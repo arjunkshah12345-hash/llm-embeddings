@@ -35,6 +35,7 @@ Goal: eliminate measurement ambiguity before spending compute.
 - Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting.
 - Separate optimizer-state checkpoints from compact evaluation checkpoints when resume support is needed.
 - Record wall-clock time, peak allocated memory, FLOPs estimates, and tokens per second in a common schema.
+- Add a sweep runner that records the exact shared configuration and run matrix. (Implemented in the current baseline.)
 
 Gate: no comparison is published unless all three runs use the same data manifest and the same token budget within one percent.
 

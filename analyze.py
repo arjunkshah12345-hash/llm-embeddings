@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import statistics
 from pathlib import Path
 
 import matplotlib
@@ -114,7 +115,22 @@ def make_summary(runs, output_path: Path) -> dict:
         if tied is not None:
             row["additional_parameters_vs_tied"] = row["total_parameters"] - tied
 
-    output_path.write_text(json.dumps(summary, indent=2) + "\n")
+    aggregates = {}
+    for kind in sorted({row["embedding_type"] for row in summary}):
+        rows = [row for row in summary if row["embedding_type"] == kind and row["best_val_loss"] is not None]
+        losses = [row["best_val_loss"] for row in rows]
+        perplexities = [row["best_val_perplexity"] for row in rows]
+        aggregates[kind] = {
+            "run_count": len(rows),
+            "total_parameters": rows[0]["total_parameters"] if rows else None,
+            "embedding_parameters": rows[0]["embedding_parameters"] if rows else None,
+            "additional_parameters_vs_tied": rows[0]["additional_parameters_vs_tied"] if rows else None,
+            "mean_best_val_loss": statistics.mean(losses) if losses else None,
+            "std_best_val_loss": statistics.stdev(losses) if len(losses) > 1 else 0.0 if losses else None,
+            "mean_best_val_perplexity": statistics.mean(perplexities) if perplexities else None,
+        }
+
+    output_path.write_text(json.dumps({"runs": summary, "by_embedding_type": aggregates}, indent=2) + "\n")
     lines = [
         "# Embedding experiment results",
         "",
@@ -134,18 +150,30 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
+        "## Aggregate by embedding type",
+        "",
+        "| Model | Runs | Mean best val loss | Std. dev. | Mean perplexity |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for kind, aggregate in aggregates.items():
+        lines.append(
+            f"| {kind} | {aggregate['run_count']} | {fmt(aggregate['mean_best_val_loss'])} | "
+            f"{fmt(aggregate['std_best_val_loss'])} | {fmt(aggregate['mean_best_val_perplexity'])} |"
+        )
+    lines += [
+        "",
         "## Questions",
         "",
         "The statements below are computed from the logged runs and do not assume that untying or partial tying wins.",
     ]
-    by_type = {row["embedding_type"]: row for row in summary}
-    if all(kind in by_type and by_type[kind]["best_val_loss"] is not None for kind in ("tied", "untied", "partial")):
+    by_type = aggregates
+    if all(kind in by_type and by_type[kind]["mean_best_val_loss"] is not None for kind in ("tied", "untied", "partial")):
         tied_row = by_type["tied"]
         untied_row = by_type["untied"]
         partial_row = by_type["partial"]
-        untied_delta = tied_row["best_val_loss"] - untied_row["best_val_loss"]
-        partial_vs_tied = tied_row["best_val_loss"] - partial_row["best_val_loss"]
-        partial_vs_untied = partial_row["best_val_loss"] - untied_row["best_val_loss"]
+        untied_delta = tied_row["mean_best_val_loss"] - untied_row["mean_best_val_loss"]
+        partial_vs_tied = tied_row["mean_best_val_loss"] - partial_row["mean_best_val_loss"]
+        partial_vs_untied = partial_row["mean_best_val_loss"] - untied_row["mean_best_val_loss"]
         direction = "lower" if untied_delta > 0 else "higher"
         partial_direction = "lower" if partial_vs_tied > 0 else "higher"
         gap_direction = "higher" if partial_vs_untied > 0 else "lower"
@@ -161,12 +189,22 @@ def make_summary(runs, output_path: Path) -> dict:
         lines.append("- A complete tied/partial/untied comparison is unavailable in the discovered runs.")
 
     for kind in ("tied", "untied", "partial"):
-        rows = next((metrics for name, _, _, metrics in runs if name == kind), [])
-        ratios = [r["output_to_input_grad_ratio"] for r in rows if r.get("split") == "train" and "output_to_input_grad_ratio" in r]
+        ratios = [
+            r["output_to_input_grad_ratio"]
+            for _, _, counts, metrics in runs
+            if counts["embedding_type"] == kind
+            for r in metrics
+            if r.get("split") == "train" and "output_to_input_grad_ratio" in r
+        ]
         if ratios:
             lines.append(f"- {kind} output/input embedding-gradient ratio: mean {sum(ratios) / len(ratios):.3f}, final {ratios[-1]:.3f}.")
-    partial_metrics = next((metrics for name, _, _, metrics in runs if name == "partial"), [])
-    partial_train = [r for r in partial_metrics if r.get("split") == "train" and "input_correction_relative_norm" in r]
+    partial_train = [
+        r
+        for _, _, counts, metrics in runs
+        if counts["embedding_type"] == "partial"
+        for r in metrics
+        if r.get("split") == "train" and "input_correction_relative_norm" in r
+    ]
     if partial_train:
         final = partial_train[-1]
         lines.append(
@@ -178,7 +216,7 @@ def make_summary(runs, output_path: Path) -> dict:
         "Gradient plots: `gradient_norms_and_ratio.png`; correction plot: `correction_norms.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
-    return {"runs": summary}
+    return {"runs": summary, "by_embedding_type": aggregates}
 
 
 def main() -> None:

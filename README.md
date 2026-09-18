@@ -40,6 +40,12 @@ python3 train.py --embedding_type partial --adapter_rank 8
 python3 analyze.py
 ```
 
+For a multi-seed study, use `sweep.py`. It forwards one shared configuration to every model/seed combination, refuses to overwrite completed runs unless asked, writes `study_manifest.json`, and analyzes the full study at the end:
+
+```bash
+python3 sweep.py --output_dir runs/study-001 --steps 2000 --seeds 1337 2027 31415
+```
+
 Evaluate a saved checkpoint directly:
 
 ```bash
@@ -64,7 +70,7 @@ Validation uses deterministic fixed token windows, so all model variants and rep
 - parameter count versus validation loss;
 - input/output embedding gradient norms and their output-to-input ratio (`gradient_norms_and_ratio.png`);
 - partial-model correction norms;
-- `results_summary.md` and `results.json`.
+- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates.
 
 ## Gradient measurement
 
@@ -86,6 +92,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py test_model.py
+python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py test_model.py
 python3 -m pytest -q
 ```
