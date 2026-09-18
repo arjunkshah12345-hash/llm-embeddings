@@ -3,11 +3,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import platform
 import random
+import subprocess
+import sys
 import time
 from pathlib import Path
 
 import numpy as np
+import tiktoken
 import torch
 
 from config import ModelConfig, TrainConfig, as_dict
@@ -54,8 +58,8 @@ def evaluate(model: GPTModel, dataset: TokenDataset, split: str, config: TrainCo
     was_training = model.training
     model.eval()
     losses = []
-    for _ in range(config.eval_batches):
-        x, y = dataset.get_batch(split, config.batch_size, model.config.block_size, device)
+    for batch_index in range(config.eval_batches):
+        x, y = dataset.get_fixed_batch(split, batch_index, config.batch_size, model.config.block_size, device)
         losses.append(model.loss(x, y).item())
     if was_training:
         model.train()
@@ -64,6 +68,20 @@ def evaluate(model: GPTModel, dataset: TokenDataset, split: str, config: TrainCo
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+def git_commit() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).resolve().parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
 
 def checkpoint_payload(model: GPTModel, model_config: ModelConfig, train_config: TrainConfig, device: torch.device, step: int, best_val_loss: float) -> dict:
@@ -160,6 +178,21 @@ def main() -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     write_json(run_dir / "config.json", {**as_dict(model_config, train_config), "device": str(device), "dataset": dataset.metadata()})
     write_json(run_dir / "parameter_counts.json", model.parameter_counts())
+    write_json(
+        run_dir / "manifest.json",
+        {
+            "git_commit": git_commit(),
+            "command": [sys.executable, *sys.argv],
+            "python": sys.version,
+            "platform": platform.platform(),
+            "torch": torch.__version__,
+            "tiktoken": getattr(tiktoken, "__version__", "unknown"),
+            "tokenizer": {"name": "gpt2", "vocab_size": dataset.vocab_size},
+            "dataset": dataset.metadata(),
+            "model": model.config_dict(),
+            "parameter_counts": model.parameter_counts(),
+        },
+    )
     metrics_path = run_dir / "metrics.jsonl"
     metrics_path.unlink(missing_ok=True)
     best_val = float("inf")

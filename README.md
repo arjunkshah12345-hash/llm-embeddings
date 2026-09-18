@@ -51,9 +51,12 @@ python3 evaluate.py --run_dir runs/partial --checkpoint best.pt
 Each run directory contains:
 
 - `config.json`: exact model, data, optimizer, and seed settings;
+- `manifest.json`: git commit, command, runtime, dataset hashes, and parameter manifest;
 - `parameter_counts.json`: total, transformer, and embedding parameter counts;
 - `metrics.jsonl`: training/validation losses, perplexity, throughput, memory, gradient decomposition, and adapter norms;
 - `last.pt` and `best.pt`: CPU model checkpoints. The first version intentionally omits AdamW state to keep local artifacts compact; checkpoints are for evaluation and comparison rather than exact mid-run resume.
+
+Validation uses deterministic fixed token windows, so all model variants and repeated evaluations see the same validation examples.
 
 `analyze.py` creates:
 

@@ -29,8 +29,8 @@ Exit condition: all three variants train, save checkpoints, report finite losses
 
 Goal: eliminate measurement ambiguity before spending compute.
 
-- Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit.
-- Add deterministic fixed validation windows alongside sampled validation batches.
+- Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit. (Implemented in the current baseline.)
+- Add deterministic fixed validation windows alongside sampled validation batches. (Implemented in the current baseline; evaluation now uses fixed windows.)
 - Verify that the input/output gradient decomposition matches finite-difference checks on tiny models.
 - Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting.
 - Separate optimizer-state checkpoints from compact evaluation checkpoints when resume support is needed.

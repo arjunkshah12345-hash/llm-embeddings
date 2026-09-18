@@ -89,3 +89,19 @@ class TokenDataset:
         x = torch.stack([tokens[start : start + block_size] for start in starts])
         y = torch.stack([tokens[start + 1 : start + block_size + 1] for start in starts])
         return x.to(device), y.to(device)
+
+    def get_fixed_batch(self, split: str, batch_index: int, batch_size: int, block_size: int, device: torch.device):
+        """Return a deterministic, non-random validation batch.
+
+        Validation uses these fixed windows so repeated evaluations and all model
+        variants see exactly the same tokens independent of generator state.
+        """
+        tokens = self.tokens[split]
+        if tokens.numel() <= block_size + 1:
+            raise ValueError(f"Split {split} is too short for block_size={block_size}")
+        window_count = tokens.numel() - block_size
+        offsets = torch.arange(batch_size, dtype=torch.long)
+        starts = ((batch_index * batch_size + offsets) * block_size) % window_count
+        x = torch.stack([tokens[start : start + block_size] for start in starts])
+        y = torch.stack([tokens[start + 1 : start + block_size + 1] for start in starts])
+        return x.to(device), y.to(device)
