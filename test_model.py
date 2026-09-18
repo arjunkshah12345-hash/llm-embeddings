@@ -1,9 +1,10 @@
 import torch
 import torch.nn.functional as F
 
-from config import ModelConfig
+from config import ModelConfig, TrainConfig
 from data import TokenDataset
 from model import GPTModel
+from train import checkpoint_payload, save_checkpoint
 
 
 def make_model(kind: str) -> GPTModel:
@@ -92,3 +93,18 @@ def test_gradient_side_paths_match_finite_difference():
 
     numeric_output = (output_loss_at(epsilon) - output_loss_at(-epsilon)) / (2 * epsilon)
     assert abs(output_grad[0, 0].item() - numeric_output) < 1e-3
+
+
+def test_compact_checkpoint_round_trip(tmp_path):
+    model_config = ModelConfig(vocab_size=97, block_size=16, n_layer=2, n_head=2, n_embd=32, adapter_rank=4)
+    train_config = TrainConfig(embedding_type="partial", steps=1, output_dir=str(tmp_path))
+    model = GPTModel(model_config, "partial", seed=11)
+    checkpoint_path = tmp_path / "checkpoint.pt"
+    save_checkpoint(checkpoint_path, checkpoint_payload(model, model_config, train_config, torch.device("cpu"), 3, 4.5))
+    loaded = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    restored = GPTModel(model_config, "partial", seed=99)
+    restored.load_state_dict(loaded["model"])
+    for name, parameter in model.state_dict().items():
+        assert torch.equal(parameter, restored.state_dict()[name]), name
+    assert loaded["step"] == 3
+    assert loaded["best_val_loss"] == 4.5
