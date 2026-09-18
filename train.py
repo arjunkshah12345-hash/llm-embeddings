@@ -199,11 +199,13 @@ def main() -> None:
     tokens_seen = 0
     peak_memory = 0.0
     started = time.perf_counter()
+    training_elapsed = 0.0
     model.train()
 
     print(f"run={train_config.run_name} embedding={train_config.embedding_type} device={device}")
     print(json.dumps(model.parameter_counts(), sort_keys=True))
     for step in range(train_config.steps):
+        step_started = time.perf_counter()
         lr = learning_rate(step, train_config)
         for group in optimizer.param_groups:
             group["lr"] = lr
@@ -222,6 +224,7 @@ def main() -> None:
             tokens_seen += x.numel()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
         optimizer.step()
+        training_elapsed += time.perf_counter() - step_started
         elapsed = time.perf_counter() - started
         memory = memory_mb(device)
         peak_memory = max(peak_memory, memory)
@@ -233,7 +236,9 @@ def main() -> None:
                 "perplexity": math.exp(min(step_loss / train_config.grad_accum_steps, 20.0)),
                 "learning_rate": lr,
                 "tokens_seen": tokens_seen,
-                "tokens_per_second": tokens_seen / max(elapsed, 1e-9),
+                "tokens_per_second": tokens_seen / max(training_elapsed, 1e-9),
+                "training_wall_time_seconds": training_elapsed,
+                "wall_time_seconds": elapsed,
                 "grad_norm": float(grad_norm),
                 "combined_embedding_grad_norm": model.combined_embedding_grad_norm(),
                 "peak_gpu_memory_mb": peak_memory,
@@ -256,7 +261,9 @@ def main() -> None:
                 "loss": val_loss,
                 "perplexity": math.exp(min(val_loss, 20.0)),
                 "tokens_seen": tokens_seen,
-                "tokens_per_second": tokens_seen / max(elapsed, 1e-9),
+                "tokens_per_second": tokens_seen / max(training_elapsed, 1e-9),
+                "training_wall_time_seconds": training_elapsed,
+                "wall_time_seconds": elapsed,
                 "peak_gpu_memory_mb": peak_memory,
             }
             with metrics_path.open("a") as handle:

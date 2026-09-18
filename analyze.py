@@ -94,6 +94,7 @@ def make_summary(runs, output_path: Path) -> dict:
         val_rows = [r for r in metrics if r.get("split") == "val"]
         train_rows = [r for r in metrics if r.get("split") == "train"]
         best = min(val_rows, key=lambda r: r["loss"]) if val_rows else None
+        final = val_rows[-1] if val_rows else None
         last_train = train_rows[-1] if train_rows else {}
         summary.append(
             {
@@ -105,6 +106,8 @@ def make_summary(runs, output_path: Path) -> dict:
                 "best_val_loss": best["loss"] if best else None,
                 "best_val_perplexity": best["perplexity"] if best else None,
                 "best_val_step": best["step"] if best else None,
+                "final_val_loss": final["loss"] if final else None,
+                "final_val_perplexity": final["perplexity"] if final else None,
                 "tokens_per_second": last_train.get("tokens_per_second"),
                 "peak_gpu_memory_mb": max((r.get("peak_gpu_memory_mb", 0.0) for r in metrics), default=0.0),
                 "run_dir": str(run_dir),
@@ -128,6 +131,8 @@ def make_summary(runs, output_path: Path) -> dict:
             "mean_best_val_loss": statistics.mean(losses) if losses else None,
             "std_best_val_loss": statistics.stdev(losses) if len(losses) > 1 else 0.0 if losses else None,
             "mean_best_val_perplexity": statistics.mean(perplexities) if perplexities else None,
+            "mean_final_val_loss": statistics.mean([row["final_val_loss"] for row in rows]) if rows else None,
+            "mean_final_val_perplexity": statistics.mean([row["final_val_perplexity"] for row in rows]) if rows else None,
         }
 
     output_path.write_text(json.dumps({"runs": summary, "by_embedding_type": aggregates}, indent=2) + "\n")
@@ -136,8 +141,8 @@ def make_summary(runs, output_path: Path) -> dict:
         "",
         "Lower validation loss/perplexity is better. Results are based on the logged validation checkpoints.",
         "",
-        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Val perplexity | Tokens/s |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Final val loss | Val perplexity | Tokens/s |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary:
         def fmt(value):
@@ -145,20 +150,21 @@ def make_summary(runs, output_path: Path) -> dict:
 
         lines.append(
             f"| {row['embedding_type']} | {row['total_parameters']:,} | {row['embedding_parameters']:,} | "
-            f"{fmt(row['additional_parameters_vs_tied'])} | {fmt(row['best_val_loss'])} | "
+            f"{fmt(row['additional_parameters_vs_tied'])} | {fmt(row['best_val_loss'])} | {fmt(row['final_val_loss'])} | "
             f"{fmt(row['best_val_perplexity'])} | {fmt(row['tokens_per_second'])} |"
         )
     lines += [
         "",
         "## Aggregate by embedding type",
         "",
-        "| Model | Runs | Mean best val loss | Std. dev. | Mean perplexity |",
-        "|---|---:|---:|---:|---:|",
+        "| Model | Runs | Mean best val loss | Std. dev. | Mean final val loss | Mean perplexity |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for kind, aggregate in aggregates.items():
         lines.append(
             f"| {kind} | {aggregate['run_count']} | {fmt(aggregate['mean_best_val_loss'])} | "
-            f"{fmt(aggregate['std_best_val_loss'])} | {fmt(aggregate['mean_best_val_perplexity'])} |"
+            f"{fmt(aggregate['std_best_val_loss'])} | {fmt(aggregate['mean_final_val_loss'])} | "
+            f"{fmt(aggregate['mean_best_val_perplexity'])} |"
         )
     lines += [
         "",
