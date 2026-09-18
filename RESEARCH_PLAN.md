@@ -31,8 +31,8 @@ Goal: eliminate measurement ambiguity before spending compute.
 
 - Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit. (Implemented in the current baseline.)
 - Add deterministic fixed validation windows alongside sampled validation batches. (Implemented in the current baseline; evaluation now uses fixed windows.)
-- Verify that the input/output gradient decomposition matches finite-difference checks on tiny models.
-- Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting.
+- Verify that the input/output gradient decomposition matches finite-difference checks on tiny models. (Implemented.)
+- Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting. (Core embedding identity, initialization, fixed-window token accounting, and gradient-path tests are implemented; checkpoint round-trip coverage remains.)
 - Separate optimizer-state checkpoints from compact evaluation checkpoints when resume support is needed.
 - Record wall-clock time, peak allocated memory, FLOPs estimates, and tokens per second in a common schema.
 - Add a sweep runner that records the exact shared configuration and run matrix. (Implemented in the current baseline.)

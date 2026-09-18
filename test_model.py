@@ -1,6 +1,8 @@
 import torch
+import torch.nn.functional as F
 
 from config import ModelConfig
+from data import TokenDataset
 from model import GPTModel
 
 
@@ -17,7 +19,10 @@ def test_embedding_parameter_relationships():
     assert untied.parameter_counts()["embedding_parameters"] == 2 * 97 * 32
     expected_partial = 97 * 32 + 2 * 4 * (97 + 32)
     assert partial.parameter_counts()["embedding_parameters"] == expected_partial
-    assert torch.equal(partial.embeddings.weight("input"), partial.embeddings.weight("output"))
+    assert tied.embeddings.weight("input") is tied.embeddings.weight("output")
+    assert torch.equal(untied.embeddings.weight("input"), untied.embeddings.weight("output"))
+    assert torch.equal(partial.embeddings.weight("input"), partial.embeddings.shared)
+    assert torch.equal(partial.embeddings.weight("output"), partial.embeddings.shared)
 
 
 def test_gradient_decomposition_and_forward():
@@ -33,3 +38,57 @@ def test_gradient_decomposition_and_forward():
 
     model.loss(x, y).backward()
     assert model.combined_embedding_grad_norm() > 0
+
+
+def test_fixed_validation_windows_are_deterministic():
+    dataset = object.__new__(TokenDataset)
+    dataset.tokens = {split: torch.arange(100, dtype=torch.long) for split in ("train", "val", "test")}
+    x1, y1 = dataset.get_fixed_batch("val", batch_index=2, batch_size=2, block_size=8, device=torch.device("cpu"))
+    x2, y2 = dataset.get_fixed_batch("val", batch_index=2, batch_size=2, block_size=8, device=torch.device("cpu"))
+    assert torch.equal(x1, x2)
+    assert torch.equal(y1, y2)
+    assert torch.equal(y1, x1 + 1)
+    assert x1.numel() == 16
+
+
+def test_gradient_side_paths_match_finite_difference():
+    model = make_model("tied")
+    model.eval()
+    x = torch.randint(0, 97, (1, 8))
+    y = torch.randint(0, 97, (1, 8))
+    _, hidden = model(x, return_hidden=True)
+    shared = model.embeddings.shared
+    output_snapshot = model.embeddings.weight("output").detach().clone()
+    input_loss = F.cross_entropy(F.linear(hidden, output_snapshot).reshape(-1, 97), y.reshape(-1))
+    input_grad = torch.autograd.grad(input_loss, shared)[0]
+
+    direction = torch.zeros_like(shared)
+    direction[0, 0] = 1.0
+    base = shared.detach().clone()
+
+    def input_loss_at(epsilon: float) -> float:
+        with torch.no_grad():
+            shared.copy_(base + epsilon * direction)
+        _, perturbed_hidden = model(x, return_hidden=True)
+        value = F.cross_entropy(F.linear(perturbed_hidden, output_snapshot).reshape(-1, 97), y.reshape(-1)).item()
+        with torch.no_grad():
+            shared.copy_(base)
+        return value
+
+    epsilon = 1e-3
+    numeric_input = (input_loss_at(epsilon) - input_loss_at(-epsilon)) / (2 * epsilon)
+    assert abs(input_grad[0, 0].item() - numeric_input) < 1e-3
+
+    output_loss = F.cross_entropy(F.linear(hidden.detach(), shared).reshape(-1, 97), y.reshape(-1))
+    output_grad = torch.autograd.grad(output_loss, shared)[0]
+
+    def output_loss_at(epsilon: float) -> float:
+        with torch.no_grad():
+            shared.copy_(base + epsilon * direction)
+        value = F.cross_entropy(F.linear(hidden.detach(), shared).reshape(-1, 97), y.reshape(-1)).item()
+        with torch.no_grad():
+            shared.copy_(base)
+        return value
+
+    numeric_output = (output_loss_at(epsilon) - output_loss_at(-epsilon)) / (2 * epsilon)
+    assert abs(output_grad[0, 0].item() - numeric_output) < 1e-3
