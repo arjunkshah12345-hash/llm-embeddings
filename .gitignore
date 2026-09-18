@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+runs/
+smoke_runs/
+sanity_runs/
+sanity_runs2/
+analysis/
+sanity_analysis/
