@@ -26,6 +26,21 @@ def test_embedding_parameter_relationships():
     assert torch.equal(partial.embeddings.weight("output"), partial.embeddings.shared)
 
 
+def test_partial_adapter_metrics_report_effective_rank_and_alignment():
+    model = make_model("partial")
+    initial = model.embeddings.adapter_metrics()
+    assert initial["input_correction_effective_rank"] == 0.0
+    assert initial["output_correction_effective_rank"] == 0.0
+    with torch.no_grad():
+        model.embeddings.input_b.normal_()
+        model.embeddings.output_b.normal_()
+    metrics = model.embeddings.adapter_metrics()
+    assert 0.0 < metrics["input_correction_effective_rank"] <= 4.0
+    assert 0.0 < metrics["output_correction_effective_rank"] <= 4.0
+    assert -1.0 <= metrics["input_correction_shared_cosine"] <= 1.0
+    assert -1.0 <= metrics["output_correction_shared_cosine"] <= 1.0
+
+
 def test_gradient_decomposition_and_forward():
     model = make_model("partial")
     x = torch.randint(0, 97, (2, 16))

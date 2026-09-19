@@ -180,16 +180,49 @@ class EmbeddingSystem(nn.Module):
                 "output_correction_norm": 0.0,
                 "input_correction_relative_norm": 0.0,
                 "output_correction_relative_norm": 0.0,
+                "input_correction_effective_rank": 0.0,
+                "output_correction_effective_rank": 0.0,
+                "input_correction_top_singular_value": 0.0,
+                "output_correction_top_singular_value": 0.0,
+                "input_correction_shared_cosine": 0.0,
+                "output_correction_shared_cosine": 0.0,
             }
-        with torch.no_grad():
-            input_delta = self.correction("input")
-            output_delta = self.correction("output")
-            shared_norm = self.shared.norm().item()
+
+        def factor_singular_values(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+            # A @ B.T has the same non-zero singular values as the small core
+            # R_A @ R_B.T from the reduced QR factorizations.
+            a = a.detach().float().cpu()
+            b = b.detach().float().cpu()
+            _, r_a = torch.linalg.qr(a, mode="reduced")
+            _, r_b = torch.linalg.qr(b, mode="reduced")
+            return torch.linalg.svdvals(self.adapter_scale * (r_a @ r_b.transpose(0, 1)))
+
+        def side_metrics(side: str, a: torch.Tensor, b: torch.Tensor) -> dict[str, float]:
+            correction = self.correction(side)
+            singular_values = factor_singular_values(a, b)
+            top = singular_values.max().item() if singular_values.numel() else 0.0
+            threshold = top * 1e-3
+            effective_rank = float((singular_values > threshold).sum().item()) if top > 0 else 0.0
+            correction_norm = correction.float().norm().item()
+            shared_norm = self.shared.float().norm().item()
+            denominator = correction_norm * shared_norm
+            shared_cosine = (
+                torch.dot(correction.float().reshape(-1), self.shared.float().reshape(-1)).item() / denominator
+                if denominator > 0
+                else 0.0
+            )
             return {
-                "input_correction_norm": input_delta.norm().item(),
-                "output_correction_norm": output_delta.norm().item(),
-                "input_correction_relative_norm": input_delta.norm().item() / max(shared_norm, 1e-12),
-                "output_correction_relative_norm": output_delta.norm().item() / max(shared_norm, 1e-12),
+                f"{side}_correction_norm": correction_norm,
+                f"{side}_correction_relative_norm": correction_norm / max(shared_norm, 1e-12),
+                f"{side}_correction_effective_rank": effective_rank,
+                f"{side}_correction_top_singular_value": top,
+                f"{side}_correction_shared_cosine": shared_cosine,
+            }
+
+        with torch.no_grad():
+            return {
+                **side_metrics("input", self.input_a, self.input_b),
+                **side_metrics("output", self.output_a, self.output_b),
             }
 
 

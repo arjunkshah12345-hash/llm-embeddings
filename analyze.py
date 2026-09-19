@@ -160,6 +160,27 @@ def plot_corrections(runs, path: Path) -> None:
     plt.close()
 
 
+def plot_correction_rank(runs, path: Path) -> None:
+    plt.figure(figsize=(8, 5))
+    plotted = False
+    for name, _, _, metrics in runs:
+        rows = [r for r in metrics if r.get("split") == "train" and "input_correction_effective_rank" in r]
+        if rows and any(r["input_correction_effective_rank"] or r["output_correction_effective_rank"] for r in rows):
+            plotted = True
+            steps = [r["step"] for r in rows]
+            plt.plot(steps, [r["input_correction_effective_rank"] for r in rows], marker="o", label=f"{name} input")
+            plt.plot(steps, [r["output_correction_effective_rank"] for r in rows], linestyle="--", marker="x", label=f"{name} output")
+    plt.xlabel("Step")
+    plt.ylabel("Effective correction rank")
+    plt.title("Effective rank of low-rank corrections")
+    plt.grid(alpha=0.25)
+    if plotted:
+        plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=160)
+    plt.close()
+
+
 def plot_validation_loss_vs_flops(runs, path: Path) -> None:
     plt.figure(figsize=(8, 5))
     for name, _, _, metrics in runs:
@@ -330,7 +351,7 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
-        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; update plot: `embedding_updates.png`; correction plot: `correction_norms.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png` and `correction_effective_rank.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
     return {"runs": summary, "by_embedding_type": aggregates}
@@ -354,6 +375,7 @@ def main() -> None:
     plot_gradient_alignment(runs, output_dir / "gradient_alignment.png")
     plot_embedding_updates(runs, output_dir / "embedding_updates.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
+    plot_correction_rank(runs, output_dir / "correction_effective_rank.png")
 
     plt.figure(figsize=(7, 5))
     for name, _, counts, metrics in runs:

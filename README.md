@@ -95,6 +95,7 @@ Validation uses deterministic fixed token windows, so all model variants and rep
 - input/output gradient alignment (`gradient_alignment.png`);
 - embedding update size and cumulative update path (`embedding_updates.png`);
 - partial-model correction norms;
+- effective rank of the learned corrections (`correction_effective_rank.png`);
 - `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates with deterministic bootstrap 95% intervals when multiple seeds are available.
 
 ## Gradient measurement
