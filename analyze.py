@@ -217,6 +217,36 @@ def plot_correction_rank(runs, path: Path) -> None:
     plt.close()
 
 
+def plot_token_type_gradients(runs, path: Path) -> None:
+    keys = (
+        "output_token_grad_whitespace_mean",
+        "output_token_grad_punctuation_mean",
+        "output_token_grad_common_mean",
+        "output_token_grad_rare_mean",
+    )
+    plt.figure(figsize=(8, 5))
+    plotted = False
+    for name, _, _, metrics in runs:
+        for key in keys:
+            rows = [row for row in metrics if row.get("split") == "train" and key in row]
+            if not rows:
+                continue
+            plotted = True
+            label = f"{name} {key.removeprefix('output_token_grad_').removesuffix('_mean')}"
+            plt.plot([row["step"] for row in rows], [row[key] for row in rows], marker="o", label=label)
+    if not plotted:
+        plt.close()
+        return
+    plt.xlabel("Step")
+    plt.ylabel("Mean target-token gradient norm")
+    plt.title("Output-side gradient by token class")
+    plt.grid(alpha=0.25)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=160)
+    plt.close()
+
+
 def plot_validation_loss_vs_flops(runs, path: Path) -> None:
     plt.figure(figsize=(8, 5))
     for name, _, _, metrics in runs:
@@ -405,7 +435,7 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
-        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png` and `correction_effective_rank.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; token-class plot: `token_type_gradients.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png` and `correction_effective_rank.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
     return {"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons}
@@ -430,6 +460,7 @@ def main() -> None:
     plot_embedding_updates(runs, output_dir / "embedding_updates.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
     plot_correction_rank(runs, output_dir / "correction_effective_rank.png")
+    plot_token_type_gradients(runs, output_dir / "token_type_gradients.png")
 
     plt.figure(figsize=(7, 5))
     for name, _, counts, metrics in runs:

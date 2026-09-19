@@ -167,6 +167,9 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             "eval_batches": reference_train.get("eval_batches"),
             "log_interval": reference_train.get("log_interval"),
             "save_interval": reference_train.get("save_interval"),
+            "path_ablation": reference_train.get("path_ablation"),
+            "ablation_start": reference_train.get("ablation_start"),
+            "ablation_end": reference_train.get("ablation_end"),
         }
         for key, expected_value in expected_common.items():
             if key in actual_common and actual_common[key] != expected_value:

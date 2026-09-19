@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from config import ModelConfig
+from token_classes import TOKEN_CLASSES
 
 
 class CausalSelfAttention(nn.Module):
@@ -226,6 +227,25 @@ class EmbeddingSystem(nn.Module):
             }
 
 
+def token_class_grad_means(prefix: str, grad: torch.Tensor | None, token_ids: torch.Tensor, class_ids: torch.Tensor) -> dict[str, float]:
+    """Mean embedding-row gradient norm for tokens present in this batch, by class."""
+    metrics: dict[str, float] = {}
+    row_norm = None if grad is None else grad.detach().float().norm(dim=1)
+    flat = token_ids.reshape(-1)
+    classes = class_ids.to(flat.device)[flat] if row_norm is not None else None
+    for code, name in enumerate(TOKEN_CLASSES):
+        if classes is None:
+            count = 0
+            mean = 0.0
+        else:
+            mask = classes == code
+            count = int(mask.sum().item())
+            mean = row_norm[flat[mask]].mean().item() if count else 0.0
+        metrics[f"{prefix}_{name}_count"] = float(count)
+        metrics[f"{prefix}_{name}_mean"] = mean
+    return metrics
+
+
 class GPTModel(nn.Module):
     def __init__(self, config: ModelConfig, embedding_type: str, seed: int = 1337):
         super().__init__()
@@ -261,17 +281,24 @@ class GPTModel(nn.Module):
                     nn.init.ones_(module.weight)
                     nn.init.zeros_(module.bias)
 
-    def forward(self, idx: torch.Tensor, return_hidden: bool = False):
+    def forward(self, idx: torch.Tensor, return_hidden: bool = False, path_ablation: str = "none"):
+        if path_ablation not in {"none", "stop_input", "stop_output"}:
+            raise ValueError("path_ablation must be none, stop_input, or stop_output")
         _, length = idx.shape
         if length > self.config.block_size:
             raise ValueError(f"sequence length {length} exceeds block_size={self.config.block_size}")
         positions = torch.arange(0, length, device=idx.device)
-        x = F.embedding(idx, self.embeddings.weight("input"))
-        x = self.drop(x + self.position_embedding(positions)[None, :, :])
+        token_embeddings = F.embedding(idx, self.embeddings.weight("input"))
+        if path_ablation == "stop_input":
+            token_embeddings = token_embeddings.detach()
+        x = self.drop(token_embeddings + self.position_embedding(positions)[None, :, :])
         for block in self.blocks:
             x = block(x)
         hidden = self.ln_f(x)
-        logits = F.linear(hidden, self.embeddings.weight("output"))
+        output_weight = self.embeddings.weight("output")
+        if path_ablation == "stop_output":
+            output_weight = output_weight.detach()
+        logits = F.linear(hidden, output_weight)
         if return_hidden:
             return logits, hidden
         return logits
@@ -280,7 +307,12 @@ class GPTModel(nn.Module):
         logits = self(idx)
         return F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
 
-    def embedding_gradient_metrics(self, idx: torch.Tensor, targets: torch.Tensor) -> dict[str, float]:
+    def embedding_gradient_metrics(
+        self,
+        idx: torch.Tensor,
+        targets: torch.Tensor,
+        token_class_ids: torch.Tensor | None = None,
+    ) -> dict[str, float]:
         """Measure input-path and output-path pressure on embedding parameters.
 
         The input loss detaches the output matrix; the output loss detaches the hidden
@@ -325,9 +357,13 @@ class GPTModel(nn.Module):
         metrics["output_to_input_grad_ratio"] = metrics["output_grad_norm"] / max(metrics["input_grad_norm"], 1e-12)
 
         shared = getattr(self.embeddings, "shared", None)
+        input_matrix = None
+        output_matrix = None
         if shared is not None:
             shared_input_grad = torch.autograd.grad(input_loss, shared, retain_graph=True, allow_unused=True)[0]
             shared_output_grad = torch.autograd.grad(output_loss, shared, retain_graph=True, allow_unused=True)[0]
+            input_matrix = shared_input_grad
+            output_matrix = shared_output_grad
             metrics["shared_input_grad_norm"] = norm([shared_input_grad])
             metrics["shared_output_grad_norm"] = norm([shared_output_grad])
             metrics["shared_output_to_input_grad_ratio"] = metrics["shared_output_grad_norm"] / max(
@@ -345,6 +381,18 @@ class GPTModel(nn.Module):
             metrics["shared_output_grad_norm"] = 0.0
             metrics["shared_output_to_input_grad_ratio"] = 0.0
             metrics["shared_input_output_grad_cosine"] = 0.0
+            vocab, width = self.config.vocab_size, self.config.n_embd
+            for grad in input_grads:
+                if grad is not None and tuple(grad.shape) == (vocab, width):
+                    input_matrix = grad
+                    break
+            for grad in output_grads:
+                if grad is not None and tuple(grad.shape) == (vocab, width):
+                    output_matrix = grad
+                    break
+        if token_class_ids is not None:
+            metrics.update(token_class_grad_means("input_token_grad", input_matrix, idx, token_class_ids))
+            metrics.update(token_class_grad_means("output_token_grad", output_matrix, targets, token_class_ids))
         return metrics
 
     def combined_embedding_grad_norm(self) -> float:

@@ -79,10 +79,10 @@ Goal: test whether the shared matrix is actually receiving unequal role pressure
 - Track input-side, output-side, and combined gradient norms for the shared matrix.
 - Track update norms, cumulative parameter displacement, cosine similarity of input/output gradients, and the output-to-input ratio over training. (Gradient cosine and embedding update-path logging/plotting are implemented.)
 - Measure correction norm, rank utilization, singular values, and alignment between corrections and the shared matrix. Effective rank, top singular value, and shared-matrix cosine are now logged and plotted.
-- Compare token-frequency buckets and token types such as punctuation, whitespace, common words, and rare words.
-- Run ablations that stop gradients through the input or output path for controlled intervals.
+- Compare token-frequency buckets and token types such as punctuation, whitespace, common words, and rare words. (Logged as mean row-gradient by class; see [docs/phase4-mechanism.md](docs/phase4-mechanism.md).)
+- Run ablations that stop gradients through the input or output path for controlled intervals. (`--path_ablation stop_input|stop_output` with `--ablation_start` / `--ablation_end`.)
 
-Gate: call the mechanism supported only if the pattern replicates across seeds and is not explained by token frequency, optimizer state, or a logging artifact.
+Gate: call the mechanism supported only if the pattern replicates across seeds and is not explained by token frequency, optimizer state, or a logging artifact. The checks above are implemented; the gate is not yet met.
 
 ## Phase 5 — Input-representation evaluation
 

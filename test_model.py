@@ -181,3 +181,48 @@ def test_flops_estimate_scales_with_tokens_and_embedding_cost():
     untied_flops = estimate_flops(untied, tokens=1)
     assert untied_flops["estimated_flops_non_embedding"] == one["estimated_flops_non_embedding"]
     assert untied_flops["estimated_flops_total"] > one["estimated_flops_total"]
+
+
+def test_path_ablation_stops_one_embedding_role():
+    model = make_model("untied")
+    x = torch.randint(0, 97, (2, 8))
+    y = torch.randint(0, 97, (2, 8))
+
+    def backward(ablation: str) -> None:
+        model.zero_grad(set_to_none=True)
+        logits = model(x, path_ablation=ablation)
+        F.cross_entropy(logits.reshape(-1, 97), y.reshape(-1)).backward()
+
+    backward("stop_input")
+    assert model.embeddings.input_weight.grad is None
+    assert model.embeddings.output_weight.grad is not None
+    assert model.embeddings.output_weight.grad.abs().sum() > 0
+
+    backward("stop_output")
+    assert model.embeddings.output_weight.grad is None
+    assert model.embeddings.input_weight.grad is not None
+    assert model.embeddings.input_weight.grad.abs().sum() > 0
+
+
+def test_path_ablation_is_active_only_inside_interval():
+    from train import active_path_ablation
+
+    config = TrainConfig(path_ablation="stop_output", ablation_start=2, ablation_end=4, steps=10)
+    assert active_path_ablation(1, config) == "none"
+    assert active_path_ablation(2, config) == "stop_output"
+    assert active_path_ablation(3, config) == "stop_output"
+    assert active_path_ablation(4, config) == "none"
+
+
+def test_token_class_gradient_means_follow_batch_tokens():
+    model = make_model("tied")
+    class_ids = torch.zeros(97, dtype=torch.long)
+    class_ids[1] = 2
+    class_ids[2] = 3
+    x = torch.full((1, 4), 1)
+    y = torch.full((1, 4), 2)
+    metrics = model.embedding_gradient_metrics(x, y, class_ids)
+    assert metrics["input_token_grad_common_count"] == 4
+    assert metrics["output_token_grad_rare_count"] == 4
+    assert metrics["output_token_grad_rare_mean"] > 0
+    assert metrics["output_token_grad_common_count"] == 0

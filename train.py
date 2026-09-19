@@ -17,6 +17,7 @@ import torch
 from config import ModelConfig, TrainConfig, as_dict
 from data import TokenDataset
 from model import GPTModel
+from token_classes import dataset_class_ids
 
 
 def choose_device(requested: str) -> torch.device:
@@ -43,6 +44,19 @@ def memory_mb(device: torch.device) -> float:
     if device.type == "mps" and hasattr(torch.mps, "current_allocated_memory"):
         return torch.mps.current_allocated_memory() / (1024**2)
     return 0.0
+
+
+def active_path_ablation(step: int, config: TrainConfig) -> str:
+    """Return the path ablation in force at this step, or none outside the interval."""
+    mode = config.path_ablation
+    if mode in ("", "none"):
+        return "none"
+    if mode not in {"stop_input", "stop_output"}:
+        raise ValueError("path_ablation must be none, stop_input, or stop_output")
+    end = config.ablation_end if config.ablation_end > 0 else config.steps
+    if config.ablation_start <= step < end:
+        return mode
+    return "none"
 
 
 def learning_rate(step: int, config: TrainConfig) -> float:
@@ -217,6 +231,9 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument("--path_ablation", choices=["none", "stop_input", "stop_output"], default="none")
+    parser.add_argument("--ablation_start", type=int, default=0, help="first step included in the path ablation")
+    parser.add_argument("--ablation_end", type=int, default=0, help="first step excluded; 0 means through the last step")
     parser.add_argument(
         "--resume",
         default="",
@@ -229,6 +246,12 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         help="also write optimizer_last.pt for exact mid-run resume (default: true)",
     )
     args = parser.parse_args()
+    if args.ablation_start < 0 or args.ablation_end < 0:
+        parser.error("ablation_start and ablation_end must be non-negative")
+    if args.ablation_end and args.ablation_end <= args.ablation_start:
+        parser.error("ablation_end must be greater than ablation_start when non-zero")
+    if args.ablation_start >= args.steps and args.path_ablation != "none":
+        parser.error("ablation_start must be smaller than steps when path_ablation is enabled")
     model_config = ModelConfig(
         block_size=args.block_size,
         n_layer=args.n_layer,
@@ -258,6 +281,9 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         eval_batches=args.eval_batches,
         log_interval=args.log_interval,
         save_interval=args.save_interval,
+        path_ablation=args.path_ablation,
+        ablation_start=args.ablation_start,
+        ablation_end=args.ablation_end,
     )
     return model_config, train_config, args
 
@@ -295,6 +321,11 @@ def main() -> None:
             },
             "resume_from": args.resume or None,
             "save_optimizer": bool(args.save_optimizer),
+            "path_ablation": {
+                "mode": train_config.path_ablation,
+                "start": train_config.ablation_start,
+                "end": train_config.ablation_end or train_config.steps,
+            },
         },
     )
     metrics_path = run_dir / "metrics.jsonl"
@@ -316,6 +347,7 @@ def main() -> None:
     else:
         metrics_path.unlink(missing_ok=True)
     model.train()
+    token_class_ids = dataset_class_ids(dataset).to(device)
 
     print(f"run={train_config.run_name} embedding={train_config.embedding_type} device={device}")
     print(json.dumps(parameter_counts, sort_keys=True))
@@ -332,14 +364,15 @@ def main() -> None:
         )
         step_loss = 0.0
         gradient_metrics = None
+        path_ablation = active_path_ablation(step, train_config)
         for micro_step in range(train_config.grad_accum_steps):
             x, y = dataset.get_batch("train", train_config.batch_size, model_config.block_size, device)
-            logits, _ = model(x, return_hidden=True)
+            logits, _ = model(x, return_hidden=True, path_ablation=path_ablation)
             loss = torch.nn.functional.cross_entropy(logits.reshape(-1, logits.size(-1)), y.reshape(-1))
             step_loss += loss.detach().item()
             should_measure = step % train_config.log_interval == 0 and micro_step == train_config.grad_accum_steps - 1
             if should_measure:
-                gradient_metrics = model.embedding_gradient_metrics(x, y)
+                gradient_metrics = model.embedding_gradient_metrics(x, y, token_class_ids)
             (loss / train_config.grad_accum_steps).backward()
             tokens_seen += x.numel()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
@@ -381,6 +414,7 @@ def main() -> None:
                 "grad_norm": float(grad_norm),
                 "combined_embedding_grad_norm": model.combined_embedding_grad_norm(),
                 "peak_gpu_memory_mb": peak_memory,
+                "path_ablation": path_ablation,
                 **flops,
                 **(gradient_metrics or {}),
                 **update_metrics,

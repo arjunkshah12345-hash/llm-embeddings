@@ -8,7 +8,7 @@ This repository is a small, reproducible experiment for comparing three GPT-styl
 
 The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, batch size, seed, and token budget the same across runs. The architectural difference is the embedding module.
 
-The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md). The first representation pilot is recorded in [docs/initial-representation-pilot.md](docs/initial-representation-pilot.md).
+The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), Phase 4 mechanism checks are in [docs/phase4-mechanism.md](docs/phase4-mechanism.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md). The first representation pilot is recorded in [docs/initial-representation-pilot.md](docs/initial-representation-pilot.md).
 
 The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
 
@@ -54,6 +54,8 @@ If a study is interrupted, rerun it with the same settings and `--resume_existin
 python3 sweep.py --output_dir runs/study-001 --steps 10000 --seeds 1337 2027 31415 --resume_existing
 ```
 
+For a disk-constrained run that does not need mid-run resume, add `--no-save_optimizer`; compact model checkpoints and metrics are still written.
+
 For the predeclared partial-adapter rank/scaling sweep:
 
 ```bash
@@ -79,7 +81,7 @@ Each run directory contains:
 - `config.json`: exact model, data, optimizer, and seed settings;
 - `manifest.json`: git commit, command, runtime, dataset hashes, and parameter manifest;
 - `parameter_counts.json`: total, transformer, and embedding parameter counts;
-- `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, estimated FLOPs (6ND rule), gradient decomposition, and adapter norms;
+- `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, estimated FLOPs (6ND rule), gradient decomposition, token-class gradient means, and adapter norms;
 - `study_validation.json`: the sweep fairness gate and its token/hash/config checks;
 - `last.pt` and `best.pt`: compact CPU model checkpoints without optimizer state (evaluation and comparison);
 - `optimizer_last.pt`: full resume checkpoint with AdamW state, RNG, and token counters (written by default; disable with `--no-save_optimizer`).
@@ -106,14 +108,14 @@ Validation uses deterministic fixed token windows, so all model variants and rep
 
 ## Gradient measurement
 
-The gradient decomposition is done without changing the training objective. For a logged batch, the code evaluates the same logits twice:
+The gradient decomposition is done without changing the training objective. For a logged batch, the code evaluates the same hidden states twice:
 
 1. The output weight is detached, so the gradient reaching the input-side embedding parameters comes through the transformer.
 2. The hidden state is detached, so the gradient reaching the output-side parameters comes directly from next-token prediction.
 
 This makes the input/output pressure comparable even when the two roles share a parameter. The ordinary combined gradient is still used for the optimizer update.
 
-For the partial model, `shared_input_grad_norm` and `shared_output_grad_norm` isolate the two pressures on the shared matrix. `input_correction_norm` and `output_correction_norm` measure the effective low-rank corrections, while `input_correction_parameter_count` and `output_correction_parameter_count` report their trainable parameter cost.
+For the partial model, `shared_input_grad_norm` and `shared_output_grad_norm` isolate the two pressures on the shared matrix. `input_correction_norm` and `output_correction_norm` measure the effective low-rank corrections, while `input_correction_parameters` and `output_correction_parameters` in `parameter_counts.json` report their trainable parameter cost. Token-class metrics report row-gradient means for the input tokens and target tokens seen in each logged batch.
 
 ## Fairness and limitations
 
@@ -124,6 +126,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
 python3 -m pytest -q
 ```

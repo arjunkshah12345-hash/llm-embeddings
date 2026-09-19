@@ -65,11 +65,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument("--path_ablation", choices=["none", "stop_input", "stop_output"], default="none")
+    parser.add_argument("--ablation_start", type=int, default=0)
+    parser.add_argument("--ablation_end", type=int, default=0)
     parser.add_argument("--overwrite", action="store_true", help="allow existing run directories to be replaced")
     parser.add_argument(
         "--resume_existing",
         action="store_true",
         help="resume incomplete runs from optimizer_last.pt and skip completed runs in an existing study",
+    )
+    parser.add_argument(
+        "--save_optimizer",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="write optimizer checkpoints for exact resume (default: true)",
     )
     parser.add_argument("--skip_analysis", action="store_true")
     return parser.parse_args()
@@ -79,6 +88,12 @@ def main() -> None:
     args = parse_args()
     if args.overwrite and args.resume_existing:
         raise SystemExit("--overwrite and --resume_existing are mutually exclusive")
+    if args.ablation_start < 0 or args.ablation_end < 0:
+        raise SystemExit("ablation_start and ablation_end must be non-negative")
+    if args.ablation_end and args.ablation_end <= args.ablation_start:
+        raise SystemExit("ablation_end must be greater than ablation_start when non-zero")
+    if args.path_ablation != "none" and args.ablation_start >= args.steps:
+        raise SystemExit("ablation_start must be smaller than steps when path_ablation is enabled")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     common_keys = (
@@ -86,6 +101,7 @@ def main() -> None:
         "block_size", "n_layer", "n_head", "n_embd", "dropout", "adapter_rank",
         "adapter_alpha", "learning_rate", "min_learning_rate", "warmup_steps",
         "weight_decay", "grad_clip", "eval_interval", "eval_batches", "log_interval", "save_interval",
+        "path_ablation", "ablation_start", "ablation_end",
     )
     common = {key: getattr(args, key) for key in common_keys}
     new_manifest = {
@@ -95,6 +111,7 @@ def main() -> None:
         "common": common,
         "seeds": args.seeds,
         "embedding_types": args.embedding_types,
+        "save_optimizer": bool(args.save_optimizer),
         "runs": [],
     }
     manifest_path = output_dir / "study_manifest.json"
@@ -107,6 +124,8 @@ def main() -> None:
                 raise SystemExit("Cannot resume study: manifest seeds differ from requested configuration")
             if study_manifest.get("embedding_types") != new_manifest["embedding_types"]:
                 raise SystemExit("Cannot resume study: manifest embedding_types differ from requested configuration")
+            if bool(study_manifest.get("save_optimizer", True)) != bool(new_manifest["save_optimizer"]):
+                raise SystemExit("Cannot resume study with a different optimizer-checkpoint policy")
             previous_common = study_manifest.get("common", {})
             for key, value in common.items():
                 if key == "steps":
@@ -155,6 +174,8 @@ def main() -> None:
                 command.extend([f"--{key}", str(getattr(args, key))])
             if resume_path is not None:
                 command.extend(["--resume", str(resume_path)])
+            if not args.save_optimizer:
+                command.append("--no-save_optimizer")
             print(f"\n=== {run_name} ===", flush=True)
             subprocess.run(command, cwd=repo_root, check=True)
             upsert_run(study_manifest, {"run_name": run_name, "seed": seed, "embedding_type": embedding_type, "command": command})

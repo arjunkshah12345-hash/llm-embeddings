@@ -35,6 +35,9 @@ class TrainConfig:
     eval_batches: int = 20
     log_interval: int = 10
     save_interval: int = 500
+    path_ablation: str = "none"
+    ablation_start: int = 0
+    ablation_end: int = 0
 
 
 def as_dict(model_config: ModelConfig, train_config: TrainConfig) -> dict[str, Any]:

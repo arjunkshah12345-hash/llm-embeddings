@@ -74,3 +74,5 @@ Before publishing any claim:
 ## Disk note
 
 Default ~30M checkpoints are large once optimizer state is included. Keep `optimizer_last.pt` only for active runs; compact `best.pt` / `last.pt` are enough for analysis. Free disk before starting the 10k pilot.
+
+Use `--no-save_optimizer` for a non-resumable pilot when disk is limited.

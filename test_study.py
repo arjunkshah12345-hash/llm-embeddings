@@ -37,6 +37,9 @@ COMMON = {
     "eval_batches": 1,
     "log_interval": 1,
     "save_interval": 1,
+    "path_ablation": "none",
+    "ablation_start": 0,
+    "ablation_end": 0,
 }
 
 
@@ -103,3 +106,16 @@ def test_study_validation_rejects_non_finite_metrics(tmp_path):
 
     assert not result["passed"]
     assert any("non-finite" in error for error in result["errors"])
+
+
+def test_study_validation_rejects_path_ablation_mismatch(tmp_path):
+    make_study(tmp_path)
+    config_path = tmp_path / "seed7_partial" / "config.json"
+    config = json.loads(config_path.read_text())
+    config["train"]["path_ablation"] = "stop_input"
+    config_path.write_text(json.dumps(config))
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert any("shared model/training configuration differs" in error for error in result["errors"])
