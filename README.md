@@ -8,7 +8,7 @@ This repository is a small, reproducible experiment for comparing three GPT-styl
 
 The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, batch size, seed, and token budget the same across runs. The architectural difference is the embedding module.
 
-The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), and Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md).
+The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md).
 
 The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
 
@@ -58,6 +58,12 @@ Evaluate a saved checkpoint directly:
 
 ```bash
 python3 evaluate.py --run_dir runs/partial --checkpoint best.pt
+```
+
+Evaluate the effective input representation with deterministic intrinsic probes:
+
+```bash
+python3 embedding_eval.py --run_dir runs/partial --checkpoint best.pt
 ```
 
 ## Outputs
@@ -111,6 +117,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py validate_study.py test_model.py test_study.py test_adapter_sweep.py
+python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_adapter_sweep.py test_embedding_eval.py
 python3 -m pytest -q
 ```
