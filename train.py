@@ -133,6 +133,7 @@ def optimizer_checkpoint_payload(
     best_val_loss: float,
     tokens_seen: int,
     training_elapsed: float,
+    embedding_cumulative_update_norm: float = 0.0,
 ) -> dict:
     """Full resume checkpoint with AdamW state and RNG."""
     payload = compact_checkpoint_payload(model, model_config, train_config, device, step, best_val_loss)
@@ -142,6 +143,7 @@ def optimizer_checkpoint_payload(
             "optimizer": optimizer.state_dict(),
             "tokens_seen": tokens_seen,
             "training_wall_time_seconds": training_elapsed,
+            "embedding_cumulative_update_norm": embedding_cumulative_update_norm,
             "rng": {
                 "python": random.getstate(),
                 "numpy": np.random.get_state(),
@@ -302,12 +304,14 @@ def main() -> None:
     peak_memory = 0.0
     started = time.perf_counter()
     training_elapsed = 0.0
+    embedding_cumulative_update_norm = 0.0
     if args.resume:
         resumed = load_resume_checkpoint(Path(args.resume), model, optimizer, device)
         start_step = int(resumed.get("step", -1)) + 1
         best_val = float(resumed.get("best_val_loss", best_val))
         tokens_seen = int(resumed.get("tokens_seen", 0))
         training_elapsed = float(resumed.get("training_wall_time_seconds", 0.0))
+        embedding_cumulative_update_norm = float(resumed.get("embedding_cumulative_update_norm", 0.0))
         print(f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}")
     else:
         metrics_path.unlink(missing_ok=True)
@@ -321,6 +325,11 @@ def main() -> None:
         for group in optimizer.param_groups:
             group["lr"] = lr
         optimizer.zero_grad(set_to_none=True)
+        embedding_before_update = (
+            [parameter.detach().clone() for parameter in model.embeddings.unique_parameters()]
+            if step % train_config.log_interval == 0
+            else None
+        )
         step_loss = 0.0
         gradient_metrics = None
         for micro_step in range(train_config.grad_accum_steps):
@@ -335,6 +344,23 @@ def main() -> None:
             tokens_seen += x.numel()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
         optimizer.step()
+        update_metrics = {}
+        if embedding_before_update is not None:
+            with torch.no_grad():
+                update_squared = sum(
+                    (parameter.detach() - before).float().pow(2).sum()
+                    for parameter, before in zip(model.embeddings.unique_parameters(), embedding_before_update)
+                )
+                embedding_update_norm = math.sqrt(update_squared.item())
+                embedding_cumulative_update_norm += embedding_update_norm
+                update_metrics = {
+                    "embedding_update_norm": embedding_update_norm,
+                    "embedding_cumulative_update_norm": embedding_cumulative_update_norm,
+                    "embedding_update_relative_norm": embedding_update_norm / max(
+                        sum(parameter.detach().float().pow(2).sum() for parameter in model.embeddings.unique_parameters()).sqrt().item(),
+                        1e-12,
+                    ),
+                }
         training_elapsed += time.perf_counter() - step_started
         # Session wall clock resets on resume; training_wall_time_seconds stays cumulative.
         wall_elapsed = time.perf_counter() - started
@@ -357,6 +383,7 @@ def main() -> None:
                 "peak_gpu_memory_mb": peak_memory,
                 **flops,
                 **(gradient_metrics or {}),
+                **update_metrics,
                 **model.embeddings.adapter_metrics(),
             }
             with metrics_path.open("a") as handle:
@@ -404,6 +431,7 @@ def main() -> None:
                         best_val,
                         tokens_seen,
                         training_elapsed,
+                        embedding_cumulative_update_norm,
                     ),
                 )
         elif step % train_config.save_interval == 0:
@@ -424,6 +452,7 @@ def main() -> None:
                         best_val,
                         tokens_seen,
                         training_elapsed,
+                        embedding_cumulative_update_norm,
                     ),
                 )
 

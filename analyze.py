@@ -118,6 +118,30 @@ def plot_gradient_alignment(runs, path: Path) -> None:
     plt.close()
 
 
+def plot_embedding_updates(runs, path: Path) -> None:
+    fig, axes = plt.subplots(2, 1, figsize=(8, 8), sharex=True)
+    plotted = False
+    for name, _, _, metrics in runs:
+        rows = [r for r in metrics if r.get("split") == "train" and "embedding_update_norm" in r]
+        if rows:
+            plotted = True
+            steps = [r["step"] for r in rows]
+            axes[0].plot(steps, [r["embedding_update_norm"] for r in rows], marker="o", label=name)
+            axes[1].plot(steps, [r["embedding_cumulative_update_norm"] for r in rows], marker="o", label=name)
+    axes[0].set_ylabel("Embedding update norm")
+    axes[0].set_title("Embedding update size")
+    axes[1].set_ylabel("Cumulative update path")
+    axes[1].set_xlabel("Step")
+    axes[1].set_title("Cumulative embedding update path length")
+    for axis in axes:
+        axis.grid(alpha=0.25)
+        if plotted:
+            axis.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
 def plot_corrections(runs, path: Path) -> None:
     plt.figure(figsize=(8, 5))
     for name, _, _, metrics in runs:
@@ -306,7 +330,7 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
-        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; correction plot: `correction_norms.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; update plot: `embedding_updates.png`; correction plot: `correction_norms.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
     return {"runs": summary, "by_embedding_type": aggregates}
@@ -328,6 +352,7 @@ def main() -> None:
     plot_validation_loss_vs_flops(runs, output_dir / "validation_loss_vs_estimated_flops.png")
     plot_gradient(runs, output_dir / "gradient_norms_and_ratio.png")
     plot_gradient_alignment(runs, output_dir / "gradient_alignment.png")
+    plot_embedding_updates(runs, output_dir / "embedding_updates.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
 
     plt.figure(figsize=(7, 5))

@@ -148,6 +148,7 @@ def test_optimizer_checkpoint_resume_round_trip(tmp_path):
     assert loaded["step"] == 2
     assert loaded["tokens_seen"] == 64
     assert loaded["training_wall_time_seconds"] == 1.5
+    assert loaded["embedding_cumulative_update_norm"] == 0.0
     for name, parameter in model.state_dict().items():
         assert torch.equal(parameter, restored.state_dict()[name]), name
     assert restored_opt.state_dict()["state"]
