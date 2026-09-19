@@ -10,6 +10,8 @@ The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, b
 
 The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md).
 
+The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
+
 ## Setup
 
 ```bash
