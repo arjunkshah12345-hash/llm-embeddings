@@ -14,8 +14,8 @@ python3 embedding_eval.py \
 
 The output includes:
 
-- a fixed nearest-centroid probe for four frequency quantiles;
-- a fixed nearest-centroid probe for coarse token-shape classes (whitespace, punctuation, short, and longer tokens);
+- a fixed nearest-centroid probe for four frequency quantiles, reporting accuracy, macro accuracy, and per-class accuracy;
+- a fixed nearest-centroid probe for coarse token-shape classes (whitespace, punctuation, short, and longer tokens), with macro accuracy to expose class imbalance;
 - frequency-bucket agreement and mean cosine similarity among deterministic nearest neighbors sampled across frequency buckets.
 
 The probe split is token-ID modulo five, with one remainder held out. This is an intrinsic diagnostic, not a semantic benchmark. Positive claims about meaning require a predeclared pair set or downstream task and should be reported separately from these diagnostics.

@@ -13,6 +13,7 @@ def test_nearest_centroid_probe_beats_majority_on_separable_vectors():
     labels = torch.tensor([0, 0, 1, 1])
     result = nearest_centroid_probe(embeddings, labels, torch.tensor([True, False, True, False]))
     assert result["accuracy"] == 1.0
+    assert result["macro_accuracy"] == 1.0
     assert result["majority_baseline"] == 0.5
 
 

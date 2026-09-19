@@ -2,13 +2,13 @@
 
 This report applies `embedding_eval.py` to the existing three-model pilot. It is an instrumentation check, not a representation claim: each checkpoint was trained for only 30 steps with seed 1337, batch size 1, and context length 64.
 
-| Variant | Frequency probe accuracy | Frequency majority baseline | Neighbor bucket agreement | Mean neighbor cosine | Shape probe accuracy |
-|---|---:|---:|---:|---:|---:|
-| tied | 0.2482 | 0.2583 | 0.2609 | 0.2205 | 0.6210 |
-| partial | 0.2479 | 0.2583 | 0.2613 | 0.2206 | 0.6210 |
-| untied | 0.2456 | 0.2583 | 0.2527 | 0.1912 | 0.2510 |
+| Variant | Frequency accuracy | Frequency macro accuracy | Frequency majority baseline | Neighbor bucket agreement | Mean neighbor cosine | Shape accuracy | Shape macro accuracy |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| tied | 0.2482 | 0.2483 | 0.2583 | 0.2609 | 0.2205 | 0.6210 | 0.4736 |
+| partial | 0.2479 | 0.2479 | 0.2583 | 0.2613 | 0.2206 | 0.6210 | 0.4736 |
+| untied | 0.2456 | 0.2457 | 0.2583 | 0.2527 | 0.1912 | 0.2510 | 0.2505 |
 
-The frequency probe is at or below its majority baseline, and nearest-neighbor frequency agreement is close to the chance level implied by the bucket distribution. The shape probe is not interpretable as a positive result because its majority baseline is 0.9658; the token-shape labels are highly imbalanced and need a balanced or macro-averaged evaluation before use.
+The frequency probe is at or below its majority baseline, and nearest-neighbor frequency agreement is close to the chance level implied by the bucket distribution. Macro accuracy makes the shape result visible despite its 0.9658 majority baseline; the tied and partial checkpoints are identical at this very short horizon, while the untied result is near chance. None of this is a semantic claim: the checkpoints are too short and the shape labels are only coarse diagnostics.
 
 Reproduce the measurements after running the pilot:
 

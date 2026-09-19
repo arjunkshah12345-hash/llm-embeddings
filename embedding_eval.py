@@ -47,11 +47,17 @@ def nearest_centroid_probe(embeddings: torch.Tensor, labels: torch.Tensor, train
     predictions = classes[(normalized[test_mask] @ centroids.T).argmax(dim=1)]
     targets = labels[test_mask]
     accuracy = (predictions == targets).float().mean().item()
-    counts = torch.bincount(labels[train_mask], minlength=int(classes.max().item()) + 1)
     test_counts = torch.bincount(labels[test_mask], minlength=int(classes.max().item()) + 1)
     majority = test_counts.max().item() / max(int(test_mask.sum().item()), 1)
+    per_class_accuracy = {}
+    for label in torch.unique(targets, sorted=True):
+        class_mask = targets == label
+        per_class_accuracy[str(int(label))] = (predictions[class_mask] == label).float().mean().item()
+    macro_accuracy = sum(per_class_accuracy.values()) / max(len(per_class_accuracy), 1)
     return {
         "accuracy": accuracy,
+        "macro_accuracy": macro_accuracy,
+        "per_class_accuracy": per_class_accuracy,
         "majority_baseline": majority,
         "train_count": int(train_mask.sum().item()),
         "test_count": int(test_mask.sum().item()),
