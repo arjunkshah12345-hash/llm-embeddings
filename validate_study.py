@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +76,19 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         except (OSError, ValueError, KeyError) as exc:
             errors.append(f"{run_name}: unreadable run metadata ({exc})")
             continue
+
+        train_or_validation = [row for row in metrics if row.get("split") in {"train", "val"}]
+        if not train_or_validation:
+            errors.append(f"{run_name}: metrics contain no train or validation records")
+        for row in train_or_validation:
+            for metric in ("loss", "perplexity"):
+                value = row.get(metric)
+                try:
+                    finite = math.isfinite(float(value))
+                except (TypeError, ValueError):
+                    finite = False
+                if not finite:
+                    errors.append(f"{run_name}: non-finite or missing {metric} at step={row.get('step')}")
 
         try:
             canonical = _canonical_config(config)

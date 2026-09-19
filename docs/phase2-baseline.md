@@ -63,12 +63,13 @@ Before publishing any claim:
 
 1. Confirm `study_validation.json` has `"passed": true` and `study_manifest.json` lists the intended common flags for every run.
 2. Confirm dataset SHA-256 hashes match across manifests.
-3. Report mean ± std of best and final validation loss/perplexity by embedding type.
-4. Report deterministic bootstrap 95% intervals from `results.json` when multiple seeds are available.
-5. Report paired seed-level deltas versus tied from `results.json`.
-6. Report parameters, extra-vs-tied, tokens/s, peak memory, and `estimated_flops_total`.
-7. Plot loss vs tokens and loss vs estimated FLOPs separately.
-8. Do not tune one variant on validation and then compare it to untuned variants.
+3. Confirm all logged train/validation losses and perplexities are finite.
+4. Report mean ± std of best and final validation loss/perplexity by embedding type.
+5. Report deterministic bootstrap 95% intervals from `results.json` when multiple seeds are available.
+6. Report paired seed-level deltas versus tied from `results.json`.
+7. Report parameters, extra-vs-tied, tokens/s, peak memory, and `estimated_flops_total`.
+8. Plot loss vs tokens and loss vs estimated FLOPs separately.
+9. Do not tune one variant on validation and then compare it to untuned variants.
 
 ## Disk note
 

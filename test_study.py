@@ -68,7 +68,9 @@ def make_study(tmp_path, token_counts=(160, 160, 160)):
         (run_dir / "config.json").write_text(json.dumps(config))
         (run_dir / "manifest.json").write_text(json.dumps({"dataset": dataset}))
         (run_dir / "parameter_counts.json").write_text("{}")
-        (run_dir / "metrics.jsonl").write_text(json.dumps({"split": "val", "tokens_seen": tokens}) + "\n")
+        (run_dir / "metrics.jsonl").write_text(
+            json.dumps({"split": "val", "step": 4, "tokens_seen": tokens, "loss": 4.0, "perplexity": 54.6}) + "\n"
+        )
         study["runs"].append({"run_name": run_name, "seed": 7, "embedding_type": embedding_type})
     (tmp_path / "study_manifest.json").write_text(json.dumps(study))
 
@@ -90,3 +92,14 @@ def test_study_validation_rejects_unequal_token_exposure(tmp_path):
 
     assert not result["passed"]
     assert any("token exposure" in error for error in result["errors"])
+
+
+def test_study_validation_rejects_non_finite_metrics(tmp_path):
+    make_study(tmp_path)
+    metrics_path = tmp_path / "seed7_partial" / "metrics.jsonl"
+    metrics_path.write_text('{"split":"val","step":4,"tokens_seen":160,"loss":NaN,"perplexity":NaN}\n')
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert any("non-finite" in error for error in result["errors"])
