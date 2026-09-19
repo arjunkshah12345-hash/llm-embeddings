@@ -18,7 +18,7 @@ Hold these fixed across all variants and seeds:
 | LR schedule | `3e-4` → `3e-5`, warmup `100` |
 | Eval | every `200` steps, `20` fixed validation batches |
 
-Token budget must match within 1% across the three embedding types (enforced by shared `sweep.py` flags).
+Token budget must match within 1% across the three embedding types. `sweep.py` writes `study_validation.json` and refuses to analyze the study if the matrix, shared settings, dataset hashes, or token exposure fail validation.
 
 ## Commands
 
@@ -61,7 +61,7 @@ python3 sweep.py \
 
 Before publishing any claim:
 
-1. Confirm `study_manifest.json` lists identical common flags for every run.
+1. Confirm `study_validation.json` has `"passed": true` and `study_manifest.json` lists the intended common flags for every run.
 2. Confirm dataset SHA-256 hashes match across manifests.
 3. Report mean ± std of best and final validation loss/perplexity by embedding type.
 4. Report parameters, extra-vs-tied, tokens/s, peak memory, and `estimated_flops_total`.

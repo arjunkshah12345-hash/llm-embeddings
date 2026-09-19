@@ -9,6 +9,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from validate_study import validate_study
+
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
@@ -91,6 +93,12 @@ def main() -> None:
             subprocess.run(command, cwd=repo_root, check=True)
             study_manifest["runs"].append({"run_name": run_name, "seed": seed, "embedding_type": embedding_type, "command": command})
             write_json(manifest_path, study_manifest)
+
+    validation = validate_study(output_dir)
+    write_json(output_dir / "study_validation.json", validation)
+    if not validation["passed"]:
+        print(json.dumps(validation, indent=2), file=sys.stderr)
+        raise SystemExit("Study fairness validation failed; refusing to analyze an invalid comparison")
 
     if not args.skip_analysis:
         analysis_dir = output_dir / "analysis"

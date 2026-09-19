@@ -42,7 +42,7 @@ python3 train.py --embedding_type partial --adapter_rank 8
 python3 analyze.py
 ```
 
-For a multi-seed study, use `sweep.py`. It forwards one shared configuration to every model/seed combination, refuses to overwrite completed runs unless asked, writes `study_manifest.json`, and analyzes the full study at the end:
+For a multi-seed study, use `sweep.py`. It forwards one shared configuration to every model/seed combination, refuses to overwrite completed runs unless asked, writes `study_manifest.json`, validates the complete matrix, dataset hashes, shared settings, and token exposure, and analyzes the full study only after that gate passes:
 
 ```bash
 python3 sweep.py --output_dir runs/study-001 --steps 2000 --seeds 1337 2027 31415
@@ -62,6 +62,7 @@ Each run directory contains:
 - `manifest.json`: git commit, command, runtime, dataset hashes, and parameter manifest;
 - `parameter_counts.json`: total, transformer, and embedding parameter counts;
 - `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, estimated FLOPs (6ND rule), gradient decomposition, and adapter norms;
+- `study_validation.json`: the sweep fairness gate and its token/hash/config checks;
 - `last.pt` and `best.pt`: compact CPU model checkpoints without optimizer state (evaluation and comparison);
 - `optimizer_last.pt`: full resume checkpoint with AdamW state, RNG, and token counters (written by default; disable with `--no-save_optimizer`).
 
@@ -102,6 +103,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py test_model.py
+python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py validate_study.py test_model.py test_study.py
 python3 -m pytest -q
 ```

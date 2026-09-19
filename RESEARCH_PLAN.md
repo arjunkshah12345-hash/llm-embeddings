@@ -38,6 +38,7 @@ Status: implemented.
 - Separate optimizer-state checkpoints (`optimizer_last.pt`) from compact evaluation checkpoints (`last.pt` / `best.pt`). Resume with `--resume path/to/optimizer_last.pt`.
 - Record wall-clock time, peak allocated memory, FLOPs estimates (`estimated_flops_*` via the 6ND rule), and tokens per second in a common metrics schema.
 - Add a sweep runner that records the exact shared configuration and run matrix. (Implemented.)
+- Enforce the comparison gate before analysis: complete seed × embedding matrix, identical dataset hashes and shared settings, and token exposure within one percent. (Implemented in `validate_study.py` and called by `sweep.py`.)
 
 Gate: no comparison is published unless all three runs use the same data manifest and the same token budget within one percent.
 
