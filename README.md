@@ -8,7 +8,7 @@ This repository is a small, reproducible experiment for comparing three GPT-styl
 
 The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, batch size, seed, and token budget the same across runs. The architectural difference is the embedding module.
 
-The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md).
+The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md). The first representation pilot is recorded in [docs/initial-representation-pilot.md](docs/initial-representation-pilot.md).
 
 The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
 
