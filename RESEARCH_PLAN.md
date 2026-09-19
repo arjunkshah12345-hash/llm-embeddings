@@ -60,6 +60,8 @@ Gate: continue only if the partial model is consistently closer to untied than t
 
 Goal: map the quality/parameter tradeoff rather than overfit to rank 8.
 
+Status: runner implemented in `adapter_sweep.py`; evidence pending the longer study.
+
 - Sweep ranks 1, 2, 4, 8, 16, and 32.
 - Sweep adapter scaling separately from rank.
 - Compare low-rank additive corrections with a small number of alternatives: per-token diagonal gates, shared low-rank corrections with separate scalars, and a bottleneck residual adapter.
