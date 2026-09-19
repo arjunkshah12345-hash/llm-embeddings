@@ -102,7 +102,7 @@ Validation uses deterministic fixed token windows, so all model variants and rep
 - embedding update size and cumulative update path (`embedding_updates.png`);
 - partial-model correction norms;
 - effective rank of the learned corrections (`correction_effective_rank.png`);
-- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates with deterministic bootstrap 95% intervals when multiple seeds are available.
+- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates, paired seed-level deltas, and deterministic bootstrap 95% intervals when multiple seeds are available.
 
 ## Gradient measurement
 
@@ -124,6 +124,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_sweep.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
 python3 -m pytest -q
 ```

@@ -65,9 +65,10 @@ Before publishing any claim:
 2. Confirm dataset SHA-256 hashes match across manifests.
 3. Report mean ± std of best and final validation loss/perplexity by embedding type.
 4. Report deterministic bootstrap 95% intervals from `results.json` when multiple seeds are available.
-5. Report parameters, extra-vs-tied, tokens/s, peak memory, and `estimated_flops_total`.
-6. Plot loss vs tokens and loss vs estimated FLOPs separately.
-7. Do not tune one variant on validation and then compare it to untuned variants.
+5. Report paired seed-level deltas versus tied from `results.json`.
+6. Report parameters, extra-vs-tied, tokens/s, peak memory, and `estimated_flops_total`.
+7. Plot loss vs tokens and loss vs estimated FLOPs separately.
+8. Do not tune one variant on validation and then compare it to untuned variants.
 
 ## Disk note
 

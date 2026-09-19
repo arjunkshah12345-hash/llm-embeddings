@@ -37,6 +37,39 @@ def bootstrap_mean_ci(values: list[float], seed: int, samples: int = 2000) -> di
     return {"low": means[low_index], "high": means[high_index]}
 
 
+def paired_comparisons(summary: list[dict]) -> dict[str, dict]:
+    """Compute paired per-seed deltas for each variant against tied."""
+    by_kind_seed = {
+        kind: {row["seed"]: row for row in summary if row["embedding_type"] == kind}
+        for kind in ("tied", "partial", "untied")
+    }
+    comparisons = {}
+    for variant in ("partial", "untied"):
+        common_seeds = sorted(set(by_kind_seed["tied"]) & set(by_kind_seed[variant]))
+        for metric in ("best_val_loss", "final_val_loss"):
+            paired_seeds = [
+                seed
+                for seed in common_seeds
+                if by_kind_seed[variant][seed][metric] is not None and by_kind_seed["tied"][seed][metric] is not None
+            ]
+            deltas = [
+                by_kind_seed[variant][seed][metric] - by_kind_seed["tied"][seed][metric]
+                for seed in paired_seeds
+            ]
+            key = f"{variant}_minus_tied_{metric}"
+            comparisons[key] = {
+                "variant": variant,
+                "baseline": "tied",
+                "metric": metric,
+                "seed_count": len(deltas),
+                "mean_delta": statistics.mean(deltas) if deltas else None,
+                "std_delta": statistics.stdev(deltas) if len(deltas) > 1 else 0.0 if deltas else None,
+                "ci95": bootstrap_mean_ci(deltas, seed=9000 + len(key)),
+                "seeds": paired_seeds,
+            }
+    return comparisons
+
+
 def discover_runs(runs_dir: Path) -> list[tuple[str, Path, dict, list[dict]]]:
     runs = []
     for run_dir in sorted(p for p in runs_dir.iterdir() if p.is_dir()):
@@ -221,6 +254,7 @@ def make_summary(runs, output_path: Path) -> dict:
         summary.append(
             {
                 "run": name,
+                "seed": counts["config"]["train"]["seed"],
                 "embedding_type": counts["embedding_type"],
                 "total_parameters": counts["total_parameters"],
                 "embedding_parameters": counts["embedding_parameters"],
@@ -265,7 +299,10 @@ def make_summary(runs, output_path: Path) -> dict:
             "mean_final_val_perplexity": statistics.mean([row["final_val_perplexity"] for row in rows]) if rows else None,
         }
 
-    output_path.write_text(json.dumps({"runs": summary, "by_embedding_type": aggregates}, indent=2) + "\n")
+    comparisons = paired_comparisons(summary)
+    output_path.write_text(
+        json.dumps({"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons}, indent=2) + "\n"
+    )
     def fmt(value):
         return "—" if value is None else f"{value:.4f}" if isinstance(value, float) else f"{value:,}"
 
@@ -300,6 +337,20 @@ def make_summary(runs, output_path: Path) -> dict:
             f"{fmt_ci(aggregate['mean_best_val_loss_ci95'])} | {fmt(aggregate['std_best_val_loss'])} | "
             f"{fmt(aggregate['mean_final_val_loss'])} | "
             f"{fmt(aggregate['mean_best_val_perplexity'])} |"
+        )
+    lines += [
+        "",
+        "## Paired differences versus tied",
+        "",
+        "Negative deltas mean the variant has lower loss than tied. Intervals are deterministic bootstrap intervals over shared seeds.",
+        "",
+        "| Variant | Metric | Seeds | Mean delta | 95% CI |",
+        "|---|---|---:|---:|---:|",
+    ]
+    for comparison in comparisons.values():
+        lines.append(
+            f"| {comparison['variant']} | {comparison['metric']} | {comparison['seed_count']} | "
+            f"{fmt(comparison['mean_delta'])} | {fmt_ci(comparison['ci95'])} |"
         )
     lines += [
         "",
@@ -357,7 +408,7 @@ def make_summary(runs, output_path: Path) -> dict:
         "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png` and `correction_effective_rank.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
-    return {"runs": summary, "by_embedding_type": aggregates}
+    return {"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons}
 
 
 def main() -> None:
