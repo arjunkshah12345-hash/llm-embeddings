@@ -86,7 +86,7 @@ Gate: call the mechanism supported only if the pattern replicates across seeds a
 
 Goal: test whether partial tying improves the usefulness of input embeddings independently of language-model loss.
 
-Status: intrinsic frequency/shape probes implemented in `embedding_eval.py`; semantic and downstream evidence pending.
+Status: intrinsic frequency/shape probes and optional predeclared single-token pair scoring are implemented in `embedding_eval.py`; semantic and downstream evidence pending.
 
 - Evaluate nearest-neighbor structure with frequency-matched token probes.
 - Measure similarity on morphological, lexical, and semantic token-pair sets where appropriate.

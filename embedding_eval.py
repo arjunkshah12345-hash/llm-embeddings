@@ -129,12 +129,56 @@ def token_shape_labels(encoder, token_ids: torch.Tensor) -> torch.Tensor:
     return torch.tensor(labels, dtype=torch.long)
 
 
+def resolve_token_id(encoder, value) -> int:
+    if isinstance(value, bool):
+        raise ValueError("boolean values are not valid token IDs")
+    if isinstance(value, int):
+        return value
+    if not isinstance(value, str):
+        raise ValueError(f"token value must be an integer ID or string, got {type(value).__name__}")
+    encoded = encoder.encode(value, allowed_special=set())
+    if len(encoded) != 1:
+        raise ValueError(f"{value!r} does not map to exactly one GPT-2 token: {encoded}")
+    return int(encoded[0])
+
+
+def pair_similarity(embedding_matrix: torch.Tensor, pairs: list[dict], encoder) -> dict:
+    """Score a predeclared list of single-token pairs by cosine similarity."""
+    normalized = torch.nn.functional.normalize(embedding_matrix.float(), dim=1)
+    scored = []
+    for index, pair in enumerate(pairs):
+        left_id = resolve_token_id(encoder, pair.get("left_token_id", pair.get("left")))
+        right_id = resolve_token_id(encoder, pair.get("right_token_id", pair.get("right")))
+        if not (0 <= left_id < normalized.size(0) and 0 <= right_id < normalized.size(0)):
+            raise ValueError(f"pair {index} contains a token ID outside the vocabulary")
+        scored.append(
+            {
+                "index": index,
+                "left_token_id": left_id,
+                "right_token_id": right_id,
+                "relation": pair.get("relation", "unspecified"),
+                "cosine": torch.dot(normalized[left_id], normalized[right_id]).item(),
+            }
+        )
+    by_relation: dict[str, list[float]] = {}
+    for row in scored:
+        by_relation.setdefault(str(row["relation"]), []).append(row["cosine"])
+    return {
+        "pair_count": len(scored),
+        "mean_cosine_by_relation": {
+            relation: sum(values) / len(values) for relation, values in sorted(by_relation.items())
+        },
+        "pairs": scored,
+    }
+
+
 def evaluate_input_embeddings(
     embedding_matrix: torch.Tensor,
     train_tokens: torch.Tensor,
     encoder,
     max_tokens: int = 512,
     neighbors: int = 5,
+    pairs: list[dict] | None = None,
 ) -> dict:
     counts = torch.bincount(train_tokens, minlength=embedding_matrix.size(0)).float()
     active = counts > 0
@@ -144,7 +188,7 @@ def evaluate_input_embeddings(
     frequency_labels = quantile_bucket_labels(torch.log1p(frequencies), bucket_count=4)
     train_mask = token_ids.remainder(5).ne(4)
     shape_labels = token_shape_labels(encoder, token_ids)
-    return {
+    result = {
         "active_token_count": int(token_ids.numel()),
         "frequency_bucket_probe": nearest_centroid_probe(embeddings, frequency_labels, train_mask),
         "token_shape_probe": nearest_centroid_probe(embeddings, shape_labels, train_mask),
@@ -156,6 +200,19 @@ def evaluate_input_embeddings(
             neighbors=neighbors,
         ),
     }
+    if pairs is not None:
+        result["pair_evaluation"] = pair_similarity(embedding_matrix, pairs, encoder)
+    return result
+
+
+def load_pairs(path: Path) -> list[dict]:
+    text = path.read_text()
+    if text.lstrip().startswith("["):
+        payload = json.loads(text)
+        if not isinstance(payload, list):
+            raise ValueError("pair file JSON must contain a list")
+        return payload
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
 def main() -> None:
@@ -165,6 +222,7 @@ def main() -> None:
     parser.add_argument("--device", default="auto")
     parser.add_argument("--max_tokens", type=int, default=512)
     parser.add_argument("--neighbors", type=int, default=5)
+    parser.add_argument("--pairs", default="", help="JSON or JSONL file of single-token pairs")
     parser.add_argument("--output", default="")
     args = parser.parse_args()
 
@@ -182,6 +240,7 @@ def main() -> None:
     with torch.no_grad():
         input_matrix = model.embeddings.weight("input").detach().cpu()
     encoder = tiktoken.get_encoding("gpt2")
+    pairs = load_pairs(Path(args.pairs)) if args.pairs else None
     result = {
         "run_dir": str(run_dir),
         "checkpoint": args.checkpoint,
@@ -195,6 +254,7 @@ def main() -> None:
             encoder,
             max_tokens=args.max_tokens,
             neighbors=args.neighbors,
+            pairs=pairs,
         ),
     }
     output = Path(args.output) if args.output else run_dir / "embedding_eval.json"

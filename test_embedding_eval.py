@@ -1,6 +1,6 @@
 import torch
 
-from embedding_eval import nearest_centroid_probe, nearest_neighbor_statistics, quantile_bucket_labels
+from embedding_eval import nearest_centroid_probe, nearest_neighbor_statistics, pair_similarity, quantile_bucket_labels
 
 
 def test_quantile_buckets_are_deterministic():
@@ -28,3 +28,22 @@ def test_nearest_neighbor_statistics_reports_bucket_agreement():
     )
     assert result["token_count"] == 4
     assert result["mean_frequency_bucket_agreement"] == 1.0
+
+
+def test_pair_similarity_groups_predeclared_relations():
+    class Encoder:
+        def encode(self, value, allowed_special):
+            return [int(value)]
+
+    embeddings = torch.tensor([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    result = pair_similarity(
+        embeddings,
+        [
+            {"left": "0", "right": "1", "relation": "same"},
+            {"left_token_id": 0, "right_token_id": 2, "relation": "different"},
+        ],
+        Encoder(),
+    )
+    assert result["pair_count"] == 2
+    assert result["mean_cosine_by_relation"]["same"] == 1.0
+    assert result["mean_cosine_by_relation"]["different"] == 0.0
