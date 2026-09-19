@@ -269,11 +269,25 @@ class GPTModel(nn.Module):
             values = [g.detach().float().pow(2).sum() for g in grads if g is not None]
             return math.sqrt(torch.stack(values).sum().item()) if values else 0.0
 
+        def vector(grads: Iterable[torch.Tensor | None]) -> torch.Tensor:
+            values = [g.detach().float().reshape(-1) for g in grads if g is not None]
+            return torch.cat(values) if values else torch.empty(0, device=idx.device)
+
+        input_vector = vector(input_grads)
+        output_vector = vector(output_grads)
+        vector_denominator = input_vector.norm() * output_vector.norm()
+        overall_cosine = (
+            torch.dot(input_vector, output_vector).item() / vector_denominator.item()
+            if vector_denominator.item() > 0
+            else 0.0
+        )
+
         metrics = {
             "input_side_loss": input_loss.detach().item(),
             "output_side_loss": output_loss.detach().item(),
             "input_grad_norm": norm(input_grads),
             "output_grad_norm": norm(output_grads),
+            "input_output_grad_cosine": overall_cosine,
         }
         metrics["output_to_input_grad_ratio"] = metrics["output_grad_norm"] / max(metrics["input_grad_norm"], 1e-12)
 
@@ -286,10 +300,18 @@ class GPTModel(nn.Module):
             metrics["shared_output_to_input_grad_ratio"] = metrics["shared_output_grad_norm"] / max(
                 metrics["shared_input_grad_norm"], 1e-12
             )
+            shared_denominator = shared_input_grad.float().norm() * shared_output_grad.float().norm()
+            metrics["shared_input_output_grad_cosine"] = (
+                torch.dot(shared_input_grad.float().reshape(-1), shared_output_grad.float().reshape(-1)).item()
+                / shared_denominator.item()
+                if shared_denominator.item() > 0
+                else 0.0
+            )
         else:
             metrics["shared_input_grad_norm"] = 0.0
             metrics["shared_output_grad_norm"] = 0.0
             metrics["shared_output_to_input_grad_ratio"] = 0.0
+            metrics["shared_input_output_grad_cosine"] = 0.0
         return metrics
 
     def combined_embedding_grad_norm(self) -> float:

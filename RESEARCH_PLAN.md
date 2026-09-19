@@ -73,7 +73,7 @@ Gate: select the simplest adapter family on the Pareto frontier and freeze it be
 Goal: test whether the shared matrix is actually receiving unequal role pressure and whether the correction directions explain the difference.
 
 - Track input-side, output-side, and combined gradient norms for the shared matrix.
-- Track update norms, cumulative parameter displacement, cosine similarity of input/output gradients, and the output-to-input ratio over training.
+- Track update norms, cumulative parameter displacement, cosine similarity of input/output gradients, and the output-to-input ratio over training. (Gradient cosine logging and plotting are implemented.)
 - Measure correction norm, rank utilization, singular values, and alignment between corrections and the shared matrix.
 - Compare token-frequency buckets and token types such as punctuation, whitespace, common words, and rare words.
 - Run ablations that stop gradients through the input or output path for controlled intervals.

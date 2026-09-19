@@ -36,6 +36,8 @@ def test_gradient_decomposition_and_forward():
     assert metrics["shared_input_grad_norm"] > 0
     assert metrics["shared_output_grad_norm"] > 0
     assert torch.isfinite(torch.tensor(metrics["output_to_input_grad_ratio"]))
+    assert -1.0 <= metrics["input_output_grad_cosine"] <= 1.0
+    assert -1.0 <= metrics["shared_input_output_grad_cosine"] <= 1.0
 
     model.loss(x, y).backward()
     assert model.combined_embedding_grad_norm() > 0

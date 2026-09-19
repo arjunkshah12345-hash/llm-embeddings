@@ -80,8 +80,9 @@ Validation uses deterministic fixed token windows, so all model variants and rep
 - validation loss versus estimated training FLOPs;
 - parameter count versus validation loss;
 - input/output embedding gradient norms and their output-to-input ratio (`gradient_norms_and_ratio.png`);
+- input/output gradient alignment (`gradient_alignment.png`);
 - partial-model correction norms;
-- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates.
+- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates with deterministic bootstrap 95% intervals when multiple seeds are available.
 
 ## Gradient measurement
 

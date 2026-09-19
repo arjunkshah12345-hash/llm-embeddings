@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 import statistics
 from pathlib import Path
 
@@ -16,6 +17,24 @@ def read_jsonl(path: Path) -> list[dict]:
     if not path.exists():
         return []
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def bootstrap_mean_ci(values: list[float], seed: int, samples: int = 2000) -> dict[str, float] | None:
+    """Return a deterministic percentile bootstrap interval for a sample mean."""
+    if not values:
+        return None
+    values = [float(value) for value in values]
+    if len(values) == 1:
+        return {"low": values[0], "high": values[0]}
+    rng = random.Random(seed)
+    means = [
+        statistics.mean(rng.choice(values) for _ in values)
+        for _ in range(samples)
+    ]
+    means.sort()
+    low_index = int(0.025 * (len(means) - 1))
+    high_index = int(0.975 * (len(means) - 1))
+    return {"low": means[low_index], "high": means[high_index]}
 
 
 def discover_runs(runs_dir: Path) -> list[tuple[str, Path, dict, list[dict]]]:
@@ -68,6 +87,35 @@ def plot_gradient(runs, path: Path) -> None:
     fig.tight_layout()
     fig.savefig(path, dpi=160)
     plt.close(fig)
+
+
+def plot_gradient_alignment(runs, path: Path) -> None:
+    plt.figure(figsize=(8, 5))
+    plotted = False
+    for name, _, _, metrics in runs:
+        rows = [r for r in metrics if r.get("split") == "train" and "input_output_grad_cosine" in r]
+        if rows:
+            plotted = True
+            steps = [r["step"] for r in rows]
+            plt.plot(steps, [r["input_output_grad_cosine"] for r in rows], marker="o", label=f"{name} all")
+            if any("shared_input_output_grad_cosine" in r for r in rows):
+                plt.plot(
+                    steps,
+                    [r.get("shared_input_output_grad_cosine", 0.0) for r in rows],
+                    linestyle="--",
+                    marker="x",
+                    label=f"{name} shared",
+                )
+    plt.xlabel("Step")
+    plt.ylabel("Input/output gradient cosine")
+    plt.title("Input/output embedding-gradient alignment")
+    plt.ylim(-1.05, 1.05)
+    plt.grid(alpha=0.25)
+    if plotted:
+        plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=160)
+    plt.close()
 
 
 def plot_corrections(runs, path: Path) -> None:
@@ -159,14 +207,22 @@ def make_summary(runs, output_path: Path) -> dict:
             "additional_parameters_vs_tied": rows[0]["additional_parameters_vs_tied"] if rows else None,
             "mean_best_val_loss": statistics.mean(losses) if losses else None,
             "std_best_val_loss": statistics.stdev(losses) if len(losses) > 1 else 0.0 if losses else None,
+            "mean_best_val_loss_ci95": bootstrap_mean_ci(losses, seed=1337 + len(kind)),
             "mean_best_val_perplexity": statistics.mean(perplexities) if perplexities else None,
+            "mean_best_val_perplexity_ci95": bootstrap_mean_ci(perplexities, seed=2027 + len(kind)),
             "mean_final_val_loss": statistics.mean([row["final_val_loss"] for row in rows]) if rows else None,
+            "mean_final_val_loss_ci95": bootstrap_mean_ci(
+                [row["final_val_loss"] for row in rows], seed=31415 + len(kind)
+            ),
             "mean_final_val_perplexity": statistics.mean([row["final_val_perplexity"] for row in rows]) if rows else None,
         }
 
     output_path.write_text(json.dumps({"runs": summary, "by_embedding_type": aggregates}, indent=2) + "\n")
     def fmt(value):
         return "—" if value is None else f"{value:.4f}" if isinstance(value, float) else f"{value:,}"
+
+    def fmt_ci(value):
+        return "—" if value is None else f"[{value['low']:.4f}, {value['high']:.4f}]"
 
     lines = [
         "# Embedding experiment results",
@@ -187,13 +243,14 @@ def make_summary(runs, output_path: Path) -> dict:
         "",
         "## Aggregate by embedding type",
         "",
-        "| Model | Runs | Mean best val loss | Std. dev. | Mean final val loss | Mean perplexity |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Model | Runs | Mean best val loss | 95% CI | Std. dev. | Mean final val loss | Mean perplexity |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for kind, aggregate in aggregates.items():
         lines.append(
             f"| {kind} | {aggregate['run_count']} | {fmt(aggregate['mean_best_val_loss'])} | "
-            f"{fmt(aggregate['std_best_val_loss'])} | {fmt(aggregate['mean_final_val_loss'])} | "
+            f"{fmt_ci(aggregate['mean_best_val_loss_ci95'])} | {fmt(aggregate['std_best_val_loss'])} | "
+            f"{fmt(aggregate['mean_final_val_loss'])} | "
             f"{fmt(aggregate['mean_best_val_perplexity'])} |"
         )
     lines += [
@@ -249,7 +306,7 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
-        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png`; correction plot: `correction_norms.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; correction plot: `correction_norms.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
     return {"runs": summary, "by_embedding_type": aggregates}
@@ -270,6 +327,7 @@ def main() -> None:
     plot_lines(runs, "val", "step", "loss", "Validation loss", "Loss", output_dir / "validation_loss.png")
     plot_validation_loss_vs_flops(runs, output_dir / "validation_loss_vs_estimated_flops.png")
     plot_gradient(runs, output_dir / "gradient_norms_and_ratio.png")
+    plot_gradient_alignment(runs, output_dir / "gradient_alignment.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
 
     plt.figure(figsize=(7, 5))
