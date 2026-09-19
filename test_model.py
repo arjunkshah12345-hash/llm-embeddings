@@ -108,3 +108,58 @@ def test_compact_checkpoint_round_trip(tmp_path):
         assert torch.equal(parameter, restored.state_dict()[name]), name
     assert loaded["step"] == 3
     assert loaded["best_val_loss"] == 4.5
+    assert loaded["kind"] == "compact"
+    assert "optimizer" not in loaded
+
+
+def test_optimizer_checkpoint_resume_round_trip(tmp_path):
+    from train import estimate_flops, load_resume_checkpoint, optimizer_checkpoint_payload
+
+    model_config = ModelConfig(vocab_size=97, block_size=16, n_layer=2, n_head=2, n_embd=32, adapter_rank=4)
+    train_config = TrainConfig(embedding_type="partial", steps=5, output_dir=str(tmp_path))
+    model = GPTModel(model_config, "partial", seed=11)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    x = torch.randint(0, 97, (2, 16))
+    y = torch.randint(0, 97, (2, 16))
+    loss = model.loss(x, y)
+    loss.backward()
+    optimizer.step()
+    path = tmp_path / "optimizer_last.pt"
+    save_checkpoint(
+        path,
+        optimizer_checkpoint_payload(
+            model,
+            optimizer,
+            model_config,
+            train_config,
+            torch.device("cpu"),
+            step=2,
+            best_val_loss=3.25,
+            tokens_seen=64,
+            training_elapsed=1.5,
+        ),
+    )
+    restored = GPTModel(model_config, "partial", seed=0)
+    restored_opt = torch.optim.AdamW(restored.parameters(), lr=1e-3)
+    loaded = load_resume_checkpoint(path, restored, restored_opt, torch.device("cpu"))
+    assert loaded["kind"] == "optimizer"
+    assert loaded["step"] == 2
+    assert loaded["tokens_seen"] == 64
+    assert loaded["training_wall_time_seconds"] == 1.5
+    for name, parameter in model.state_dict().items():
+        assert torch.equal(parameter, restored.state_dict()[name]), name
+    assert restored_opt.state_dict()["state"]
+
+
+def test_flops_estimate_scales_with_tokens_and_embedding_cost():
+    from train import estimate_flops
+
+    tied = {"transformer_parameters": 1000, "embedding_parameters": 500}
+    untied = {"transformer_parameters": 1000, "embedding_parameters": 1000}
+    one = estimate_flops(tied, tokens=1)
+    ten = estimate_flops(tied, tokens=10)
+    assert one["estimated_flops_total"] == 6.0 * 1500
+    assert ten["estimated_flops_total"] == 10 * one["estimated_flops_total"]
+    untied_flops = estimate_flops(untied, tokens=1)
+    assert untied_flops["estimated_flops_non_embedding"] == one["estimated_flops_non_embedding"]
+    assert untied_flops["estimated_flops_total"] > one["estimated_flops_total"]

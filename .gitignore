@@ -8,3 +8,5 @@ sanity_runs/
 sanity_runs2/
 analysis/
 sanity_analysis/
+phase2-*/
+*.pt.tmp

@@ -84,12 +84,38 @@ def git_commit() -> str:
         return "unknown"
 
 
-def checkpoint_payload(model: GPTModel, model_config: ModelConfig, train_config: TrainConfig, device: torch.device, step: int, best_val_loss: float) -> dict:
-    # Keep checkpoints small enough for local research runs. Optimizer state is
-    # intentionally omitted; this first version supports evaluation/reproduction
-    # rather than exact mid-run resume.
+def estimate_flops(parameter_counts: dict[str, int], tokens: int) -> dict[str, float]:
+    """Approximate training FLOPs with the common 6ND dense-matmul rule.
+
+    Input embedding lookups are treated as negligible. Output projection cost is
+    folded into embedding/shared parameter counts. Transformer and embedding
+    FLOPs are reported separately so tied/untied/partial comparisons stay fair.
+    """
+    transformer = float(parameter_counts["transformer_parameters"])
+    embedding = float(parameter_counts["embedding_parameters"])
+    non_embedding_flops = 6.0 * transformer * tokens
+    embedding_flops = 6.0 * embedding * tokens
+    return {
+        "estimated_flops_non_embedding": non_embedding_flops,
+        "estimated_flops_embedding": embedding_flops,
+        "estimated_flops_total": non_embedding_flops + embedding_flops,
+        "flops_per_token_non_embedding": 6.0 * transformer,
+        "flops_per_token_total": 6.0 * (transformer + embedding),
+    }
+
+
+def compact_checkpoint_payload(
+    model: GPTModel,
+    model_config: ModelConfig,
+    train_config: TrainConfig,
+    device: torch.device,
+    step: int,
+    best_val_loss: float,
+) -> dict:
+    """Evaluation checkpoint without optimizer state (small, comparable across runs)."""
     model_state = {key: value.detach().cpu() for key, value in model.state_dict().items()}
     return {
+        "kind": "compact",
         "model": model_state,
         "step": step,
         "best_val_loss": best_val_loss,
@@ -97,10 +123,68 @@ def checkpoint_payload(model: GPTModel, model_config: ModelConfig, train_config:
     }
 
 
+def optimizer_checkpoint_payload(
+    model: GPTModel,
+    optimizer: torch.optim.Optimizer,
+    model_config: ModelConfig,
+    train_config: TrainConfig,
+    device: torch.device,
+    step: int,
+    best_val_loss: float,
+    tokens_seen: int,
+    training_elapsed: float,
+) -> dict:
+    """Full resume checkpoint with AdamW state and RNG."""
+    payload = compact_checkpoint_payload(model, model_config, train_config, device, step, best_val_loss)
+    payload.update(
+        {
+            "kind": "optimizer",
+            "optimizer": optimizer.state_dict(),
+            "tokens_seen": tokens_seen,
+            "training_wall_time_seconds": training_elapsed,
+            "rng": {
+                "python": random.getstate(),
+                "numpy": np.random.get_state(),
+                "torch": torch.get_rng_state(),
+                "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            },
+        }
+    )
+    return payload
+
+
+# Backwards-compatible alias used by tests and callers.
+checkpoint_payload = compact_checkpoint_payload
+
+
 def save_checkpoint(path: Path, payload: dict) -> None:
     temp_path = path.with_suffix(path.suffix + ".tmp")
     torch.save(payload, temp_path)
     temp_path.replace(path)
+
+
+def load_resume_checkpoint(
+    path: Path,
+    model: GPTModel,
+    optimizer: torch.optim.Optimizer,
+    device: torch.device,
+) -> dict:
+    checkpoint = torch.load(path, map_location=device, weights_only=False)
+    if "model" not in checkpoint:
+        raise ValueError(f"Resume checkpoint missing model weights: {path}")
+    model.load_state_dict(checkpoint["model"])
+    if "optimizer" in checkpoint:
+        optimizer.load_state_dict(checkpoint["optimizer"])
+    rng = checkpoint.get("rng") or {}
+    if rng.get("python") is not None:
+        random.setstate(rng["python"])
+    if rng.get("numpy") is not None:
+        np.random.set_state(rng["numpy"])
+    if rng.get("torch") is not None:
+        torch.set_rng_state(rng["torch"])
+    if rng.get("cuda") is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(rng["cuda"])
+    return checkpoint
 
 
 def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
@@ -131,6 +215,17 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument(
+        "--resume",
+        default="",
+        help="path to optimizer_last.pt (or any optimizer-kind checkpoint) to continue training",
+    )
+    parser.add_argument(
+        "--save_optimizer",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="also write optimizer_last.pt for exact mid-run resume (default: true)",
+    )
     args = parser.parse_args()
     model_config = ModelConfig(
         block_size=args.block_size,
@@ -166,7 +261,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
 
 
 def main() -> None:
-    model_config, train_config, _ = parse_args()
+    model_config, train_config, args = parse_args()
     set_seed(train_config.seed)
     device = choose_device(train_config.device)
     dataset = TokenDataset(train_config.data_dir, train_config.dataset, train_config.seed)
@@ -176,8 +271,9 @@ def main() -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=train_config.learning_rate, weight_decay=train_config.weight_decay)
     run_dir = Path(train_config.output_dir) / train_config.run_name
     run_dir.mkdir(parents=True, exist_ok=True)
+    parameter_counts = model.parameter_counts()
     write_json(run_dir / "config.json", {**as_dict(model_config, train_config), "device": str(device), "dataset": dataset.metadata()})
-    write_json(run_dir / "parameter_counts.json", model.parameter_counts())
+    write_json(run_dir / "parameter_counts.json", parameter_counts)
     write_json(
         run_dir / "manifest.json",
         {
@@ -190,21 +286,36 @@ def main() -> None:
             "tokenizer": {"name": "gpt2", "vocab_size": dataset.vocab_size},
             "dataset": dataset.metadata(),
             "model": model.config_dict(),
-            "parameter_counts": model.parameter_counts(),
+            "parameter_counts": parameter_counts,
+            "flops_accounting": {
+                "rule": "6ND dense-matmul approximation; embedding lookups treated as negligible",
+                **estimate_flops(parameter_counts, tokens=1),
+            },
+            "resume_from": args.resume or None,
+            "save_optimizer": bool(args.save_optimizer),
         },
     )
     metrics_path = run_dir / "metrics.jsonl"
-    metrics_path.unlink(missing_ok=True)
+    start_step = 0
     best_val = float("inf")
     tokens_seen = 0
     peak_memory = 0.0
     started = time.perf_counter()
     training_elapsed = 0.0
+    if args.resume:
+        resumed = load_resume_checkpoint(Path(args.resume), model, optimizer, device)
+        start_step = int(resumed.get("step", -1)) + 1
+        best_val = float(resumed.get("best_val_loss", best_val))
+        tokens_seen = int(resumed.get("tokens_seen", 0))
+        training_elapsed = float(resumed.get("training_wall_time_seconds", 0.0))
+        print(f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}")
+    else:
+        metrics_path.unlink(missing_ok=True)
     model.train()
 
     print(f"run={train_config.run_name} embedding={train_config.embedding_type} device={device}")
-    print(json.dumps(model.parameter_counts(), sort_keys=True))
-    for step in range(train_config.steps):
+    print(json.dumps(parameter_counts, sort_keys=True))
+    for step in range(start_step, train_config.steps):
         step_started = time.perf_counter()
         lr = learning_rate(step, train_config)
         for group in optimizer.param_groups:
@@ -225,9 +336,11 @@ def main() -> None:
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
         optimizer.step()
         training_elapsed += time.perf_counter() - step_started
-        elapsed = time.perf_counter() - started
+        # Session wall clock resets on resume; training_wall_time_seconds stays cumulative.
+        wall_elapsed = time.perf_counter() - started
         memory = memory_mb(device)
         peak_memory = max(peak_memory, memory)
+        flops = estimate_flops(parameter_counts, tokens_seen)
         if step % train_config.log_interval == 0:
             record = {
                 "step": step,
@@ -238,10 +351,11 @@ def main() -> None:
                 "tokens_seen": tokens_seen,
                 "tokens_per_second": tokens_seen / max(training_elapsed, 1e-9),
                 "training_wall_time_seconds": training_elapsed,
-                "wall_time_seconds": elapsed,
+                "wall_time_seconds": wall_elapsed,
                 "grad_norm": float(grad_norm),
                 "combined_embedding_grad_norm": model.combined_embedding_grad_norm(),
                 "peak_gpu_memory_mb": peak_memory,
+                **flops,
                 **(gradient_metrics or {}),
                 **model.embeddings.adapter_metrics(),
             }
@@ -263,22 +377,55 @@ def main() -> None:
                 "tokens_seen": tokens_seen,
                 "tokens_per_second": tokens_seen / max(training_elapsed, 1e-9),
                 "training_wall_time_seconds": training_elapsed,
-                "wall_time_seconds": elapsed,
+                "wall_time_seconds": wall_elapsed,
                 "peak_gpu_memory_mb": peak_memory,
+                **flops,
             }
             with metrics_path.open("a") as handle:
                 handle.write(json.dumps(val_record) + "\n")
             print(f"step={step:5d} val_loss={val_loss:.4f} val_ppl={val_record['perplexity']:.2f}")
-            checkpoint = checkpoint_payload(model, model_config, train_config, device, step, min(best_val, val_loss))
+            checkpoint = compact_checkpoint_payload(
+                model, model_config, train_config, device, step, min(best_val, val_loss)
+            )
             save_checkpoint(run_dir / "last.pt", checkpoint)
             if val_loss < best_val:
                 best_val = val_loss
                 save_checkpoint(run_dir / "best.pt", checkpoint)
+            if args.save_optimizer:
+                save_checkpoint(
+                    run_dir / "optimizer_last.pt",
+                    optimizer_checkpoint_payload(
+                        model,
+                        optimizer,
+                        model_config,
+                        train_config,
+                        device,
+                        step,
+                        best_val,
+                        tokens_seen,
+                        training_elapsed,
+                    ),
+                )
         elif step % train_config.save_interval == 0:
             save_checkpoint(
                 run_dir / "last.pt",
-                checkpoint_payload(model, model_config, train_config, device, step, best_val),
+                compact_checkpoint_payload(model, model_config, train_config, device, step, best_val),
             )
+            if args.save_optimizer:
+                save_checkpoint(
+                    run_dir / "optimizer_last.pt",
+                    optimizer_checkpoint_payload(
+                        model,
+                        optimizer,
+                        model_config,
+                        train_config,
+                        device,
+                        step,
+                        best_val,
+                        tokens_seen,
+                        training_elapsed,
+                    ),
+                )
 
     print(f"finished run={train_config.run_name} best_val_loss={best_val:.4f} output={run_dir}")
 

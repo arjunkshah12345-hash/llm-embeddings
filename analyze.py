@@ -88,6 +88,31 @@ def plot_corrections(runs, path: Path) -> None:
     plt.close()
 
 
+def plot_validation_loss_vs_flops(runs, path: Path) -> None:
+    plt.figure(figsize=(8, 5))
+    for name, _, _, metrics in runs:
+        rows = [
+            r
+            for r in metrics
+            if r.get("split") == "val" and "estimated_flops_total" in r
+        ]
+        if rows:
+            plt.plot(
+                [r["estimated_flops_total"] / 1e12 for r in rows],
+                [r["loss"] for r in rows],
+                marker="o",
+                label=name,
+            )
+    plt.xlabel("Estimated training FLOPs (trillions)")
+    plt.ylabel("Validation loss")
+    plt.title("Validation loss versus estimated training compute")
+    plt.grid(alpha=0.25)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=160)
+    plt.close()
+
+
 def make_summary(runs, output_path: Path) -> dict:
     summary = []
     for name, run_dir, counts, metrics in runs:
@@ -96,6 +121,7 @@ def make_summary(runs, output_path: Path) -> dict:
         best = min(val_rows, key=lambda r: r["loss"]) if val_rows else None
         final = val_rows[-1] if val_rows else None
         last_train = train_rows[-1] if train_rows else {}
+        last_with_flops = next((r for r in reversed(metrics) if "estimated_flops_total" in r), {})
         summary.append(
             {
                 "run": name,
@@ -109,6 +135,9 @@ def make_summary(runs, output_path: Path) -> dict:
                 "final_val_loss": final["loss"] if final else None,
                 "final_val_perplexity": final["perplexity"] if final else None,
                 "tokens_per_second": last_train.get("tokens_per_second"),
+                "training_wall_time_seconds": last_train.get("training_wall_time_seconds"),
+                "estimated_flops_total": last_with_flops.get("estimated_flops_total"),
+                "estimated_flops_non_embedding": last_with_flops.get("estimated_flops_non_embedding"),
                 "peak_gpu_memory_mb": max((r.get("peak_gpu_memory_mb", 0.0) for r in metrics), default=0.0),
                 "run_dir": str(run_dir),
             }
@@ -136,22 +165,23 @@ def make_summary(runs, output_path: Path) -> dict:
         }
 
     output_path.write_text(json.dumps({"runs": summary, "by_embedding_type": aggregates}, indent=2) + "\n")
+    def fmt(value):
+        return "—" if value is None else f"{value:.4f}" if isinstance(value, float) else f"{value:,}"
+
     lines = [
         "# Embedding experiment results",
         "",
         "Lower validation loss/perplexity is better. Results are based on the logged validation checkpoints.",
         "",
-        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Final val loss | Val perplexity | Tokens/s |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Final val loss | Val perplexity | Tokens/s | Train s | FLOPs (T) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary:
-        def fmt(value):
-            return "—" if value is None else f"{value:.4f}" if isinstance(value, float) else f"{value:,}"
-
         lines.append(
             f"| {row['embedding_type']} | {row['total_parameters']:,} | {row['embedding_parameters']:,} | "
             f"{fmt(row['additional_parameters_vs_tied'])} | {fmt(row['best_val_loss'])} | {fmt(row['final_val_loss'])} | "
-            f"{fmt(row['best_val_perplexity'])} | {fmt(row['tokens_per_second'])} |"
+            f"{fmt(row['best_val_perplexity'])} | {fmt(row['tokens_per_second'])} | "
+            f"{fmt(row['training_wall_time_seconds'])} | {fmt(row['estimated_flops_total'] / 1e12 if row['estimated_flops_total'] is not None else None)} |"
         )
     lines += [
         "",
@@ -219,7 +249,7 @@ def make_summary(runs, output_path: Path) -> dict:
         )
     lines += [
         "",
-        "Gradient plots: `gradient_norms_and_ratio.png`; correction plot: `correction_norms.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png`; correction plot: `correction_norms.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
     return {"runs": summary, "by_embedding_type": aggregates}
@@ -238,6 +268,7 @@ def main() -> None:
         raise SystemExit(f"No complete runs found under {runs_dir}")
     plot_lines(runs, "train", "step", "loss", "Training loss", "Loss", output_dir / "training_loss.png")
     plot_lines(runs, "val", "step", "loss", "Validation loss", "Loss", output_dir / "validation_loss.png")
+    plot_validation_loss_vs_flops(runs, output_dir / "validation_loss_vs_estimated_flops.png")
     plot_gradient(runs, output_dir / "gradient_norms_and_ratio.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
 

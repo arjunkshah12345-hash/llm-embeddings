@@ -29,13 +29,15 @@ Exit condition: all three variants train, save checkpoints, report finite losses
 
 Goal: eliminate measurement ambiguity before spending compute.
 
-- Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit. (Implemented in the current baseline.)
-- Add deterministic fixed validation windows alongside sampled validation batches. (Implemented in the current baseline; evaluation now uses fixed windows.)
+Status: implemented.
+
+- Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit. (Implemented.)
+- Add deterministic fixed validation windows alongside sampled validation batches. (Implemented; evaluation uses fixed windows.)
 - Verify that the input/output gradient decomposition matches finite-difference checks on tiny models. (Implemented.)
-- Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting. (Implemented for the current checkpoint and fixed-window formats.)
-- Separate optimizer-state checkpoints from compact evaluation checkpoints when resume support is needed.
-- Record wall-clock time, peak allocated memory, FLOPs estimates, and tokens per second in a common schema.
-- Add a sweep runner that records the exact shared configuration and run matrix. (Implemented in the current baseline.)
+- Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting. (Implemented.)
+- Separate optimizer-state checkpoints (`optimizer_last.pt`) from compact evaluation checkpoints (`last.pt` / `best.pt`). Resume with `--resume path/to/optimizer_last.pt`.
+- Record wall-clock time, peak allocated memory, FLOPs estimates (`estimated_flops_*` via the 6ND rule), and tokens per second in a common metrics schema.
+- Add a sweep runner that records the exact shared configuration and run matrix. (Implemented.)
 
 Gate: no comparison is published unless all three runs use the same data manifest and the same token budget within one percent.
 
@@ -43,9 +45,11 @@ Gate: no comparison is published unless all three runs use the same data manifes
 
 Goal: determine whether the loss signal survives beyond the six-step smoke test.
 
+Status: ready to run (see [docs/phase2-baseline.md](docs/phase2-baseline.md)).
+
 - Run 10k–100k steps on WikiText-2 with at least three seeds.
 - Keep the transformer configuration fixed across variants and repeat the analysis at two model sizes in the 20M–50M range.
-- Report mean, standard deviation, best validation loss, final validation loss, perplexity, throughput, memory, and parameter count.
+- Report mean, standard deviation, best validation loss, final validation loss, perplexity, throughput, memory, FLOPs, and parameter count.
 - Use confidence intervals or bootstrap intervals for differences between variants.
 - Compare equal training tokens first; add compute-matched results as a separate analysis because untied output projections have different cost.
 

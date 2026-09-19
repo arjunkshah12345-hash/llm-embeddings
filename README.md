@@ -8,7 +8,7 @@ This repository is a small, reproducible experiment for comparing three GPT-styl
 
 The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, batch size, seed, and token budget the same across runs. The architectural difference is the embedding module.
 
-The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md).
+The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md).
 
 The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
 
@@ -61,14 +61,22 @@ Each run directory contains:
 - `config.json`: exact model, data, optimizer, and seed settings;
 - `manifest.json`: git commit, command, runtime, dataset hashes, and parameter manifest;
 - `parameter_counts.json`: total, transformer, and embedding parameter counts;
-- `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, gradient decomposition, and adapter norms;
-- `last.pt` and `best.pt`: CPU model checkpoints. The first version intentionally omits AdamW state to keep local artifacts compact; checkpoints are for evaluation and comparison rather than exact mid-run resume.
+- `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, estimated FLOPs (6ND rule), gradient decomposition, and adapter norms;
+- `last.pt` and `best.pt`: compact CPU model checkpoints without optimizer state (evaluation and comparison);
+- `optimizer_last.pt`: full resume checkpoint with AdamW state, RNG, and token counters (written by default; disable with `--no-save_optimizer`).
+
+Resume an interrupted run:
+
+```bash
+python3 train.py --embedding_type partial --resume runs/partial/optimizer_last.pt --steps 5000
+```
 
 Validation uses deterministic fixed token windows, so all model variants and repeated evaluations see the same validation examples.
 
 `analyze.py` creates:
 
 - training and validation loss plots;
+- validation loss versus estimated training FLOPs;
 - parameter count versus validation loss;
 - input/output embedding gradient norms and their output-to-input ratio (`gradient_norms_and_ratio.png`);
 - partial-model correction norms;
