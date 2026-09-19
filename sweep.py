@@ -16,6 +16,28 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def run_is_complete(run_dir: Path, steps: int) -> bool:
+    validation = [row for row in read_jsonl(run_dir / "metrics.jsonl") if row.get("split") == "val"]
+    return bool(validation) and max(int(row.get("step", -1)) for row in validation) >= steps - 1
+
+
+def upsert_run(manifest: dict, entry: dict) -> None:
+    key = (int(entry["seed"]), entry["embedding_type"])
+    runs = [
+        existing
+        for existing in manifest.get("runs", [])
+        if (int(existing["seed"]), existing["embedding_type"]) != key
+    ]
+    runs.append(entry)
+    manifest["runs"] = runs
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output_dir", default="runs/study-001")
@@ -44,12 +66,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
     parser.add_argument("--overwrite", action="store_true", help="allow existing run directories to be replaced")
+    parser.add_argument(
+        "--resume_existing",
+        action="store_true",
+        help="resume incomplete runs from optimizer_last.pt and skip completed runs in an existing study",
+    )
     parser.add_argument("--skip_analysis", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.overwrite and args.resume_existing:
+        raise SystemExit("--overwrite and --resume_existing are mutually exclusive")
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     common_keys = (
@@ -58,18 +87,40 @@ def main() -> None:
         "adapter_alpha", "learning_rate", "min_learning_rate", "warmup_steps",
         "weight_decay", "grad_clip", "eval_interval", "eval_batches", "log_interval", "save_interval",
     )
-    study_manifest = {
+    common = {key: getattr(args, key) for key in common_keys}
+    new_manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "python": sys.executable,
         "script": "train.py",
-        "common": {key: getattr(args, key) for key in common_keys},
+        "common": common,
         "seeds": args.seeds,
         "embedding_types": args.embedding_types,
         "runs": [],
     }
     manifest_path = output_dir / "study_manifest.json"
-    if manifest_path.exists() and not args.overwrite:
-        raise SystemExit(f"Study manifest already exists: {manifest_path}; use --overwrite to start a new study")
+    if manifest_path.exists():
+        if not args.resume_existing and not args.overwrite:
+            raise SystemExit(f"Study manifest already exists: {manifest_path}; use --overwrite or --resume_existing")
+        if args.resume_existing:
+            study_manifest = json.loads(manifest_path.read_text())
+            if study_manifest.get("seeds") != new_manifest["seeds"]:
+                raise SystemExit("Cannot resume study: manifest seeds differ from requested configuration")
+            if study_manifest.get("embedding_types") != new_manifest["embedding_types"]:
+                raise SystemExit("Cannot resume study: manifest embedding_types differ from requested configuration")
+            previous_common = study_manifest.get("common", {})
+            for key, value in common.items():
+                if key == "steps":
+                    if int(value) < int(previous_common.get(key, value)):
+                        raise SystemExit("Cannot resume study with fewer steps than the existing manifest")
+                elif previous_common.get(key) != value:
+                    raise SystemExit(f"Cannot resume study: manifest common setting {key} differs")
+            study_manifest["common"] = common
+        else:
+            study_manifest = new_manifest
+    else:
+        if args.resume_existing:
+            raise SystemExit(f"Cannot resume missing study manifest: {manifest_path}")
+        study_manifest = new_manifest
     write_json(manifest_path, study_manifest)
 
     repo_root = Path(__file__).resolve().parent
@@ -77,8 +128,21 @@ def main() -> None:
         for embedding_type in args.embedding_types:
             run_name = f"seed{seed}_{embedding_type}"
             run_dir = output_dir / run_name
+            resume_path = None
             if run_dir.exists() and any(run_dir.iterdir()) and not args.overwrite:
-                raise SystemExit(f"Run directory already contains files: {run_dir}; use --overwrite to replace it")
+                if run_is_complete(run_dir, args.steps):
+                    print(f"skip completed run={run_name}", flush=True)
+                    upsert_run(
+                        study_manifest,
+                        {"run_name": run_name, "seed": seed, "embedding_type": embedding_type, "command": ["preserved"]},
+                    )
+                    write_json(manifest_path, study_manifest)
+                    continue
+                if not args.resume_existing:
+                    raise SystemExit(f"Run directory already contains files: {run_dir}; use --overwrite or --resume_existing")
+                resume_path = run_dir / "optimizer_last.pt"
+                if not resume_path.exists():
+                    raise SystemExit(f"Cannot resume incomplete run without {resume_path}")
             command = [
                 sys.executable, "train.py", "--embedding_type", embedding_type,
                 "--dataset", args.dataset, "--data_dir", args.data_dir,
@@ -89,9 +153,11 @@ def main() -> None:
                 if key in {"dataset", "data_dir", "device"}:
                     continue
                 command.extend([f"--{key}", str(getattr(args, key))])
+            if resume_path is not None:
+                command.extend(["--resume", str(resume_path)])
             print(f"\n=== {run_name} ===", flush=True)
             subprocess.run(command, cwd=repo_root, check=True)
-            study_manifest["runs"].append({"run_name": run_name, "seed": seed, "embedding_type": embedding_type, "command": command})
+            upsert_run(study_manifest, {"run_name": run_name, "seed": seed, "embedding_type": embedding_type, "command": command})
             write_json(manifest_path, study_manifest)
 
     validation = validate_study(output_dir)

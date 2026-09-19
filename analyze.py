@@ -144,9 +144,11 @@ def plot_embedding_updates(runs, path: Path) -> None:
 
 def plot_corrections(runs, path: Path) -> None:
     plt.figure(figsize=(8, 5))
+    plotted = False
     for name, _, _, metrics in runs:
         rows = [r for r in metrics if r.get("split") == "train" and "input_correction_norm" in r]
         if rows and any(r["input_correction_norm"] or r["output_correction_norm"] for r in rows):
+            plotted = True
             steps = [r["step"] for r in rows]
             plt.plot(steps, [r["input_correction_relative_norm"] for r in rows], marker="o", label=f"{name} input")
             plt.plot(steps, [r["output_correction_relative_norm"] for r in rows], linestyle="--", marker="x", label=f"{name} output")
@@ -154,7 +156,8 @@ def plot_corrections(runs, path: Path) -> None:
     plt.ylabel("Correction norm / shared norm")
     plt.title("Effective partial-tying corrections")
     plt.grid(alpha=0.25)
-    plt.legend()
+    if plotted:
+        plt.legend()
     plt.tight_layout()
     plt.savefig(path, dpi=160)
     plt.close()

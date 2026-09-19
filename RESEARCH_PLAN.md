@@ -36,6 +36,7 @@ Status: implemented.
 - Verify that the input/output gradient decomposition matches finite-difference checks on tiny models. (Implemented.)
 - Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting. (Implemented.)
 - Separate optimizer-state checkpoints (`optimizer_last.pt`) from compact evaluation checkpoints (`last.pt` / `best.pt`). Resume with `--resume path/to/optimizer_last.pt`.
+- Make multi-run studies resumable: completed runs are preserved, incomplete runs resume from `optimizer_last.pt`, and the fairness gate still blocks analysis until the full matrix is complete.
 - Record wall-clock time, peak allocated memory, FLOPs estimates (`estimated_flops_*` via the 6ND rule), and tokens per second in a common metrics schema.
 - Add a sweep runner that records the exact shared configuration and run matrix. (Implemented.)
 - Enforce the comparison gate before analysis: complete seed × embedding matrix, identical dataset hashes and shared settings, and token exposure within one percent. (Implemented in `validate_study.py` and called by `sweep.py`.)

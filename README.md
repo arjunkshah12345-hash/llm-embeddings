@@ -48,6 +48,12 @@ For a multi-seed study, use `sweep.py`. It forwards one shared configuration to 
 python3 sweep.py --output_dir runs/study-001 --steps 2000 --seeds 1337 2027 31415
 ```
 
+If a study is interrupted, rerun it with the same settings and `--resume_existing`; completed runs are skipped and incomplete runs resume from their latest optimizer checkpoint:
+
+```bash
+python3 sweep.py --output_dir runs/study-001 --steps 10000 --seeds 1337 2027 31415 --resume_existing
+```
+
 For the predeclared partial-adapter rank/scaling sweep:
 
 ```bash
@@ -118,6 +124,6 @@ The first run is a signal check, not a definitive claim. The default single seed
 ## Development checks
 
 ```bash
-python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m py_compile config.py data.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_study.py test_sweep.py test_adapter_sweep.py test_embedding_eval.py
 python3 -m pytest -q
 ```
