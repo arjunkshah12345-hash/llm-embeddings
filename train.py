@@ -203,6 +203,27 @@ def load_resume_checkpoint(
     return checkpoint
 
 
+def truncate_metrics(path: Path, start_step: int) -> int:
+    """Drop metric rows at or after start_step so resume does not duplicate history."""
+    if not path.exists() or start_step <= 0:
+        return 0
+    rows = []
+    removed = 0
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if int(row.get("step", -1)) >= start_step:
+            removed += 1
+            continue
+        rows.append(row)
+    if removed:
+        with path.open("w") as handle:
+            for row in rows:
+                handle.write(json.dumps(row) + "\n")
+    return removed
+
+
 def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--embedding_type", choices=["tied", "untied", "partial"], required=True)
@@ -343,7 +364,11 @@ def main() -> None:
         tokens_seen = int(resumed.get("tokens_seen", 0))
         training_elapsed = float(resumed.get("training_wall_time_seconds", 0.0))
         embedding_cumulative_update_norm = float(resumed.get("embedding_cumulative_update_norm", 0.0))
-        print(f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}")
+        removed = truncate_metrics(metrics_path, start_step)
+        print(
+            f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}"
+            + (f" truncated_metrics={removed}" if removed else "")
+        )
     else:
         metrics_path.unlink(missing_ok=True)
     model.train()

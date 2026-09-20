@@ -1,3 +1,5 @@
+import json
+
 import torch
 import torch.nn.functional as F
 
@@ -181,6 +183,25 @@ def test_flops_estimate_scales_with_tokens_and_embedding_cost():
     untied_flops = estimate_flops(untied, tokens=1)
     assert untied_flops["estimated_flops_non_embedding"] == one["estimated_flops_non_embedding"]
     assert untied_flops["estimated_flops_total"] > one["estimated_flops_total"]
+
+
+def test_truncate_metrics_drops_rows_at_or_after_resume_step(tmp_path):
+    from train import truncate_metrics
+
+    path = tmp_path / "metrics.jsonl"
+    rows = [
+        {"step": 0, "split": "train", "loss": 1.0},
+        {"step": 1, "split": "val", "loss": 0.9},
+        {"step": 2, "split": "train", "loss": 0.8},
+        {"step": 2, "split": "val", "loss": 0.85},
+        {"step": 3, "split": "train", "loss": 0.7},
+    ]
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    removed = truncate_metrics(path, start_step=2)
+    kept = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    assert removed == 3
+    assert [row["step"] for row in kept] == [0, 1]
+    assert truncate_metrics(path, start_step=2) == 0
 
 
 def test_path_ablation_stops_one_embedding_role():

@@ -9,17 +9,20 @@ import tiktoken
 import torch
 
 
+WIKITEXT2 = {
+    "train": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt",
+    "val": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/valid.txt",
+    "test": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/test.txt",
+}
+
+TINY_SHAKESPEARE_URL = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+# Character fractions over the downloaded source. Contiguous, non-overlapping, deterministic.
+TINY_SHAKESPEARE_SPLIT = {"train": 0.90, "val": 0.05, "test": 0.05}
+TINY_SHAKESPEARE_SPLIT_VERSION = 1
+
 DATASETS = {
-    "wikitext2": {
-        "train": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt",
-        "val": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/valid.txt",
-        "test": "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/test.txt",
-    },
-    "tiny_shakespeare": {
-        "train": "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
-        "val": "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
-        "test": "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt",
-    },
+    "wikitext2": WIKITEXT2,
+    "tiny_shakespeare": {"source": TINY_SHAKESPEARE_URL},
 }
 
 
@@ -31,7 +34,7 @@ class TokenDataset:
         self.root = Path(data_dir) / dataset_name
         self.root.mkdir(parents=True, exist_ok=True)
         self.encoder = tiktoken.get_encoding("gpt2")
-        self._download_files()
+        self._prepare_files()
         self.tokens = {split: self._load_tokens(split) for split in ("train", "val", "test")}
         self.generators = {
             "train": torch.Generator().manual_seed(seed + 1),
@@ -43,8 +46,11 @@ class TokenDataset:
     def vocab_size(self) -> int:
         return self.encoder.n_vocab
 
-    def _download_files(self) -> None:
-        for split, url in DATASETS[self.dataset_name].items():
+    def _prepare_files(self) -> None:
+        if self.dataset_name == "tiny_shakespeare":
+            self._prepare_tiny_shakespeare()
+            return
+        for split, url in WIKITEXT2.items():
             path = self.root / f"{split}.txt"
             if path.exists() and path.stat().st_size > 0:
                 continue
@@ -52,6 +58,62 @@ class TokenDataset:
             temp_path = path.with_suffix(".tmp")
             urllib.request.urlretrieve(url, temp_path)
             temp_path.replace(path)
+
+    def _prepare_tiny_shakespeare(self) -> None:
+        """Download once and write disjoint train/val/test character splits.
+
+        Older layouts copied the same file into all three splits, which leaked
+        evaluation text into training. Rebuild when that contamination is detected
+        or when the split version stamp is missing.
+        """
+        source_path = self.root / "input.txt"
+        stamp_path = self.root / "split_manifest.json"
+        split_paths = {split: self.root / f"{split}.txt" for split in ("train", "val", "test")}
+        if not source_path.exists() or source_path.stat().st_size == 0:
+            print("Downloading tiny_shakespeare source...")
+            temp_path = source_path.with_suffix(".tmp")
+            urllib.request.urlretrieve(TINY_SHAKESPEARE_URL, temp_path)
+            temp_path.replace(source_path)
+
+        source = source_path.read_text(encoding="utf-8")
+        source_sha = hashlib.sha256(source.encode("utf-8")).hexdigest()
+        expected_stamp = {
+            "version": TINY_SHAKESPEARE_SPLIT_VERSION,
+            "source_sha256": source_sha,
+            "fractions": TINY_SHAKESPEARE_SPLIT,
+        }
+        need_rebuild = True
+        if stamp_path.exists() and all(path.exists() and path.stat().st_size > 0 for path in split_paths.values()):
+            try:
+                need_rebuild = json.loads(stamp_path.read_text()) != expected_stamp
+            except (OSError, ValueError):
+                need_rebuild = True
+        if not need_rebuild:
+            # Contaminated layout: identical bodies across splits.
+            bodies = [path.read_bytes() for path in split_paths.values()]
+            if bodies[0] == bodies[1] == bodies[2]:
+                need_rebuild = True
+        if not need_rebuild:
+            return
+
+        length = len(source)
+        if length < 3:
+            raise ValueError("tiny_shakespeare source is too short to split")
+        train_end = int(length * TINY_SHAKESPEARE_SPLIT["train"])
+        val_end = train_end + int(length * TINY_SHAKESPEARE_SPLIT["val"])
+        # Put the remainder on test so fractions always cover the full source.
+        pieces = {
+            "train": source[:train_end],
+            "val": source[train_end:val_end],
+            "test": source[val_end:],
+        }
+        for split, text in pieces.items():
+            if len(text) < 2:
+                raise ValueError(f"tiny_shakespeare {split} split is empty; source may be truncated")
+            temp_path = split_paths[split].with_suffix(".tmp")
+            temp_path.write_text(text, encoding="utf-8")
+            temp_path.replace(split_paths[split])
+        stamp_path.write_text(json.dumps(expected_stamp, indent=2, sort_keys=True) + "\n")
 
     def _load_tokens(self, split: str) -> torch.Tensor:
         path = self.root / f"{split}.txt"
