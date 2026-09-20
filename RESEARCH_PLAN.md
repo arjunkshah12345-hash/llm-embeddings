@@ -48,7 +48,7 @@ Gate: no comparison is published unless all three runs use the same data manifes
 
 Goal: determine whether the loss signal survives beyond the six-step smoke test.
 
-Status: ready to run (see [docs/phase2-baseline.md](docs/phase2-baseline.md)).
+Status: 30M-class one-seed smoke complete (see [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md)); multi-seed evidence pending.
 
 - Run 10k–100k steps on WikiText-2 with at least three seeds.
 - Keep the transformer configuration fixed across variants and repeat the analysis at two model sizes in the 20M–50M range.
