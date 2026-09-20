@@ -6,19 +6,19 @@ The intended public repository is:
 https://github.com/arjunkshah12345-hash/llm-embeddings
 ```
 
-The local git history is initialized on `main`, `origin` is configured to that URL, and the current source is committed at `4818e02`. The machine's GitHub safety control plane blocks agents from creating repositories directly, so the one-time account action is to create an empty public repository named `llm-embeddings` under `arjunkshah12345-hash`.
+The public repository now exists, `origin` is configured to that URL, and the source is committed locally. The current development branch is `fix/dataset-split-and-resume-metrics`; it contains the Tiny Shakespeare split fix and resume-history fix and is tracked by pull request #1. Its GitHub CI checks are part of the publication gate.
 
-After the empty repository exists, publish the prepared history with:
+For a new branch, publish the prepared history with:
 
 ```bash
-git push --set-upstream origin main
+git push --set-upstream origin <branch-name>
 ```
 
 Verify the result with:
 
 ```bash
-gh repo view arjunkshah12345-hash/llm-embeddings --json nameWithOwner,url,visibility,defaultBranchRef
+gh repo view arjunkshah12345-hash/llm-embeddings --json nameWithOwner,url,isPrivate,defaultBranchRef
 git ls-remote --heads origin
 ```
 
-Do not initialize the GitHub repository with a second README, license, or gitignore; those files are already in the local history. After pushing, verify that the remote's `main` branch points to `4818e02` or a descendant of it.
+For a release to `main`, merge the reviewed pull request after its checks pass, then verify that the remote `main` branch points to the merged commit. Keep the repository initialization files in the local history; do not add a second README, license, or gitignore on GitHub.
