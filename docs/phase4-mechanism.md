@@ -13,6 +13,8 @@ On each logged training step the trainer records the mean embedding-row gradient
 
 Keys look like `output_token_grad_rare_mean`. `analyze.py` plots the output-side means in `token_type_gradients.png` when those keys exist.
 
+The logged side-gradient norms use two counterfactual losses evaluated from the same hidden states: the input-side loss detaches output weights, and the output-side loss detaches the hidden states. For partial tying, `input_grad_norm` and `output_grad_norm` include the shared matrix and the corresponding low-rank factors; `shared_*` metrics isolate the two pressures on the shared matrix. These diagnostics are measurement-only and do not alter the optimizer update.
+
 ## Path ablations
 
 Stop one role's gradient for a step range without changing the loss:
@@ -25,3 +27,5 @@ python3 train.py --embedding_type tied --path_ablation stop_output --ablation_st
 `stop_input` detaches the token lookup, so input embedding parameters get no gradient on those steps. `stop_output` detaches the output matrix, so output embedding parameters get no gradient while the input path still trains. Outside `[start, end)` training is normal. `ablation_end 0` means through the last step.
 
 Keep these runs out of the tied/partial/untied comparison. They are ablations, not the primary experiment.
+
+When a path ablation is active, the ordinary gradient diagnostics still describe the normal two-path decomposition for the logged batch. The `path_ablation` field identifies the actual training path used for that optimizer step.

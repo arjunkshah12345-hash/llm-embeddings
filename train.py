@@ -101,12 +101,14 @@ def git_commit() -> str:
 def estimate_flops(parameter_counts: dict[str, int], tokens: int) -> dict[str, float]:
     """Approximate training FLOPs with the common 6ND dense-matmul rule.
 
-    Input embedding lookups are treated as negligible. Output projection cost is
-    folded into embedding/shared parameter counts. Transformer and embedding
-    FLOPs are reported separately so tied/untied/partial comparisons stay fair.
+    Input embedding lookups are treated as negligible. Dense output projection
+    and factorized adapter matmuls are represented by
+    ``embedding_compute_parameters``; this keeps untied input storage from being
+    counted as dense projection work. Transformer and embedding FLOPs are
+    reported separately so tied/untied/partial comparisons stay fair.
     """
     transformer = float(parameter_counts["transformer_parameters"])
-    embedding = float(parameter_counts["embedding_parameters"])
+    embedding = float(parameter_counts.get("embedding_compute_parameters", parameter_counts["embedding_parameters"]))
     non_embedding_flops = 6.0 * transformer * tokens
     embedding_flops = 6.0 * embedding * tokens
     return {
@@ -114,6 +116,7 @@ def estimate_flops(parameter_counts: dict[str, int], tokens: int) -> dict[str, f
         "estimated_flops_embedding": embedding_flops,
         "estimated_flops_total": non_embedding_flops + embedding_flops,
         "flops_per_token_non_embedding": 6.0 * transformer,
+        "flops_per_token_embedding": 6.0 * embedding,
         "flops_per_token_total": 6.0 * (transformer + embedding),
     }
 
