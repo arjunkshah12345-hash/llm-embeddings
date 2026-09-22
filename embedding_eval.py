@@ -238,7 +238,7 @@ def main() -> None:
     model.load_state_dict(checkpoint["model"])
     model.eval()
     with torch.no_grad():
-        input_matrix = model.embeddings.weight("input").detach().cpu()
+        input_matrix = model.embeddings.explicit_weight("input").detach().cpu()
     encoder = tiktoken.get_encoding("gpt2")
     pairs = load_pairs(Path(args.pairs)) if args.pairs else None
     result = {

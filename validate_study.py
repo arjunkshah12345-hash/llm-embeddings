@@ -16,11 +16,13 @@ def read_json(path: Path) -> dict[str, Any]:
 def _canonical_config(config: dict[str, Any]) -> dict[str, Any]:
     model = dict(config["model"])
     train = dict(config["train"])
+    dataset = dict(config["dataset"])
     variable_keys = {"seed", "run_name", "embedding_type", "output_dir"}
     return {
         "model": model,
         "train": {key: value for key, value in train.items() if key not in variable_keys},
         "device": config.get("device"),
+        "dataset": dataset,
     }
 
 
@@ -72,10 +74,58 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         try:
             config = read_json(run_dir / "config.json")
             run_manifest = read_json(run_dir / "manifest.json")
+            parameter_counts = read_json(run_dir / "parameter_counts.json")
             metrics = [json.loads(line) for line in (run_dir / "metrics.jsonl").read_text().splitlines() if line.strip()]
         except (OSError, ValueError, KeyError) as exc:
             errors.append(f"{run_name}: unreadable run metadata ({exc})")
             continue
+
+        train_config = config.get("train", {})
+        expected_seed = int(entry["seed"])
+        expected_embedding_type = entry["embedding_type"]
+        if int(train_config.get("seed", -1)) != expected_seed:
+            errors.append(f"{run_name}: config seed does not match study entry")
+        if train_config.get("embedding_type") != expected_embedding_type:
+            errors.append(f"{run_name}: config embedding_type does not match study entry")
+        if train_config.get("run_name") != run_name:
+            errors.append(f"{run_name}: config run_name does not match its directory")
+
+        dataset = config.get("dataset", {})
+        required_dataset_keys = {
+            "dataset",
+            "tokenizer",
+            "vocab_size",
+            "token_counts",
+            "sha256",
+        }
+        missing_dataset_keys = sorted(required_dataset_keys - set(dataset))
+        if missing_dataset_keys:
+            errors.append(f"{run_name}: dataset metadata missing {', '.join(missing_dataset_keys)}")
+        required_splits = {"train", "val", "test"}
+        hashes = dataset.get("sha256", {})
+        if set(hashes) != required_splits:
+            errors.append(f"{run_name}: dataset metadata must contain train/val/test SHA-256 hashes")
+        token_metadata = dataset.get("token_counts", {})
+        if set(token_metadata) != required_splits:
+            errors.append(f"{run_name}: dataset metadata must contain train/val/test token counts")
+
+        required_count_keys = {
+            "embedding_type",
+            "total_parameters",
+            "trainable_parameters",
+            "transformer_parameters",
+            "embedding_parameters",
+        }
+        missing_count_keys = sorted(required_count_keys - set(parameter_counts))
+        if missing_count_keys:
+            errors.append(f"{run_name}: parameter counts missing {', '.join(missing_count_keys)}")
+        elif parameter_counts["embedding_type"] != expected_embedding_type:
+            errors.append(f"{run_name}: parameter-count embedding_type does not match study entry")
+        elif (
+            parameter_counts["total_parameters"]
+            != parameter_counts["transformer_parameters"] + parameter_counts["embedding_parameters"]
+        ):
+            errors.append(f"{run_name}: total parameter count does not equal transformer plus embedding parameters")
 
         train_or_validation = [row for row in metrics if row.get("split") in {"train", "val"}]
         if not train_or_validation:
@@ -97,7 +147,6 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             continue
         canonical_configs[run_name] = canonical
 
-        hashes = config.get("dataset", {}).get("sha256", {})
         manifest_hashes = run_manifest.get("dataset", {}).get("sha256", {})
         if hashes != manifest_hashes:
             errors.append(f"{run_name}: config and manifest dataset hashes differ")

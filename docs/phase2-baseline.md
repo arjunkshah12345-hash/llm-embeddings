@@ -40,7 +40,7 @@ python3 sweep.py \
   --warmup_steps 100
 ```
 
-Smaller disk-friendly smoke before the pilot (not publishable as Phase 2 evidence):
+Smaller disk-friendly smoke before the pilot (not Phase 2 evidence):
 
 ```bash
 python3 sweep.py \

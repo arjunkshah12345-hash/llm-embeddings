@@ -1,0 +1,69 @@
+# Reproducibility
+
+This document describes the smallest reproducible run and the checks required before comparing embedding variants. Generated data, checkpoints, metrics, and plots belong in ignored directories such as `data/` and `runs/`; they are not part of the source repository.
+
+## Environment
+
+Install the Python dependencies from a clean checkout:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+The code requires Python 3.9 or newer and PyTorch 2.1 or newer. CUDA, Apple MPS, and CPU are supported; `--device auto` selects CUDA, then MPS, then CPU.
+
+## Smallest end-to-end experiment
+
+From the repository root:
+
+```bash
+python3 sweep.py \
+  --output_dir runs/smoke \
+  --dataset wikitext2 --device cpu --seeds 1337 \
+  --steps 8 --batch_size 1 --block_size 32 \
+  --n_layer 1 --n_head 1 --n_embd 16 \
+  --adapter_rank 2 --adapter_alpha 2 \
+  --warmup_steps 2 --eval_interval 4 --eval_batches 2 \
+  --log_interval 2 --save_interval 8 --no-save_optimizer
+```
+
+This trains tied, untied, and partial models with the same seed and token budget. The sweep validates the matrix before running analysis. The run is intentionally too short and too small to support a scientific claim.
+
+To inspect the comparison manually:
+
+```bash
+python3 validate_study.py --runs_dir runs/smoke
+python3 analyze.py --runs_dir runs/smoke --output_dir runs/smoke/analysis
+```
+
+## Baseline study
+
+The first substantive study should use the shared configuration in [docs/phase2-baseline.md](docs/phase2-baseline.md), beginning with 10,000 steps and at least three seeds. Keep the same dataset, model flags, optimizer flags, and step count for every embedding type. Use `--resume_existing` only when the study was created with optimizer checkpoints enabled.
+
+Every run records:
+
+- exact model and training configuration;
+- dataset split hashes and token counts;
+- tokenizer and package metadata;
+- git commit and command line;
+- parameter counts, training tokens, speed, memory, and approximate FLOPs;
+- train/validation metrics and embedding diagnostics.
+
+`validate_study.py` refuses incomplete or unfair comparisons. It checks the full seed-by-embedding matrix, shared configuration, dataset hashes, finite loss/perplexity, and token exposure within one percent. Treat a failed validation as a failed experiment rather than analyzing around it.
+
+## Data
+
+The default WikiText-2 files are downloaded from the public URLs declared in [`data.py`](data.py) and tokenized with the GPT-2 BPE tokenizer from `tiktoken`. Tiny Shakespeare is downloaded once and split deterministically into disjoint contiguous train, validation, and test portions. Dataset hashes are written into each run manifest.
+
+Do not commit downloaded data, model checkpoints, optimizer states, generated plots, or run directories. The repository `.gitignore` covers these artifacts.
+
+## Verification
+
+Run the source checks before sharing changes:
+
+```bash
+python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m pytest -q
+```
+
+The GitHub Actions workflow repeats compilation and the test suite on pushes and pull requests. Results from short smoke tests belong in the exploratory record; they must not be described as evidence for the main hypothesis.

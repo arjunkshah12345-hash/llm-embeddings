@@ -10,3 +10,8 @@ analysis/
 sanity_analysis/
 phase2-*/
 *.pt.tmp
+*.pt
+*.pth
+*.ckpt
+*.tmp
+.DS_Store

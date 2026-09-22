@@ -1,131 +1,93 @@
 # Partially tied language-model embeddings
 
-This repository is a small, reproducible experiment for comparing three GPT-style decoder-only language models:
+> **Research status:** Experimental. The implementation and measurement pipeline are complete enough for controlled study, but current results are smoke tests and exploratory pilots only. Multi-seed, longer-training experiments are still required before making a performance claim.
 
-- `tied`: one matrix is used for input embeddings and output logits.
-- `untied`: separate input and output matrices.
-- `partial`: one shared matrix plus independent low-rank corrections for the input and output roles.
+This project studies a parameter-sharing choice in decoder-only language models. A language model uses token vectors at the input and a vocabulary projection at the output, but those roles need not require exactly the same representation.
 
-The experiment keeps the transformer, tokenizer, dataset, optimizer, schedule, batch size, seed, and token budget the same across runs. The architectural difference is the embedding module.
+The central question is whether a model can retain most of the parameter savings of weight tying while giving the two roles a small amount of independent capacity:
 
-The long-term research roadmap is in [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The initial six-step sanity check is documented in [docs/initial-sanity-check.md](docs/initial-sanity-check.md). Phase 2 baseline study commands are in [docs/phase2-baseline.md](docs/phase2-baseline.md), the first current-code 30M smoke is recorded in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md), Phase 3 adapter-budget commands are in [docs/phase3-adapter-sweep.md](docs/phase3-adapter-sweep.md), Phase 4 mechanism checks are in [docs/phase4-mechanism.md](docs/phase4-mechanism.md), and Phase 5 input evaluation is in [docs/phase5-input-evaluation.md](docs/phase5-input-evaluation.md). The first representation pilot is recorded in [docs/initial-representation-pilot.md](docs/initial-representation-pilot.md).
+\[
+W_{\text{input}} = W_{\text{shared}} + \Delta_{\text{input}}, \qquad
+W_{\text{output}} = W_{\text{shared}} + \Delta_{\text{output}}.
+\]
 
-The prepared repository and remote publishing steps are documented in [docs/publishing.md](docs/publishing.md).
+Here each correction is a learned low-rank factorization, so the experiment compares:
 
-## Setup
+- **Tied:** one matrix is used for both token lookup and output logits.
+- **Untied:** input and output matrices are separate.
+- **Partial:** one shared matrix plus independent low-rank input and output corrections.
+
+Rather than choosing between fully tied and fully untied embeddings, this project studies whether a large shared base plus small role-specific low-rank residuals can recover much of the flexibility of untying at a fraction of the parameter cost. The result is open: the repository is designed to measure the tradeoff fairly, including cases where partial tying does not help.
+
+## Quick start
 
 ```bash
 python3 -m pip install -r requirements.txt
+python3 sweep.py \
+  --output_dir runs/smoke \
+  --dataset wikitext2 --device cpu --seeds 1337 \
+  --steps 8 --batch_size 1 --block_size 32 \
+  --n_layer 1 --n_head 1 --n_embd 16 \
+  --adapter_rank 2 --adapter_alpha 2 \
+  --warmup_steps 2 --eval_interval 4 --eval_batches 2 \
+  --log_interval 2 --save_interval 8 --no-save_optimizer
 ```
 
-The first training run downloads the public WikiText-2 raw train, validation, and test files into `data/wikitext2/`. The GPT-2 BPE vocabulary is loaded through `tiktoken`.
+The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads WikiText-2 and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the longer baseline is specified in [docs/phase2-baseline.md](docs/phase2-baseline.md).
 
-## Run the experiment
+## Model and experiment
 
-The default model is about 30M parameters when tied: six transformer blocks, width 384, six heads, and a GPT-2 vocabulary. The untied model is about 49M parameters. Partial tying uses rank-8 adapters by default and adds roughly 0.8M embedding parameters.
+The default model is a small GPT-style causal Transformer: six layers, width 384, six attention heads, and a GPT-2 vocabulary, about 30M parameters when tied. Partial tying uses rank-8 corrections by default. For vocabulary size \(V\), hidden width \(D\), and adapter rank \(r\), its extra stored parameters over tied are \(2r(V+D)\).
 
-For a short sanity check:
+The partial implementation uses the factorized operations directly during training:
 
-```bash
-python3 train.py --embedding_type tied   --steps 20 --batch_size 1 --block_size 128 --eval_interval 10 --eval_batches 4
-python3 train.py --embedding_type untied --steps 20 --batch_size 1 --block_size 128 --eval_interval 10 --eval_batches 4
-python3 train.py --embedding_type partial --steps 20 --batch_size 1 --block_size 128 --eval_interval 10 --eval_batches 4
-python3 analyze.py --runs_dir runs --output_dir analysis
+```text
+input:  shared[token_ids] + scale * input_A[token_ids] @ input_B.T
+output: hidden @ shared.T + scale * (hidden @ output_B) @ output_A.T
 ```
 
-For a useful first run, increase `--steps` to 1,000–5,000 and use the same flags for all three models. Each command writes to `runs/<embedding_type>/` unless `--run_name` is provided.
+The full correction matrices are reconstructed only for analysis metrics and explicit evaluation. At zero effective correction, partial tying is functionally identical to tied. Untied input and output matrices start from the same initialized values, while the Transformer, optimizer, schedule, seed, tokenizer, data exposure, and validation windows remain shared across variants.
 
-```bash
-python3 train.py --embedding_type tied
-python3 train.py --embedding_type untied
-python3 train.py --embedding_type partial --adapter_rank 8
-python3 analyze.py
-```
+The default dataset is raw WikiText-2 tokenized with GPT-2 BPE. Tiny Shakespeare is also available with deterministic, disjoint 90/5/5 character splits. Every run records dataset hashes, configuration, package versions, git commit, parameter counts, throughput, memory, approximate FLOPs, losses, and embedding-gradient measurements.
 
-For a multi-seed study, use `sweep.py`. It forwards one shared configuration to every model/seed combination, refuses to overwrite completed runs unless asked, writes `study_manifest.json`, validates the complete matrix, dataset hashes, shared settings, and token exposure, and analyzes the full study only after that gate passes:
+## Measurements
 
-```bash
-python3 sweep.py --output_dir runs/study-001 --steps 2000 --seeds 1337 2027 31415
-```
+The training metrics include:
 
-If a study is interrupted, rerun it with the same settings and `--resume_existing`; completed runs are skipped and incomplete runs resume from their latest optimizer checkpoint:
+- train and validation loss/perplexity;
+- total, Transformer, shared, correction, and embedding parameter counts;
+- training speed, wall time, peak allocated GPU memory, and approximate FLOPs;
+- input-side and output-side embedding gradient norms, cosine alignment, and their ratio;
+- token-class gradient means for whitespace, punctuation, common, rare, and other tokens;
+- partial-correction norms, relative norms, effective ranks, top singular values, and alignment with the shared matrix;
+- controlled ablations that stop input or output gradients for selected step intervals.
 
-```bash
-python3 sweep.py --output_dir runs/study-001 --steps 10000 --seeds 1337 2027 31415 --resume_existing
-```
+`validate_study.py` is a hard comparison gate. It requires the complete seed-by-variant matrix, matching configurations and dataset hashes, finite metrics, and token exposure within one percent. `analyze.py` produces loss, parameter-efficiency, FLOP, gradient, update, token-class, and correction plots plus paired seed-level summaries.
 
-For a disk-constrained run that does not need mid-run resume, add `--no-save_optimizer`; compact model checkpoints and metrics are still written.
+The gradient decomposition evaluates two counterfactual losses from the same hidden states: one detaches the output weights to measure pressure arriving through the input path, and the other detaches the hidden states to measure direct output-prediction pressure. For partial tying, side norms include the shared matrix and the relevant low-rank factors; `shared_*` fields isolate the shared matrix.
 
-For the predeclared partial-adapter rank/scaling sweep:
+## Current evidence
 
-```bash
-python3 adapter_sweep.py --output_dir runs/adapter-study-001 --ranks 1 2 4 8 16 32 --alphas 4 8 16 --seeds 1337 2027 31415
-```
+The tracked 30M-class pilot used one seed and five optimizer steps. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling.
 
-Evaluate a saved checkpoint directly:
+Substantive validation still requires longer equal-token runs, multiple seeds, adapter-budget sweeps, representation evaluations, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
 
-```bash
-python3 evaluate.py --run_dir runs/partial --checkpoint best.pt
-```
+## Related work
 
-Evaluate the effective input representation with deterministic intrinsic probes:
+Weight tying was introduced as a practical and theoretical parameter-sharing method for language models by Press and Wolf and by Inan, Khosravi, and Socher. Press and Wolf also compared the input and output roles and reported that the tied matrix evolves more like the output embedding in their settings: [Press & Wolf, EACL 2017](https://aclanthology.org/E17-2025/) and [Inan et al., ICLR 2017](https://arxiv.org/abs/1611.01462).
 
-```bash
-python3 embedding_eval.py --run_dir runs/partial --checkpoint best.pt
-```
+Several papers study ways to relax or reinterpret the equality constraint. Gulordava, Aina, and Boleda decouple the hidden state from word-embedding prediction while retaining a compact architecture: [EMNLP 2018](https://aclanthology.org/D18-1323/). Pappas, Miculicich, and Henderson propose a structure-aware output layer that generalizes hard tying in neural machine translation: [WMT 2018](https://aclanthology.org/W18-6308/). Chung et al. study decoupled input and output embedding dimensions and show that extra output capacity can matter for pretrained representations: [ICLR 2021](https://openreview.net/forum?id=xpFFI_NtgpW). Derby, Miller, and Devereux analyze differences between input and output representations in neural language models: [CoNLL 2020](https://aclanthology.org/2020.conll-1.36/).
 
-## Outputs
+More recent work makes the role distinction especially relevant. Bertolotti and Cazzola connect tying to the distributional hypothesis and distinguish semantic input structure from contextual output structure: [ICML 2024](https://proceedings.mlr.press/v235/bertolotti24a.html). Lopardo et al. report evidence that tied embeddings can be biased toward the output space and link that bias to output-gradient dominance: [Findings of ACL 2026](https://aclanthology.org/2026.findings-acl.2027/). Other recent alternatives take different routes, including a compact learned input representation with an untied output head in [Leviathan (Batley & Saha, 2026)](https://arxiv.org/abs/2601.22040) and a pseudo-inverse-consistent shared interface in [Pseudo-Inverse Tying (Gu et al., 2026)](https://arxiv.org/abs/2602.04556).
 
-Each run directory contains:
+This project is related to those efforts but does not claim a new general solution from its current pilots. Its specific controlled comparison is a shared vocabulary-sized base with separate low-rank residuals for the input and output paths, evaluated against tied and fully untied models with the same Transformer and training exposure.
 
-- `config.json`: exact model, data, optimizer, and seed settings;
-- `manifest.json`: git commit, command, runtime, dataset hashes, and parameter manifest;
-- `parameter_counts.json`: total, transformer, and embedding parameter counts;
-- `metrics.jsonl`: training/validation losses, best/final perplexity, training-only throughput, wall-clock time, memory, estimated FLOPs (6ND rule), gradient decomposition, token-class gradient means, and adapter norms;
-- `study_validation.json`: the sweep fairness gate and its token/hash/config checks;
-- `last.pt` and `best.pt`: compact CPU model checkpoints without optimizer state (evaluation and comparison);
-- `optimizer_last.pt`: full resume checkpoint with AdamW state, RNG, and token counters (written by default; disable with `--no-save_optimizer`).
+## Limitations and roadmap
 
-Resume an interrupted run:
+The current study is small: it uses GPT-2 BPE, WikiText-2, short exploratory runs, one primary adapter family, and limited representation probes. The FLOP numbers are estimates based on dense-matmul conventions and factorized projection costs, not hardware-independent measurements. A positive result would require replication across seeds, training lengths, model sizes, datasets, and evaluation types. A null result is also useful because it would bound the value of role-specific corrections.
 
-```bash
-python3 train.py --embedding_type partial --resume runs/partial/optimizer_last.pt --steps 5000
-```
+The roadmap covers baseline scaling, adapter-budget comparisons, mechanism checks, input-representation evaluation, robustness, and reproducible release artifacts. It is maintained in [RESEARCH_PLAN.md](RESEARCH_PLAN.md), with detailed phase notes under [`docs/`](docs/).
 
-Validation uses deterministic fixed token windows, so all model variants and repeated evaluations see the same validation examples.
+## License
 
-`analyze.py` creates:
-
-- training and validation loss plots;
-- validation loss versus estimated training FLOPs;
-- parameter count versus validation loss;
-- input/output embedding gradient norms and their output-to-input ratio (`gradient_norms_and_ratio.png`);
-- input/output gradient alignment (`gradient_alignment.png`);
-- embedding update size and cumulative update path (`embedding_updates.png`);
-- partial-model correction norms;
-- effective rank of the learned corrections (`correction_effective_rank.png`);
-- `results_summary.md` and `results.json`, including per-run and per-embedding-type aggregates, paired seed-level deltas, and deterministic bootstrap 95% intervals when multiple seeds are available.
-
-## Gradient measurement
-
-The gradient decomposition is done without changing the training objective. For a logged batch, the code evaluates the same hidden states twice:
-
-1. The output weight is detached, so the gradient reaching the input-side embedding parameters comes through the transformer.
-2. The hidden state is detached, so the gradient reaching the output-side parameters comes directly from next-token prediction.
-
-This makes the input/output pressure comparable even when the two roles share a parameter. The ordinary combined gradient is still used for the optimizer update.
-
-For the partial model, `shared_input_grad_norm` and `shared_output_grad_norm` isolate the two pressures on the shared matrix. `input_correction_norm` and `output_correction_norm` measure the effective low-rank corrections, while `input_correction_parameters` and `output_correction_parameters` in `parameter_counts.json` report their trainable parameter cost. Token-class metrics report row-gradient means for the input tokens and target tokens seen in each logged batch.
-
-## Fairness and limitations
-
-All three models use the same GPT-2 BPE tokenizer, WikiText-2 split, sampling procedure, context length, transformer size, initialization seed, optimizer, cosine schedule, and number of training tokens. The partial model is initialized with zero effective corrections, so it starts from the same shared embedding as the tied model.
-
-The first run is a signal check, not a definitive claim. The default single seed and short runs should be followed by longer training, multiple seeds, larger models, and downstream representation tests if the loss/parameter curve is promising.
-
-## Development checks
-
-```bash
-python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
-python3 -m pytest -q
-```
+Released under the [MIT License](LICENSE).

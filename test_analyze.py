@@ -1,4 +1,14 @@
-from analyze import paired_comparisons
+from analyze import bootstrap_mean_ci, paired_comparisons
+
+
+def test_bootstrap_mean_ci_is_deterministic_and_contains_sample_mean():
+    values = [1.0, 2.0, 4.0, 8.0]
+    first = bootstrap_mean_ci(values, seed=123, samples=500)
+    second = bootstrap_mean_ci(values, seed=123, samples=500)
+
+    assert first == second
+    assert first["low"] <= sum(values) / len(values) <= first["high"]
+    assert bootstrap_mean_ci([3.0], seed=123) == {"low": 3.0, "high": 3.0}
 
 
 def test_paired_comparisons_use_shared_seed_deltas():

@@ -117,6 +117,7 @@ class EmbeddingSystem(nn.Module):
                     nn.init.zeros_(self.output_b)
 
     def correction(self, side: str) -> torch.Tensor:
+        """Materialize a correction matrix for analysis-only measurements."""
         if self.embedding_type != "partial":
             return torch.zeros((), device=self.device, dtype=self.dtype)
         if side == "input":
@@ -125,7 +126,8 @@ class EmbeddingSystem(nn.Module):
             return self.adapter_scale * (self.output_a @ self.output_b.transpose(0, 1))
         raise ValueError(f"unknown embedding side {side!r}")
 
-    def weight(self, side: str) -> torch.Tensor:
+    def explicit_weight(self, side: str) -> torch.Tensor:
+        """Materialize the effective vocabulary-by-width matrix for analysis."""
         if side not in {"input", "output"}:
             raise ValueError(f"unknown embedding side {side!r}")
         if self.embedding_type == "untied":
@@ -133,6 +135,36 @@ class EmbeddingSystem(nn.Module):
         if self.embedding_type == "tied":
             return self.shared
         return self.shared + self.correction(side)
+
+    def weight(self, side: str) -> torch.Tensor:
+        """Backward-compatible alias for the analysis-only explicit matrix."""
+        return self.explicit_weight(side)
+
+    def input_embeddings(self, token_ids: torch.Tensor) -> torch.Tensor:
+        """Look up input vectors without materializing a partial correction."""
+        if self.embedding_type == "untied":
+            return F.embedding(token_ids, self.input_weight)
+        shared = F.embedding(token_ids, self.shared)
+        if self.embedding_type == "tied":
+            return shared
+        correction = F.embedding(token_ids, self.input_a) @ self.input_b.transpose(0, 1)
+        return shared + self.adapter_scale * correction
+
+    def output_logits(self, hidden: torch.Tensor, detach_weights: bool = False) -> torch.Tensor:
+        """Project hidden states to logits without materializing a partial correction."""
+        if self.embedding_type == "untied":
+            weight = self.output_weight.detach() if detach_weights else self.output_weight
+            return F.linear(hidden, weight)
+        if self.embedding_type == "tied":
+            weight = self.shared.detach() if detach_weights else self.shared
+            return F.linear(hidden, weight)
+
+        shared = self.shared.detach() if detach_weights else self.shared
+        output_a = self.output_a.detach() if detach_weights else self.output_a
+        output_b = self.output_b.detach() if detach_weights else self.output_b
+        logits = F.linear(hidden, shared)
+        low_rank_logits = (hidden @ output_b) @ output_a.transpose(0, 1)
+        return logits + self.adapter_scale * low_rank_logits
 
     def input_parameters(self) -> list[nn.Parameter]:
         if self.embedding_type == "untied":
@@ -160,6 +192,13 @@ class EmbeddingSystem(nn.Module):
         return next(self.parameters()).dtype
 
     def parameter_counts(self) -> dict[str, int]:
+        if self.embedding_type == "partial":
+            input_correction_compute_parameters = self.n_embd * self.adapter_rank
+            output_correction_compute_parameters = self.adapter_rank * (self.vocab_size + self.n_embd)
+        else:
+            input_correction_compute_parameters = 0
+            output_correction_compute_parameters = 0
+        output_projection_parameters = self.vocab_size * self.n_embd
         counts = {
             "embedding_parameters": sum(p.numel() for p in self.unique_parameters()),
             "input_side_parameters": sum(p.numel() for p in self.input_parameters()),
@@ -167,6 +206,14 @@ class EmbeddingSystem(nn.Module):
             "shared_parameters": int(self.shared.numel()) if self.embedding_type != "untied" else 0,
             "input_correction_parameters": 0,
             "output_correction_parameters": 0,
+            "output_projection_parameters": output_projection_parameters,
+            "input_correction_compute_parameters": input_correction_compute_parameters,
+            "output_correction_compute_parameters": output_correction_compute_parameters,
+            "embedding_compute_parameters": (
+                output_projection_parameters
+                + input_correction_compute_parameters
+                + output_correction_compute_parameters
+            ),
         }
         if self.embedding_type == "partial":
             correction_count = self.input_a.numel() + self.input_b.numel()
@@ -288,17 +335,14 @@ class GPTModel(nn.Module):
         if length > self.config.block_size:
             raise ValueError(f"sequence length {length} exceeds block_size={self.config.block_size}")
         positions = torch.arange(0, length, device=idx.device)
-        token_embeddings = F.embedding(idx, self.embeddings.weight("input"))
+        token_embeddings = self.embeddings.input_embeddings(idx)
         if path_ablation == "stop_input":
             token_embeddings = token_embeddings.detach()
         x = self.drop(token_embeddings + self.position_embedding(positions)[None, :, :])
         for block in self.blocks:
             x = block(x)
         hidden = self.ln_f(x)
-        output_weight = self.embeddings.weight("output")
-        if path_ablation == "stop_output":
-            output_weight = output_weight.detach()
-        logits = F.linear(hidden, output_weight)
+        logits = self.embeddings.output_logits(hidden, detach_weights=path_ablation == "stop_output")
         if return_hidden:
             return logits, hidden
         return logits
@@ -320,9 +364,8 @@ class GPTModel(nn.Module):
         """
         logits, hidden = self(idx, return_hidden=True)
         del logits
-        output_weight = self.embeddings.weight("output")
-        input_logits = F.linear(hidden, output_weight.detach())
-        output_logits = F.linear(hidden.detach(), output_weight)
+        input_logits = self.embeddings.output_logits(hidden, detach_weights=True)
+        output_logits = self.embeddings.output_logits(hidden.detach())
         input_loss = F.cross_entropy(input_logits.reshape(-1, input_logits.size(-1)), targets.reshape(-1))
         output_loss = F.cross_entropy(output_logits.reshape(-1, output_logits.size(-1)), targets.reshape(-1))
         input_params = self.embeddings.input_parameters()

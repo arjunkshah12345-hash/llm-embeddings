@@ -44,7 +44,13 @@ COMMON = {
 
 
 def make_study(tmp_path, token_counts=(160, 160, 160)):
-    dataset = {"sha256": {"train": "a", "val": "b", "test": "c"}}
+    dataset = {
+        "dataset": "fixture",
+        "tokenizer": "fixture",
+        "vocab_size": 97,
+        "token_counts": {"train": 160, "val": 160, "test": 160},
+        "sha256": {"train": "a", "val": "b", "test": "c"},
+    }
     embedding_types = ["tied", "partial", "untied"]
     study = {
         "common": COMMON,
@@ -70,7 +76,17 @@ def make_study(tmp_path, token_counts=(160, 160, 160)):
         }
         (run_dir / "config.json").write_text(json.dumps(config))
         (run_dir / "manifest.json").write_text(json.dumps({"dataset": dataset}))
-        (run_dir / "parameter_counts.json").write_text("{}")
+        (run_dir / "parameter_counts.json").write_text(
+            json.dumps(
+                {
+                    "embedding_type": embedding_type,
+                    "total_parameters": 100,
+                    "trainable_parameters": 100,
+                    "transformer_parameters": 50,
+                    "embedding_parameters": 50,
+                }
+            )
+        )
         (run_dir / "metrics.jsonl").write_text(
             json.dumps({"split": "val", "step": 4, "tokens_seen": tokens, "loss": 4.0, "perplexity": 54.6}) + "\n"
         )
@@ -119,3 +135,16 @@ def test_study_validation_rejects_path_ablation_mismatch(tmp_path):
 
     assert not result["passed"]
     assert any("shared model/training configuration differs" in error for error in result["errors"])
+
+
+def test_study_validation_rejects_run_metadata_mismatch(tmp_path):
+    make_study(tmp_path)
+    config_path = tmp_path / "seed7_partial" / "config.json"
+    config = json.loads(config_path.read_text())
+    config["train"]["seed"] = 8
+    config_path.write_text(json.dumps(config))
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert any("config seed does not match study entry" in error for error in result["errors"])
