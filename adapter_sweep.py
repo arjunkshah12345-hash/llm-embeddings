@@ -129,7 +129,12 @@ def sweep_command(args: argparse.Namespace, condition_dir: Path, rank: int, alph
     return command
 
 
-def summarize_condition(condition_dir: Path, rank: int, alpha: float) -> dict:
+def summarize_condition(
+    condition_dir: Path,
+    rank: int,
+    alpha: float,
+    tied_counts: dict | None = None,
+) -> dict:
     validation = json.loads((condition_dir / "study_validation.json").read_text())
     if not validation.get("passed"):
         raise SystemExit(f"Fairness validation failed for {condition_dir}")
@@ -140,14 +145,29 @@ def summarize_condition(condition_dir: Path, rank: int, alpha: float) -> dict:
     best_perplexities = [row["best_val_perplexity"] for row in rows if row.get("best_val_perplexity") is not None]
     if not best_losses:
         raise SystemExit(f"No validation results found for {condition_dir}")
+    first = rows[0]
+    if tied_counts is None:
+        # All rank conditions use the same Transformer. Infer the tied total
+        # from the condition's transformer count and one vocabulary matrix.
+        config = json.loads((condition_dir / rows[0]["run_name"] / "config.json").read_text())
+        model_config = config["model"]
+        tied_embedding_parameters = int(model_config["vocab_size"]) * int(model_config["n_embd"])
+        tied_total_parameters = int(first["total_parameters"]) - int(first["embedding_parameters"]) + tied_embedding_parameters
+    else:
+        tied_total_parameters = int(tied_counts["total_parameters"])
+        expected_transformer = int(first["total_parameters"]) - int(first["embedding_parameters"])
+        actual_transformer = int(tied_counts["total_parameters"]) - int(tied_counts["embedding_parameters"])
+        if expected_transformer != actual_transformer:
+            raise SystemExit(f"Tied baseline Transformer count differs for {condition_dir}")
+    additional_parameters = int(first["total_parameters"]) - tied_total_parameters
     return {
         "condition": condition_dir.name,
         "adapter_rank": rank,
         "adapter_alpha": alpha,
         "run_count": len(rows),
-        "total_parameters": rows[0]["total_parameters"],
-        "embedding_parameters": rows[0]["embedding_parameters"],
-        "additional_parameters_vs_tied": None,
+        "total_parameters": first["total_parameters"],
+        "embedding_parameters": first["embedding_parameters"],
+        "additional_parameters_vs_tied": additional_parameters,
         "mean_best_val_loss": statistics.mean(best_losses),
         "std_best_val_loss": statistics.stdev(best_losses) if len(best_losses) > 1 else 0.0,
         "mean_best_val_loss_ci95": bootstrap_mean_ci(best_losses, seed=1000 + rank),
@@ -275,8 +295,14 @@ def main() -> None:
             condition_alphas.append(alpha)
 
     validate_cross_condition_manifests(condition_dirs, condition_ranks, condition_alphas)
+    tied_counts = None
+    if args.baseline_run_dir:
+        tied_counts_path = Path(args.baseline_run_dir) / "parameter_counts.json"
+        if not tied_counts_path.exists():
+            raise SystemExit(f"missing tied baseline parameter counts: {tied_counts_path}")
+        tied_counts = json.loads(tied_counts_path.read_text())
     summaries = [
-        summarize_condition(condition_dir, rank, alpha)
+        summarize_condition(condition_dir, rank, alpha, tied_counts=tied_counts)
         for condition_dir, rank, alpha in zip(condition_dirs, condition_ranks, condition_alphas)
     ]
     if args.baseline_run_dir:
