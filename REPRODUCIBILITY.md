@@ -89,3 +89,5 @@ python3 embedding_eval.py \
 ```
 
 The pair file is a small, predeclared single-token probe. It is an exploratory representation diagnostic, not a substitute for a downstream task.
+
+Rank sweeps default to compact checkpoints without optimizer state to keep exploratory artifacts small. Pass `--save_optimizer` only when an interrupted rank condition must be resumed.

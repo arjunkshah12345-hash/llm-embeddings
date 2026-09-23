@@ -57,6 +57,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument(
+        "--save_optimizer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="write optimizer checkpoints for rank-sweep resume (default: false)",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -118,6 +124,8 @@ def sweep_command(args: argparse.Namespace, condition_dir: Path, rank: int, alph
     ]
     if args.overwrite:
         command.append("--overwrite")
+    if not args.save_optimizer:
+        command.append("--no-save_optimizer")
     return command
 
 
