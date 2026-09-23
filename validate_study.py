@@ -207,6 +207,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             "dropout": reference_model.get("dropout"),
             "adapter_rank": reference_model.get("adapter_rank"),
             "adapter_alpha": reference_model.get("adapter_alpha"),
+            "capacity_control_width": reference_model.get("capacity_control_width"),
             "learning_rate": reference_train.get("learning_rate"),
             "min_learning_rate": reference_train.get("min_learning_rate"),
             "warmup_steps": reference_train.get("warmup_steps"),

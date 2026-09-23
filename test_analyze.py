@@ -30,3 +30,17 @@ def test_paired_comparisons_use_shared_seed_deltas():
     assert partial["seed_count"] == 2
     assert abs(partial["mean_delta"] + 0.15) < 1e-9
     assert partial["ci95"]["low"] <= -0.15 <= partial["ci95"]["high"]
+
+
+def test_paired_comparisons_include_parameter_matched_controls():
+    rows = []
+    for seed, tied, control in [(1, 10.0, 9.95), (2, 9.0, 9.1)]:
+        rows.extend(
+            [
+                {"seed": seed, "embedding_type": "tied", "best_val_loss": tied, "final_val_loss": tied},
+                {"seed": seed, "embedding_type": "capacity_control", "best_val_loss": control, "final_val_loss": control},
+            ]
+        )
+    comparison = paired_comparisons(rows)["capacity_control_minus_tied_best_val_loss"]
+    assert comparison["seed_count"] == 2
+    assert abs(comparison["mean_delta"] - 0.025) < 1e-9

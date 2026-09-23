@@ -39,12 +39,13 @@ def bootstrap_mean_ci(values: list[float], seed: int, samples: int = 2000) -> di
 
 def paired_comparisons(summary: list[dict]) -> dict[str, dict]:
     """Compute paired per-seed deltas for each variant against tied."""
+    kinds = sorted({row["embedding_type"] for row in summary})
     by_kind_seed = {
         kind: {row["seed"]: row for row in summary if row["embedding_type"] == kind}
-        for kind in ("tied", "partial", "untied")
+        for kind in kinds
     }
     comparisons = {}
-    for variant in ("partial", "untied"):
+    for variant in (kind for kind in kinds if kind != "tied"):
         common_seeds = sorted(set(by_kind_seed["tied"]) & set(by_kind_seed[variant]))
         for metric in ("best_val_loss", "final_val_loss"):
             paired_seeds = [
@@ -217,6 +218,41 @@ def plot_correction_rank(runs, path: Path) -> None:
     plt.close()
 
 
+def plot_correction_alignment(runs, path: Path) -> None:
+    fig, axes = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
+    plotted = False
+    for name, _, _, metrics in runs:
+        rows = [
+            r for r in metrics
+            if r.get("split") == "train" and "input_output_correction_cosine" in r
+        ]
+        if not rows or not any(
+            r.get("input_output_correction_cosine")
+            or r.get("input_output_left_subspace_overlap")
+            or r.get("input_output_right_subspace_overlap")
+            for r in rows
+        ):
+            continue
+        plotted = True
+        steps = [r["step"] for r in rows]
+        axes[0].plot(steps, [r["input_output_correction_cosine"] for r in rows], marker="o", label=name)
+        axes[1].plot(steps, [r["input_output_left_subspace_overlap"] for r in rows], marker="o", label=name)
+        axes[2].plot(steps, [r["input_output_right_subspace_overlap"] for r in rows], marker="o", label=name)
+    axes[0].set_ylabel("Matrix cosine")
+    axes[0].set_ylim(-1.05, 1.05)
+    axes[0].set_title("Input/output correction alignment")
+    axes[1].set_ylabel("Left overlap")
+    axes[2].set_ylabel("Right overlap")
+    axes[2].set_xlabel("Step")
+    for axis in axes:
+        axis.grid(alpha=0.25)
+        if plotted:
+            axis.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
 def plot_token_type_gradients(runs, path: Path) -> None:
     keys = (
         "output_token_grad_whitespace_mean",
@@ -242,6 +278,36 @@ def plot_token_type_gradients(runs, path: Path) -> None:
     plt.title("Output-side gradient by token class")
     plt.grid(alpha=0.25)
     plt.legend()
+    plt.tight_layout()
+    plt.savefig(path, dpi=160)
+    plt.close()
+
+
+def plot_token_frequency_gradients(runs, path: Path) -> None:
+    plt.figure(figsize=(8, 5))
+    plotted = False
+    for name, _, _, metrics in runs:
+        for side in ("input", "output"):
+            for bucket in range(4):
+                key = f"{side}_token_freq_grad_q{bucket}_mean"
+                rows = [row for row in metrics if row.get("split") == "train" and key in row]
+                if not rows:
+                    continue
+                plotted = True
+                plt.plot(
+                    [row["step"] for row in rows],
+                    [row[key] for row in rows],
+                    marker="o",
+                    label=f"{name} {side} q{bucket}",
+                )
+    if not plotted:
+        plt.close()
+        return
+    plt.xlabel("Step")
+    plt.ylabel("Mean row-gradient norm")
+    plt.title("Embedding pressure within matched-frequency buckets")
+    plt.grid(alpha=0.25)
+    plt.legend(ncol=2)
     plt.tight_layout()
     plt.savefig(path, dpi=160)
     plt.close()
@@ -298,6 +364,7 @@ def make_summary(runs, output_path: Path) -> dict:
                 "training_wall_time_seconds": last_train.get("training_wall_time_seconds"),
                 "estimated_flops_total": last_with_flops.get("estimated_flops_total"),
                 "estimated_flops_non_embedding": last_with_flops.get("estimated_flops_non_embedding"),
+                "training_tokens": last_with_flops.get("tokens_seen"),
                 "peak_gpu_memory_mb": max((r.get("peak_gpu_memory_mb", 0.0) for r in metrics), default=0.0),
                 "run_dir": str(run_dir),
             }
@@ -323,15 +390,43 @@ def make_summary(runs, output_path: Path) -> dict:
             "mean_best_val_perplexity": statistics.mean(perplexities) if perplexities else None,
             "mean_best_val_perplexity_ci95": bootstrap_mean_ci(perplexities, seed=2027 + len(kind)),
             "mean_final_val_loss": statistics.mean([row["final_val_loss"] for row in rows]) if rows else None,
+            "std_final_val_loss": statistics.stdev([row["final_val_loss"] for row in rows]) if len(rows) > 1 else 0.0 if rows else None,
             "mean_final_val_loss_ci95": bootstrap_mean_ci(
                 [row["final_val_loss"] for row in rows], seed=31415 + len(kind)
             ),
             "mean_final_val_perplexity": statistics.mean([row["final_val_perplexity"] for row in rows]) if rows else None,
+            "std_final_val_perplexity": statistics.stdev([row["final_val_perplexity"] for row in rows]) if len(rows) > 1 else 0.0 if rows else None,
         }
 
     comparisons = paired_comparisons(summary)
+    research_question = {}
+    if all(kind in aggregates for kind in ("tied", "partial", "untied")):
+        for metric in ("best_val_loss", "final_val_loss"):
+            tied_value = aggregates["tied"][f"mean_{metric}"]
+            partial_value = aggregates["partial"][f"mean_{metric}"]
+            untied_value = aggregates["untied"][f"mean_{metric}"]
+            denominator = tied_value - untied_value
+            comparison = comparisons.get(f"untied_minus_tied_{metric}", {})
+            interval = comparison.get("ci95")
+            distinguishable = bool(interval and (interval["low"] > 0 or interval["high"] < 0))
+            research_question[metric] = {
+                "tied": tied_value,
+                "partial": partial_value,
+                "untied": untied_value,
+                "untied_improvement_over_tied": denominator,
+                "partial_improvement_over_tied": tied_value - partial_value,
+                "partial_to_untied_gap": partial_value - untied_value,
+                "recovered_fraction": (
+                    (tied_value - partial_value) / denominator if distinguishable and abs(denominator) > 1e-8 else None
+                ),
+                "recovery_status": "reported" if distinguishable and abs(denominator) > 1e-8 else "statistically_uncertain",
+            }
     output_path.write_text(
-        json.dumps({"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons}, indent=2) + "\n"
+        json.dumps(
+            {"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons, "research_question": research_question},
+            indent=2,
+        )
+        + "\n"
     )
     def fmt(value):
         return "—" if value is None else f"{value:.4f}" if isinstance(value, float) else f"{value:,}"
@@ -344,28 +439,28 @@ def make_summary(runs, output_path: Path) -> dict:
         "",
         "Lower validation loss/perplexity is better. Results are based on the logged validation checkpoints.",
         "",
-        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Final val loss | Val perplexity | Tokens/s | Train s | FLOPs (T) |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Model | Total params | Embedding params | Extra vs tied | Best val loss | Final val loss | Val perplexity | Tokens | Tokens/s | Train s | FLOPs (T) |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary:
         lines.append(
             f"| {row['embedding_type']} | {row['total_parameters']:,} | {row['embedding_parameters']:,} | "
             f"{fmt(row['additional_parameters_vs_tied'])} | {fmt(row['best_val_loss'])} | {fmt(row['final_val_loss'])} | "
-            f"{fmt(row['best_val_perplexity'])} | {fmt(row['tokens_per_second'])} | "
+            f"{fmt(row['best_val_perplexity'])} | {fmt(row['training_tokens'])} | {fmt(row['tokens_per_second'])} | "
             f"{fmt(row['training_wall_time_seconds'])} | {fmt(row['estimated_flops_total'] / 1e12 if row['estimated_flops_total'] is not None else None)} |"
         )
     lines += [
         "",
         "## Aggregate by embedding type",
         "",
-        "| Model | Runs | Mean best val loss | 95% CI | Std. dev. | Mean final val loss | Mean perplexity |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Model | Runs | Mean best val loss | 95% CI | Std. dev. | Mean final val loss | Final std. dev. | Mean perplexity |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for kind, aggregate in aggregates.items():
         lines.append(
             f"| {kind} | {aggregate['run_count']} | {fmt(aggregate['mean_best_val_loss'])} | "
             f"{fmt_ci(aggregate['mean_best_val_loss_ci95'])} | {fmt(aggregate['std_best_val_loss'])} | "
-            f"{fmt(aggregate['mean_final_val_loss'])} | "
+            f"{fmt(aggregate['mean_final_val_loss'])} | {fmt(aggregate['std_final_val_loss'])} | "
             f"{fmt(aggregate['mean_best_val_perplexity'])} |"
         )
     lines += [
@@ -433,12 +528,30 @@ def make_summary(runs, output_path: Path) -> dict:
             f"- Partial correction evidence: final input/output correction norms are "
             f"{final['input_correction_relative_norm']:.4f}/{final['output_correction_relative_norm']:.4f} times the shared norm."
         )
+        final_alignment = partial_train[-1]
+        if "input_output_correction_cosine" in final_alignment:
+            lines.append(
+                f"- Partial correction alignment: final input/output cosine is "
+                f"{final_alignment['input_output_correction_cosine']:.4f}; "
+                f"left/right subspace overlap is "
+                f"{final_alignment['input_output_left_subspace_overlap']:.4f}/"
+                f"{final_alignment['input_output_right_subspace_overlap']:.4f}."
+            )
+    if research_question:
+        for metric, values in research_question.items():
+            recovered = values["recovered_fraction"]
+            recovery_text = f"{recovered:.3f}" if recovered is not None else "not reported because the tied-vs-untied difference is statistically uncertain"
+            lines.append(
+                f"- {metric}: untied improves over tied by {values['untied_improvement_over_tied']:.4f}; "
+                f"partial improves over tied by {values['partial_improvement_over_tied']:.4f}; "
+                f"partial-to-untied gap is {values['partial_to_untied_gap']:.4f}; recovered fraction: {recovery_text}."
+            )
     lines += [
         "",
-        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; token-class plot: `token_type_gradients.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png` and `correction_effective_rank.png`.",
+        "Compute-aware plot: `validation_loss_vs_estimated_flops.png`; gradient plots: `gradient_norms_and_ratio.png` and `gradient_alignment.png`; token-class plots: `token_type_gradients.png` and `token_frequency_gradients.png`; update plot: `embedding_updates.png`; correction plots: `correction_norms.png`, `correction_effective_rank.png`, and `correction_alignment.png`.",
     ]
     (output_path.parent / "results_summary.md").write_text("\n".join(lines) + "\n")
-    return {"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons}
+    return {"runs": summary, "by_embedding_type": aggregates, "paired_comparisons": comparisons, "research_question": research_question}
 
 
 def main() -> None:
@@ -460,7 +573,9 @@ def main() -> None:
     plot_embedding_updates(runs, output_dir / "embedding_updates.png")
     plot_corrections(runs, output_dir / "correction_norms.png")
     plot_correction_rank(runs, output_dir / "correction_effective_rank.png")
+    plot_correction_alignment(runs, output_dir / "correction_alignment.png")
     plot_token_type_gradients(runs, output_dir / "token_type_gradients.png")
+    plot_token_frequency_gradients(runs, output_dir / "token_frequency_gradients.png")
 
     plt.figure(figsize=(7, 5))
     for name, _, counts, metrics in runs:

@@ -45,7 +45,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data_dir", default="data")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--seeds", nargs="+", type=int, default=[1337])
-    parser.add_argument("--embedding_types", nargs="+", choices=["tied", "untied", "partial"], default=["tied", "untied", "partial"])
+    parser.add_argument(
+        "--embedding_types",
+        nargs="+",
+        choices=["tied", "untied", "partial", "partial_input", "partial_output", "capacity_control"],
+        default=["tied", "untied", "partial"],
+    )
     parser.add_argument("--steps", type=int, default=2000)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--grad_accum_steps", type=int, default=1)
@@ -56,6 +61,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--adapter_rank", type=int, default=8)
     parser.add_argument("--adapter_alpha", type=float, default=8.0)
+    parser.add_argument("--capacity_control_width", type=int, default=0)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--min_learning_rate", type=float, default=3e-5)
     parser.add_argument("--warmup_steps", type=int, default=100)
@@ -99,7 +105,7 @@ def main() -> None:
     common_keys = (
         "dataset", "data_dir", "device", "steps", "batch_size", "grad_accum_steps",
         "block_size", "n_layer", "n_head", "n_embd", "dropout", "adapter_rank",
-        "adapter_alpha", "learning_rate", "min_learning_rate", "warmup_steps",
+        "adapter_alpha", "capacity_control_width", "learning_rate", "min_learning_rate", "warmup_steps",
         "weight_decay", "grad_clip", "eval_interval", "eval_batches", "log_interval", "save_interval",
         "path_ablation", "ablation_start", "ablation_end",
     )

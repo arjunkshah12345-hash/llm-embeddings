@@ -12,6 +12,7 @@ class ModelConfig:
     dropout: float = 0.0
     adapter_rank: int = 8
     adapter_alpha: float = 8.0
+    capacity_control_width: int = 0
 
 
 @dataclass

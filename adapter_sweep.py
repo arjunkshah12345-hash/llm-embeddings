@@ -145,6 +145,12 @@ def summarize_condition(condition_dir: Path, rank: int, alpha: float) -> dict:
         "mean_best_val_loss_ci95": bootstrap_mean_ci(best_losses, seed=1000 + rank),
         "mean_final_val_loss": statistics.mean(final_losses) if final_losses else None,
         "mean_best_val_perplexity": statistics.mean(best_perplexities) if best_perplexities else None,
+        "mean_training_wall_time_seconds": statistics.mean(
+            [row["training_wall_time_seconds"] for row in rows if row.get("training_wall_time_seconds") is not None]
+        ) if any(row.get("training_wall_time_seconds") is not None for row in rows) else None,
+        "mean_estimated_flops_total": statistics.mean(
+            [row["estimated_flops_total"] for row in rows if row.get("estimated_flops_total") is not None]
+        ) if any(row.get("estimated_flops_total") is not None for row in rows) else None,
         "run_dir": str(condition_dir),
     }
 
@@ -212,6 +218,32 @@ def write_summary(output_dir: Path, summaries: list[dict]) -> None:
     plt.tight_layout()
     plt.savefig(output_dir / "adapter_tradeoff.png", dpi=160)
     plt.close()
+
+    plots = [
+        ("additional_parameters_vs_tied", "Additional trainable parameters vs tied", 1e6, "rank_sweep_vs_extra_parameters.png"),
+        ("total_parameters", "Total trainable parameters", 1e6, "rank_sweep_vs_total_parameters.png"),
+        ("mean_estimated_flops_total", "Estimated training FLOPs", 1e12, "rank_sweep_vs_estimated_flops.png"),
+        ("mean_training_wall_time_seconds", "Training wall-clock seconds", 1.0, "rank_sweep_vs_wall_clock.png"),
+    ]
+    for x_key, xlabel, scale, filename in plots:
+        plt.figure(figsize=(8, 5))
+        plotted = False
+        for row in summaries:
+            x = row.get(x_key)
+            y = row.get("mean_final_val_loss")
+            if x is None or y is None:
+                continue
+            plotted = True
+            plt.scatter(x / scale, y, s=90, label=f"r{row['adapter_rank']} α{row['adapter_alpha']:g}")
+        plt.xlabel(f"{xlabel}{' (millions)' if scale == 1e6 else ' (trillions)' if scale == 1e12 else ''}")
+        plt.ylabel("Mean final validation loss")
+        plt.title(f"Rank sweep: validation loss vs {xlabel.lower()}")
+        plt.grid(alpha=0.25)
+        if plotted:
+            plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_dir / filename, dpi=160)
+        plt.close()
 
 
 def main() -> None:

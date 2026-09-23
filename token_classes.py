@@ -13,6 +13,7 @@ from pathlib import Path
 import torch
 
 TOKEN_CLASSES = ("whitespace", "punctuation", "common", "rare", "other")
+FREQUENCY_BUCKET_COUNT = 4
 
 
 def surface_class(text: str) -> str | None:
@@ -78,3 +79,35 @@ def dataset_class_ids(dataset, common_k: int = 1000, rare_max_count: int = 1) ->
     torch.save(class_ids, cache)
     stamp.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
     return class_ids
+
+
+def dataset_frequency_bucket_ids(dataset, bucket_count: int = FREQUENCY_BUCKET_COUNT) -> torch.Tensor:
+    """Assign seen token IDs to equal-count frequency buckets.
+
+    Buckets are built from training-token counts only. The labels let mechanism
+    metrics compare input/output pressure within matched exposure strata rather
+    than treating a raw mean across all vocabulary rows as frequency-neutral.
+    Unseen vocabulary rows receive -1 and are ignored by the metric helper.
+    """
+    if bucket_count <= 0:
+        raise ValueError("bucket_count must be positive")
+    meta = {
+        "bucket_count": bucket_count,
+        "tokenizer": "gpt2",
+        "train_sha256": dataset.metadata()["sha256"]["train"],
+    }
+    cache = Path(dataset.root) / f"token_frequency_buckets_{bucket_count}.pt"
+    stamp = Path(dataset.root) / f"token_frequency_buckets_{bucket_count}.meta.json"
+    if cache.exists() and stamp.exists() and json.loads(stamp.read_text()) == meta:
+        return torch.load(cache, map_location="cpu", weights_only=True)
+    counts = torch.bincount(dataset.tokens["train"], minlength=dataset.vocab_size)
+    active = torch.where(counts > 0)[0]
+    ordered = active[torch.argsort(counts[active], stable=True)]
+    labels = torch.full((dataset.vocab_size,), -1, dtype=torch.long)
+    positions = torch.arange(ordered.numel(), dtype=torch.long)
+    labels[ordered] = torch.div(positions * bucket_count, max(ordered.numel(), 1), rounding_mode="floor").clamp(
+        max=bucket_count - 1
+    )
+    torch.save(labels, cache)
+    stamp.write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
+    return labels

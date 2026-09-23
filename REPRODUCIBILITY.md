@@ -10,6 +10,8 @@ Install the Python dependencies from a clean checkout:
 python3 -m pip install -r requirements.txt
 ```
 
+The substantive Phase 2 runs used the versions recorded in [requirements-lock.txt](requirements-lock.txt). That file is pinned to the Apple MPS environment used for the release; `requirements.txt` remains the portable installation entry point.
+
 The code requires Python 3.9 or newer and PyTorch 2.1 or newer. CUDA, Apple MPS, and CPU are supported; `--device auto` selects CUDA, then MPS, then CPU.
 
 ## Smallest end-to-end experiment

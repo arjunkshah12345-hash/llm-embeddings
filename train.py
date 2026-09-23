@@ -17,7 +17,7 @@ import torch
 from config import ModelConfig, TrainConfig, as_dict
 from data import TokenDataset
 from model import GPTModel
-from token_classes import dataset_class_ids
+from token_classes import dataset_class_ids, dataset_frequency_bucket_ids
 
 
 def choose_device(requested: str) -> torch.device:
@@ -229,7 +229,11 @@ def truncate_metrics(path: Path, start_step: int) -> int:
 
 def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--embedding_type", choices=["tied", "untied", "partial"], required=True)
+    parser.add_argument(
+        "--embedding_type",
+        choices=["tied", "untied", "partial", "partial_input", "partial_output", "capacity_control"],
+        required=True,
+    )
     parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare"], default="wikitext2")
     parser.add_argument("--data_dir", default="data")
     parser.add_argument("--output_dir", default="runs")
@@ -246,6 +250,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--adapter_rank", type=int, default=8)
     parser.add_argument("--adapter_alpha", type=float, default=8.0)
+    parser.add_argument("--capacity_control_width", type=int, default=0)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--min_learning_rate", type=float, default=3e-5)
     parser.add_argument("--warmup_steps", type=int, default=100)
@@ -284,6 +289,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         dropout=args.dropout,
         adapter_rank=args.adapter_rank,
         adapter_alpha=args.adapter_alpha,
+        capacity_control_width=args.capacity_control_width,
     )
     train_config = TrainConfig(
         dataset=args.dataset,
@@ -376,6 +382,7 @@ def main() -> None:
         metrics_path.unlink(missing_ok=True)
     model.train()
     token_class_ids = dataset_class_ids(dataset).to(device)
+    token_frequency_ids = dataset_frequency_bucket_ids(dataset).to(device)
 
     print(f"run={train_config.run_name} embedding={train_config.embedding_type} device={device}")
     print(json.dumps(parameter_counts, sort_keys=True))
@@ -400,7 +407,7 @@ def main() -> None:
             step_loss += loss.detach().item()
             should_measure = step % train_config.log_interval == 0 and micro_step == train_config.grad_accum_steps - 1
             if should_measure:
-                gradient_metrics = model.embedding_gradient_metrics(x, y, token_class_ids)
+                gradient_metrics = model.embedding_gradient_metrics(x, y, token_class_ids, token_frequency_ids)
             (loss / train_config.grad_accum_steps).backward()
             tokens_seen += x.numel()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
