@@ -172,7 +172,7 @@ def pair_similarity(embedding_matrix: torch.Tensor, pairs: list[dict], encoder) 
     }
 
 
-def evaluate_input_embeddings(
+def evaluate_embedding_matrix(
     embedding_matrix: torch.Tensor,
     train_tokens: torch.Tensor,
     encoder,
@@ -205,6 +205,18 @@ def evaluate_input_embeddings(
     return result
 
 
+def evaluate_input_embeddings(
+    embedding_matrix: torch.Tensor,
+    train_tokens: torch.Tensor,
+    encoder,
+    max_tokens: int = 512,
+    neighbors: int = 5,
+    pairs: list[dict] | None = None,
+) -> dict:
+    """Backward-compatible name for evaluating an effective embedding matrix."""
+    return evaluate_embedding_matrix(embedding_matrix, train_tokens, encoder, max_tokens, neighbors, pairs)
+
+
 def load_pairs(path: Path) -> list[dict]:
     text = path.read_text()
     if text.lstrip().startswith("["):
@@ -223,6 +235,7 @@ def main() -> None:
     parser.add_argument("--max_tokens", type=int, default=512)
     parser.add_argument("--neighbors", type=int, default=5)
     parser.add_argument("--pairs", default="", help="JSON or JSONL file of single-token pairs")
+    parser.add_argument("--side", choices=["input", "output", "both"], default="input")
     parser.add_argument("--output", default="")
     args = parser.parse_args()
 
@@ -238,7 +251,10 @@ def main() -> None:
     model.load_state_dict(checkpoint["model"])
     model.eval()
     with torch.no_grad():
-        input_matrix = model.embeddings.explicit_weight("input").detach().cpu()
+        matrices = {
+            side: model.embeddings.explicit_weight(side).detach().cpu()
+            for side in (["input", "output"] if args.side == "both" else [args.side])
+        }
     encoder = tiktoken.get_encoding("gpt2")
     pairs = load_pairs(Path(args.pairs)) if args.pairs else None
     result = {
@@ -248,14 +264,18 @@ def main() -> None:
         "embedding_type": train_config.embedding_type,
         "parameter_counts": model.parameter_counts(),
         "probe_split": "token_id modulo 5; remainder 4 held out",
-        "metrics": evaluate_input_embeddings(
-            input_matrix,
-            dataset.tokens["train"],
-            encoder,
-            max_tokens=args.max_tokens,
-            neighbors=args.neighbors,
-            pairs=pairs,
-        ),
+        "evaluated_sides": list(matrices),
+        "metrics": {
+            side: evaluate_embedding_matrix(
+                matrix,
+                dataset.tokens["train"],
+                encoder,
+                max_tokens=args.max_tokens,
+                neighbors=args.neighbors,
+                pairs=pairs,
+            )
+            for side, matrix in matrices.items()
+        },
     }
     output = Path(args.output) if args.output else run_dir / "embedding_eval.json"
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
