@@ -151,9 +151,20 @@ def optimizer_checkpoint_payload(
     tokens_seen: int,
     training_elapsed: float,
     embedding_cumulative_update_norm: float = 0.0,
+    dataset_generators: dict[str, torch.Generator] | None = None,
 ) -> dict:
     """Full resume checkpoint with AdamW state and RNG."""
     payload = compact_checkpoint_payload(model, model_config, train_config, device, step, best_val_loss)
+    rng = {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch": torch.get_rng_state(),
+        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+    }
+    if dataset_generators is not None:
+        rng["dataset_generators"] = {
+            split: generator.get_state() for split, generator in dataset_generators.items()
+        }
     payload.update(
         {
             "kind": "optimizer",
@@ -161,12 +172,7 @@ def optimizer_checkpoint_payload(
             "tokens_seen": tokens_seen,
             "training_wall_time_seconds": training_elapsed,
             "embedding_cumulative_update_norm": embedding_cumulative_update_norm,
-            "rng": {
-                "python": random.getstate(),
-                "numpy": np.random.get_state(),
-                "torch": torch.get_rng_state(),
-                "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
-            },
+            "rng": rng,
         }
     )
     return payload
@@ -204,6 +210,31 @@ def load_resume_checkpoint(
     if rng.get("cuda") is not None and torch.cuda.is_available():
         torch.cuda.set_rng_state_all(rng["cuda"])
     return checkpoint
+
+
+def restore_dataset_generators(
+    dataset: TokenDataset,
+    train_config: TrainConfig,
+    checkpoint: dict,
+    completed_steps: int,
+    block_size: int,
+) -> str:
+    """Restore train sampling exactly, including compatibility with old checkpoints."""
+    saved = (checkpoint.get("rng") or {}).get("dataset_generators")
+    if saved:
+        for split, state in saved.items():
+            if split in dataset.generators:
+                dataset.generators[split].set_state(state)
+        return "checkpoint"
+
+    # Older checkpoints did not save the dataset generators. Replaying the
+    # deterministic start draws preserves the old run's stream when extending
+    # one of those checkpoints.
+    generator = dataset.generators["train"]
+    upper = dataset.tokens["train"].numel() - block_size
+    for _ in range(max(completed_steps, 0) * train_config.grad_accum_steps):
+        torch.randint(0, upper, (train_config.batch_size,), generator=generator)
+    return "replayed_legacy"
 
 
 def truncate_metrics(path: Path, start_step: int) -> int:
@@ -373,9 +404,11 @@ def main() -> None:
         tokens_seen = int(resumed.get("tokens_seen", 0))
         training_elapsed = float(resumed.get("training_wall_time_seconds", 0.0))
         embedding_cumulative_update_norm = float(resumed.get("embedding_cumulative_update_norm", 0.0))
+        restore_mode = restore_dataset_generators(dataset, train_config, resumed, start_step, model_config.block_size)
         removed = truncate_metrics(metrics_path, start_step)
         print(
             f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}"
+            f" dataset_generator={restore_mode}"
             + (f" truncated_metrics={removed}" if removed else "")
         )
     else:
@@ -501,6 +534,7 @@ def main() -> None:
                         tokens_seen,
                         training_elapsed,
                         embedding_cumulative_update_norm,
+                        dataset.generators,
                     ),
                 )
         elif step % train_config.save_interval == 0:
@@ -522,6 +556,7 @@ def main() -> None:
                         tokens_seen,
                         training_elapsed,
                         embedding_cumulative_update_norm,
+                        dataset.generators,
                     ),
                 )
 

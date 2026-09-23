@@ -296,6 +296,24 @@ def test_optimizer_checkpoint_resume_round_trip(tmp_path):
     assert restored_opt.state_dict()["state"]
 
 
+def test_optimizer_checkpoint_preserves_dataset_generator_state(tmp_path):
+    from train import restore_dataset_generators
+
+    dataset = object.__new__(TokenDataset)
+    dataset.tokens = {"train": torch.arange(100, dtype=torch.long)}
+    dataset.generators = {"train": torch.Generator().manual_seed(8)}
+    config = TrainConfig(steps=5, batch_size=2, grad_accum_steps=1)
+    state = dataset.generators["train"].get_state()
+    expected = torch.randint(0, 92, (2,), generator=dataset.generators["train"])
+    checkpoint = {"rng": {"dataset_generators": {"train": state}}}
+    restored = object.__new__(TokenDataset)
+    restored.tokens = dataset.tokens
+    restored.generators = {"train": torch.Generator().manual_seed(999)}
+    restore_dataset_generators(restored, config, checkpoint, completed_steps=1, block_size=8)
+    actual = torch.randint(0, 92, (2,), generator=restored.generators["train"])
+    assert torch.equal(expected, actual)
+
+
 def test_flops_estimate_scales_with_tokens_and_embedding_cost():
     from train import estimate_flops
 
