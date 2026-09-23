@@ -8,8 +8,8 @@ abstract: >-
 authors:
   - family-names: Shah
     given-names: Arjun
-repository-code: "https://github.com/arjunshah12345-hash/llm-embeddings"
-repository-artifact: "https://github.com/arjunshah12345-hash/llm-embeddings"
+repository-code: "https://github.com/arjunkshah12345-hash/llm-embeddings"
+repository-artifact: "https://github.com/arjunkshah12345-hash/llm-embeddings"
 license: MIT
 version: 0.1.0
 date-released: 2026-09-22
