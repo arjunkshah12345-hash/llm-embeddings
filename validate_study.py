@@ -37,9 +37,14 @@ def _final_tokens(metrics: list[dict[str, Any]]) -> int | None:
     return int(training[-1]["tokens_seen"]) if training else None
 
 
-def training_batch_stream_digest(seed: int, train_config: dict[str, Any], train_token_count: int) -> str:
+def training_batch_stream_digest(seed: int, config: dict[str, Any], train_token_count: int) -> str:
     """Hash the exact random start-index stream implied by a run configuration."""
-    block_size = int(train_config["block_size"])
+    train_config = config.get("train", config)
+    model_config = config.get("model", {})
+    block_value = train_config.get("block_size")
+    if block_value is None:
+        block_value = model_config["block_size"]
+    block_size = int(block_value)
     batch_size = int(train_config["batch_size"])
     grad_accum_steps = int(train_config["grad_accum_steps"])
     steps = int(train_config["steps"])
@@ -131,7 +136,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             errors.append(f"{run_name}: dataset metadata must contain train/val/test token counts")
         try:
             stream_hash = training_batch_stream_digest(
-                expected_seed, train_config, int(token_metadata.get("train", 0))
+                expected_seed, config, int(token_metadata.get("train", 0))
             )
             batch_stream_hashes.setdefault(str(expected_seed), {})[expected_embedding_type] = stream_hash
         except (KeyError, TypeError, ValueError) as exc:

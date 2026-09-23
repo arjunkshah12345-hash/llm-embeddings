@@ -73,7 +73,7 @@ The GitHub Actions workflow repeats compilation and the test suite on pushes and
 After a validated study, the checkpoint-level mechanism report can be regenerated with:
 
 ```bash
-python3 mechanism_eval.py --runs_dir runs/phase2-pilot-10k --checkpoint final.pt
+python3 mechanism_eval.py --runs_dir runs/phase2-pilot-10k --checkpoint last.pt
 ```
 
 This command refuses to analyze a study whose fairness validator did not pass. The fixed-batch report complements the stepwise JSONL measurements and is written to `mechanism_metrics.json`.
@@ -83,7 +83,7 @@ Input and output representation probes can be run together from a validated chec
 ```bash
 python3 embedding_eval.py \
   --run_dir runs/phase2-pilot-10k/seed1337_partial \
-  --checkpoint final.pt --side both \
+  --checkpoint last.pt --side both \
   --pairs eval/semantic_pairs.jsonl \
   --output runs/phase2-pilot-10k/seed1337_partial/embedding_eval.json
 ```

@@ -99,7 +99,7 @@ def evaluate_run(run_dir: Path, checkpoint_name: str, device_name: str) -> dict:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs_dir", required=True)
-    parser.add_argument("--checkpoint", default="final.pt")
+    parser.add_argument("--checkpoint", default="last.pt", help="compact checkpoint; last.pt is the final training checkpoint")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--output", default="")
     return parser.parse_args()
