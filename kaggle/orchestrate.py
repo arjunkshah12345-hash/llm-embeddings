@@ -77,8 +77,8 @@ def run(command: list[str]) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
-def destination_for(root: Path, profile: str, seed: int) -> Path:
-    return root / f"{profile}_seed{seed}"
+def destination_for(root: Path, profile: str, seed: int, suffix: str = "") -> Path:
+    return root / f"{profile}_seed{seed}{suffix}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -108,18 +108,24 @@ def main() -> None:
 
     if args.dry_run:
         for profile, seed, kernel in jobs:
-            print(f"{profile}\t{seed}\t{kernel}\t{destination_for(output_root, profile, seed)}")
+            print(f"{profile}\t{seed}\t{kernel}\t{destination_for(output_root, profile, seed, args.slug_suffix)}")
         return
 
     pending_jobs = []
     for profile, seed, kernel in jobs:
-        destination = destination_for(output_root, profile, seed)
+        destination = destination_for(output_root, profile, seed, args.slug_suffix)
         if destination.exists():
             validation = destination / "study_validation.json"
-            if validation.exists():
-                payload = json.loads(validation.read_text())
-                if not payload.get("passed"):
+            artifact = destination / "artifact_manifest.json"
+            if validation.exists() and artifact.exists():
+                validation_payload = json.loads(validation.read_text())
+                artifact_payload = json.loads(artifact.read_text())
+                if not validation_payload.get("passed"):
                     raise SystemExit(f"collected artifact failed validation: {destination}")
+                if artifact_payload.get("git_commit") != args.commit:
+                    raise SystemExit(f"collected artifact commit differs from requested commit: {destination}")
+                if artifact_payload.get("experiment_id") != PROFILE_EXPERIMENTS[profile]:
+                    raise SystemExit(f"collected artifact profile differs from requested profile: {destination}")
                 print(f"skip collected {profile} seed={seed}: {destination}", flush=True)
                 continue
             raise SystemExit(f"destination exists without validation: {destination}; inspect before replacing")
@@ -147,7 +153,7 @@ def main() -> None:
             time.sleep(args.poll_seconds)
 
     for profile, seed, kernel in pending_jobs:
-        destination = destination_for(output_root, profile, seed)
+        destination = destination_for(output_root, profile, seed, args.slug_suffix)
         if destination.exists():
             continue
         run([

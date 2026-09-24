@@ -13,6 +13,7 @@ from kaggle.orchestrate import (
 def test_kernel_slug_and_destination_are_deterministic(tmp_path):
     assert kernel_slug("long", 2027) == "llm-embeddings-long-50k-seed2027"
     assert destination_for(tmp_path, "long", 2027) == Path(tmp_path) / "long_seed2027"
+    assert destination_for(tmp_path, "long", 2027, "-rerun") == Path(tmp_path) / "long_seed2027-rerun"
 
 
 def test_private_kernel_status_is_treated_as_missing():
