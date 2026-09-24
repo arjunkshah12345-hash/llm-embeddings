@@ -71,6 +71,66 @@ RANK_SWEEP = {
     "seeds": [1337],
 }
 
+LONG = {
+    "runner": "sweep",
+    "experiment_id": "long_50k",
+    "dataset": "wikitext2",
+    "steps": 50_000,
+    "batch_size": 2,
+    "block_size": 256,
+    "n_layer": 6,
+    "n_head": 6,
+    "n_embd": 384,
+    "adapter_rank": 8,
+    "adapter_alpha": 8,
+    "eval_interval": 500,
+    "eval_batches": 20,
+    "log_interval": 100,
+    "save_interval": 5_000,
+    "seeds": [1337, 2027, 31415],
+    "embedding_types": ["tied", "untied", "partial", "capacity_control"],
+}
+
+SMALL_SCALE = {
+    "runner": "sweep",
+    "experiment_id": "small_scale_10k",
+    "dataset": "wikitext2",
+    "steps": 10_000,
+    "batch_size": 2,
+    "block_size": 256,
+    "n_layer": 4,
+    "n_head": 4,
+    "n_embd": 256,
+    "adapter_rank": 8,
+    "adapter_alpha": 8,
+    "eval_interval": 200,
+    "eval_batches": 20,
+    "log_interval": 50,
+    "save_interval": 1_000,
+    "seeds": [1337, 2027, 31415],
+    "embedding_types": ["tied", "untied", "partial", "capacity_control"],
+}
+
+SECOND_DATASET = {
+    "runner": "sweep",
+    "experiment_id": "tiny_shakespeare_10k",
+    "dataset": "tiny_shakespeare",
+    "steps": 10_000,
+    "batch_size": 2,
+    "block_size": 256,
+    "n_layer": 6,
+    "n_head": 6,
+    "n_embd": 384,
+    "adapter_rank": 8,
+    "adapter_alpha": 8,
+    "eval_interval": 200,
+    "eval_batches": 20,
+    "log_interval": 50,
+    "save_interval": 1_000,
+    "seeds": [1337, 2027, 31415],
+    "embedding_types": ["tied", "untied", "partial", "capacity_control"],
+}
+
 
 RUN_TEMPLATE = r'''"""Generated Kaggle kernel for the llm-embeddings study."""
 
@@ -228,7 +288,11 @@ def metadata(kernel_id: str, title: str) -> dict:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["primary", "validation", "rank"], default="primary")
+    parser.add_argument(
+        "--profile",
+        choices=["primary", "validation", "rank", "long", "small_scale", "second_dataset"],
+        default="primary",
+    )
     parser.add_argument("--commit", default="", help="frozen source commit; defaults to the current checkout HEAD")
     parser.add_argument("--owner", default=OWNER)
     parser.add_argument("--seeds", nargs="+", type=int)
@@ -239,7 +303,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    profiles = {"primary": PRIMARY, "validation": VALIDATION, "rank": RANK_SWEEP}
+    profiles = {
+        "primary": PRIMARY,
+        "validation": VALIDATION,
+        "rank": RANK_SWEEP,
+        "long": LONG,
+        "small_scale": SMALL_SCALE,
+        "second_dataset": SECOND_DATASET,
+    }
     config = dict(profiles[args.profile])
     commit = args.commit or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     seeds = args.seeds or config["seeds"]

@@ -52,3 +52,16 @@ python3 kaggle/launch.py \
 
 This runs ranks 1, 2, 4, 8, 16, and 32 at alpha 8. It is exploratory until
 the useful region is rerun with the predeclared multi-seed protocol.
+
+The launcher also contains fresh-horizon secondary profiles:
+
+```bash
+python3 kaggle/launch.py --profile long --commit <frozen-commit> --seeds 1337 2027 31415
+python3 kaggle/launch.py --profile small_scale --commit <frozen-commit> --seeds 1337 2027 31415
+python3 kaggle/launch.py --profile second_dataset --commit <frozen-commit> --seeds 1337 2027 31415
+```
+
+`long` uses a fresh 50,000-step WikiText-2 study. `small_scale` changes only
+the Transformer size. `second_dataset` uses the pinned Tiny Shakespeare
+source. These are secondary studies and must be validated and analyzed
+separately from the frozen primary matrix.
