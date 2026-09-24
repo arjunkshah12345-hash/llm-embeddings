@@ -1,0 +1,164 @@
+{
+  "batch_stream": {
+    "algorithm": "sha256-jsonl-start-offsets-v1",
+    "digest": "af8ce04d79cf426bb53ee74f718081a3b7b5e9ad35c17cad9e3e9abe1b47c9ef",
+    "offset_log": "batch_offsets.jsonl",
+    "record_count": 10000,
+    "token_count": 5120000
+  },
+  "command": [
+    "/usr/bin/python3",
+    "train.py",
+    "--embedding_type",
+    "partial_input",
+    "--dataset",
+    "wikitext2",
+    "--data_dir",
+    "/kaggle/working/llm-embeddings-data",
+    "--output_dir",
+    "/kaggle/working/primary_10k_seed2027",
+    "--run_name",
+    "seed2027_partial_input",
+    "--device",
+    "cuda",
+    "--seed",
+    "2027",
+    "--steps",
+    "10000",
+    "--batch_size",
+    "2",
+    "--grad_accum_steps",
+    "1",
+    "--block_size",
+    "256",
+    "--n_layer",
+    "6",
+    "--n_head",
+    "6",
+    "--n_embd",
+    "384",
+    "--dropout",
+    "0.0",
+    "--adapter_rank",
+    "8",
+    "--adapter_alpha",
+    "8.0",
+    "--capacity_control_width",
+    "0",
+    "--learning_rate",
+    "0.0003",
+    "--min_learning_rate",
+    "3e-05",
+    "--warmup_steps",
+    "100",
+    "--weight_decay",
+    "0.1",
+    "--grad_clip",
+    "1.0",
+    "--eval_interval",
+    "200",
+    "--eval_batches",
+    "20",
+    "--log_interval",
+    "50",
+    "--save_interval",
+    "1000",
+    "--path_ablation",
+    "none",
+    "--ablation_start",
+    "0",
+    "--ablation_end",
+    "0",
+    "--no-save_optimizer"
+  ],
+  "dataset": {
+    "dataset": "wikitext2",
+    "sha256": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "source": {
+      "files": {
+        "test": {
+          "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+        },
+        "train": {
+          "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+        },
+        "val": {
+          "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+        }
+      },
+      "manifest_version": 1,
+      "variant": "wikitext-2-raw-v1"
+    },
+    "token_counts": {
+      "test": 286221,
+      "train": 2417786,
+      "val": 249887
+    },
+    "tokenizer": "gpt2",
+    "vocab_size": 50257
+  },
+  "flops_accounting": {
+    "estimated_flops_embedding": 115810560.0,
+    "estimated_flops_non_embedding": 64350720.0,
+    "estimated_flops_total": 180161280.0,
+    "flops_per_token_embedding": 115810560.0,
+    "flops_per_token_non_embedding": 64350720.0,
+    "flops_per_token_total": 180161280.0,
+    "rule": "6ND dense-matmul approximation; embedding lookups treated as negligible"
+  },
+  "git_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677",
+  "model": {
+    "embedding_type": "partial_input",
+    "model": {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 8,
+      "block_size": 256,
+      "capacity_control_width": 0,
+      "dropout": 0.0,
+      "n_embd": 384,
+      "n_head": 6,
+      "n_layer": 6,
+      "vocab_size": 50257
+    }
+  },
+  "parameter_counts": {
+    "capacity_control_parameters": 0,
+    "capacity_control_width": 0,
+    "embedding_compute_parameters": 19301760,
+    "embedding_parameters": 19703816,
+    "embedding_type": "partial_input",
+    "input_correction_compute_parameters": 3072,
+    "input_correction_parameters": 405128,
+    "input_side_parameters": 19703816,
+    "output_correction_compute_parameters": 0,
+    "output_correction_parameters": 0,
+    "output_projection_parameters": 19298688,
+    "output_side_parameters": 19298688,
+    "shared_parameters": 19298688,
+    "total_parameters": 30428936,
+    "trainable_parameters": 30428936,
+    "transformer_parameters": 10725120
+  },
+  "path_ablation": {
+    "end": 10000,
+    "mode": "none",
+    "start": 0
+  },
+  "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+  "python": "3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0]",
+  "resume_from": null,
+  "save_optimizer": false,
+  "tiktoken": "0.12.0",
+  "tokenizer": {
+    "name": "gpt2",
+    "vocab_size": 50257
+  },
+  "torch": "2.10.0+cu128"
+}

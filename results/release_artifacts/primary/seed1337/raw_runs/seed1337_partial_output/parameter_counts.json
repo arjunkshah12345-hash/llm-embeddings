@@ -1,0 +1,18 @@
+{
+  "capacity_control_parameters": 0,
+  "capacity_control_width": 0,
+  "embedding_compute_parameters": 19703816,
+  "embedding_parameters": 19703816,
+  "embedding_type": "partial_output",
+  "input_correction_compute_parameters": 0,
+  "input_correction_parameters": 0,
+  "input_side_parameters": 19298688,
+  "output_correction_compute_parameters": 405128,
+  "output_correction_parameters": 405128,
+  "output_projection_parameters": 19298688,
+  "output_side_parameters": 19703816,
+  "shared_parameters": 19298688,
+  "total_parameters": 30428936,
+  "trainable_parameters": 30428936,
+  "transformer_parameters": 10725120
+}

@@ -22,6 +22,6 @@ def test_export_preserves_metrics_and_digest_without_checkpoints(tmp_path):
     metadata = export_study("fixture", source, destination)
 
     assert metadata["checkpoints_exported"] is False
-    assert (destination / "runs/seed1_tied/metrics.jsonl").exists()
-    assert json.loads((destination / "runs/seed1_tied/batch_stream_digest.json").read_text())["digest"] == "deadbeef"
-    assert not (destination / "runs/seed1_tied/model.pt").exists()
+    assert (destination / "raw_runs/seed1_tied/metrics.jsonl").exists()
+    assert json.loads((destination / "raw_runs/seed1_tied/batch_stream_digest.json").read_text())["digest"] == "deadbeef"
+    assert not (destination / "raw_runs/seed1_tied/model.pt").exists()

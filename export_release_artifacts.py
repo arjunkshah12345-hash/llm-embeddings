@@ -41,7 +41,7 @@ def export_study(name: str, source: Path, destination: Path) -> dict:
 
     run_names = []
     for run_dir in sorted(path for path in source.iterdir() if path.is_dir() and (path / "config.json").exists()):
-        target = destination / "runs" / run_dir.name
+        target = destination / "raw_runs" / run_dir.name
         for filename in RUN_FILES:
             copy_if_present(run_dir / filename, target / filename)
         manifest_path = run_dir / "manifest.json"

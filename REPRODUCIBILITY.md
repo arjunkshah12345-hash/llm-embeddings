@@ -105,4 +105,5 @@ python3 export_release_artifacts.py \
 ```
 
 Add every completed seed study to `--studies` before publishing the resulting
-`release_manifest.json`.
+`release_manifest.json`; the per-run files are written under `raw_runs/` so
+they remain distinct from ignored local training directories.
