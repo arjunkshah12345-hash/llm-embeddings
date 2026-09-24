@@ -131,6 +131,35 @@ SECOND_DATASET = {
     "embedding_types": ["tied", "untied", "partial", "capacity_control"],
 }
 
+MECHANISM_STOP_INPUT = {
+    "runner": "sweep",
+    "experiment_id": "mechanism_stop_input_10k",
+    "dataset": "wikitext2",
+    "steps": 10_000,
+    "batch_size": 2,
+    "block_size": 256,
+    "n_layer": 6,
+    "n_head": 6,
+    "n_embd": 384,
+    "adapter_rank": 8,
+    "adapter_alpha": 8,
+    "eval_interval": 200,
+    "eval_batches": 20,
+    "log_interval": 50,
+    "save_interval": 1_000,
+    "path_ablation": "stop_input",
+    "ablation_start": 0,
+    "ablation_end": 5_000,
+    "seeds": [1337, 2027, 31415],
+    "embedding_types": ["tied", "partial"],
+}
+
+MECHANISM_STOP_OUTPUT = {
+    **MECHANISM_STOP_INPUT,
+    "experiment_id": "mechanism_stop_output_10k",
+    "path_ablation": "stop_output",
+}
+
 
 RUN_TEMPLATE = r'''"""Generated Kaggle kernel for the llm-embeddings study."""
 
@@ -202,6 +231,9 @@ def main() -> None:
             "--eval_batches", str(CONFIG["eval_batches"]),
             "--log_interval", str(CONFIG["log_interval"]),
             "--save_interval", str(CONFIG["save_interval"]),
+            "--path_ablation", CONFIG.get("path_ablation", "none"),
+            "--ablation_start", str(CONFIG.get("ablation_start", 0)),
+            "--ablation_end", str(CONFIG.get("ablation_end", 0)),
             "--no-save_optimizer",
         ], cwd=SOURCE)
 
@@ -290,7 +322,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--profile",
-        choices=["primary", "validation", "rank", "long", "small_scale", "second_dataset"],
+        choices=[
+            "primary", "validation", "rank", "long", "small_scale", "second_dataset",
+            "mechanism_stop_input", "mechanism_stop_output",
+        ],
         default="primary",
     )
     parser.add_argument("--commit", default="", help="frozen source commit; defaults to the current checkout HEAD")
@@ -310,6 +345,8 @@ def main() -> None:
         "long": LONG,
         "small_scale": SMALL_SCALE,
         "second_dataset": SECOND_DATASET,
+        "mechanism_stop_input": MECHANISM_STOP_INPUT,
+        "mechanism_stop_output": MECHANISM_STOP_OUTPUT,
     }
     config = dict(profiles[args.profile])
     commit = args.commit or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
