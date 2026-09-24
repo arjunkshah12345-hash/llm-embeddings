@@ -17,6 +17,16 @@ from analyze import bootstrap_mean_ci
 
 
 PRIMARY_CONDITIONS = ["tied", "untied", "partial", "capacity_control", "partial_input", "partial_output"]
+SECONDARY_METRICS = (
+    "best_val_perplexity",
+    "final_val_perplexity",
+    "training_tokens",
+    "tokens_per_second",
+    "training_wall_time_seconds",
+    "peak_gpu_memory_mb",
+    "estimated_flops_total",
+    "estimated_flops_non_embedding",
+)
 
 
 def read_json(path: Path) -> dict:
@@ -144,6 +154,14 @@ def summarize(rows: list[dict], metadata: dict) -> dict:
             "std_best_val_loss": statistics.stdev(best_losses) if len(best_losses) > 1 else 0.0,
             "ci95_best_val_loss": bootstrap_mean_ci(best_losses, seed=4200 + len(condition)),
         }
+        for metric in SECONDARY_METRICS:
+            values = [float(row[metric]) for row in condition_rows if row.get(metric) is not None]
+            if values:
+                by_condition[condition][f"mean_{metric}"] = statistics.mean(values)
+                by_condition[condition][f"std_{metric}"] = statistics.stdev(values) if len(values) > 1 else 0.0
+                by_condition[condition][f"ci95_{metric}"] = bootstrap_mean_ci(
+                    values, seed=7000 + len(condition) + len(metric)
+                )
 
     paired = {}
     for condition in metadata["conditions"]:
@@ -267,14 +285,18 @@ def write_summary(result: dict, path: Path) -> None:
         "",
         "Generated directly from validated per-seed JSONL artifacts. Lower loss is better.",
         "",
-        "| Condition | Seeds | Total params | Extra vs tied | Mean final loss | Std. dev. | Mean best loss |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Condition | Seeds | Total params | Extra vs tied | Mean final loss | Mean final PPL | Tokens/s | Wall s | Peak MB | FLOPs |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for condition, values in result["by_condition"].items():
         lines.append(
             f"| {condition} | {values['run_count']} | {values['total_parameters']:,} | "
             f"{values['additional_parameters_vs_tied']:,} | {values['mean_final_val_loss']:.6f} | "
-            f"{values['std_final_val_loss']:.6f} | {values['mean_best_val_loss']:.6f} |"
+            f"{values.get('mean_final_val_perplexity', float('nan')):.4f} | "
+            f"{values.get('mean_tokens_per_second', float('nan')):.2f} | "
+            f"{values.get('mean_training_wall_time_seconds', float('nan')):.1f} | "
+            f"{values.get('mean_peak_gpu_memory_mb', float('nan')):.1f} | "
+            f"{values.get('mean_estimated_flops_total', float('nan')):.3e} |"
         )
     lines += ["", "## Paired differences versus tied", "", "| Condition | Metric | Mean delta | 95% interval |", "|---|---|---:|---:|"]
     for values in result["paired_comparisons"].values():

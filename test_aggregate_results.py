@@ -73,3 +73,32 @@ def test_recovery_is_not_reported_when_untied_is_worse():
 
     assert result["research_question"]["final_val_loss"]["recovered_fraction"] is None
     assert result["research_question"]["final_val_loss"]["recovery_status"] == "untied_not_better_than_tied"
+
+
+def test_summary_reports_runtime_and_compute_metrics():
+    rows = []
+    for seed, wall, speed in ((1, 10.0, 100.0), (2, 12.0, 80.0)):
+        for condition, loss, parameters in (("tied", 5.0, 100), ("partial", 5.1, 110), ("untied", 5.2, 200)):
+            rows.append(
+                {
+                    "seed": seed,
+                    "embedding_type": condition,
+                    "total_parameters": parameters,
+                    "embedding_parameters": parameters,
+                    "final_val_loss": loss,
+                    "best_val_loss": loss,
+                    "final_val_perplexity": 148.4,
+                    "best_val_perplexity": 148.4,
+                    "training_tokens": 1000,
+                    "tokens_per_second": speed,
+                    "training_wall_time_seconds": wall,
+                    "peak_gpu_memory_mb": 512.0,
+                    "estimated_flops_total": 1e12,
+                    "estimated_flops_non_embedding": 5e11,
+                }
+            )
+    result = summarize(rows, {"conditions": ["tied", "partial", "untied"], "seeds": [1, 2]})
+    tied = result["by_condition"]["tied"]
+    assert tied["mean_tokens_per_second"] == 90.0
+    assert tied["mean_training_wall_time_seconds"] == 11.0
+    assert tied["mean_estimated_flops_total"] == 1e12
