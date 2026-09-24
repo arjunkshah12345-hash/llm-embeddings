@@ -54,7 +54,7 @@ Status: 30M-class one-seed smoke complete (see [docs/initial-mechanism-smoke.md]
 - Keep the transformer configuration fixed across variants and repeat the analysis at two model sizes in the 20M–50M range.
 - Report mean, standard deviation, best validation loss, final validation loss, perplexity, throughput, memory, FLOPs, and parameter count.
 - Use confidence intervals or bootstrap intervals for differences between variants.
-- Compare equal training tokens first; add compute-matched results as a separate analysis because untied output projections have different cost.
+- Compare equal training tokens first; add compute-matched results as a separate analysis because partial tying adds factorized adapter matmul work and untying changes embedding storage, gradient, and optimizer-state cost.
 
 Gate: continue only if the partial model is consistently closer to untied than tied, or if the gradient/representation measurements show a clear independent signal.
 

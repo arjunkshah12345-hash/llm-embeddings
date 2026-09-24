@@ -40,7 +40,7 @@ python3 analyze.py --runs_dir runs/smoke --output_dir runs/smoke/analysis
 
 ## Baseline study
 
-The first substantive study should use the shared configuration in [docs/phase2-baseline.md](docs/phase2-baseline.md), beginning with 10,000 steps and at least three seeds. Keep the same dataset, model flags, optimizer flags, and step count for every embedding type. Use `--resume_existing` only when the study was created with optimizer checkpoints enabled.
+The first substantive study should use the shared configuration in [docs/phase2-baseline.md](docs/phase2-baseline.md), beginning with 10,000 steps and at least three seeds. Keep the same dataset, model flags, optimizer flags, and step count for every embedding type. Use `--resume_existing` only when the study was created with optimizer checkpoints enabled and the requested step horizon is unchanged. To run a longer 50,000-step study, launch a fresh output directory so the cosine learning-rate schedule starts from step zero with its intended horizon.
 
 Every run records:
 

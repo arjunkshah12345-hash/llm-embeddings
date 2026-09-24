@@ -38,6 +38,24 @@ def upsert_run(manifest: dict, entry: dict) -> None:
     manifest["runs"] = runs
 
 
+def validate_resume_common(previous_common: dict, requested_common: dict) -> None:
+    """Require an exact study configuration when resuming optimizer state.
+
+    In particular, the step horizon controls the cosine learning-rate schedule.
+    Changing it would make a resumed run incomparable with a fresh run at the
+    requested horizon, so longer studies must use a new output directory.
+    """
+    for key, value in requested_common.items():
+        if key == "steps":
+            if int(previous_common.get(key, -1)) != int(value):
+                raise SystemExit(
+                    "Cannot resume study with a different step horizon; "
+                    "launch a fresh study directory for a new training schedule"
+                )
+        elif previous_common.get(key) != value:
+            raise SystemExit(f"Cannot resume study: manifest common setting {key} differs")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output_dir", default="runs/study-001")
@@ -133,12 +151,7 @@ def main() -> None:
             if bool(study_manifest.get("save_optimizer", True)) != bool(new_manifest["save_optimizer"]):
                 raise SystemExit("Cannot resume study with a different optimizer-checkpoint policy")
             previous_common = study_manifest.get("common", {})
-            for key, value in common.items():
-                if key == "steps":
-                    if int(value) < int(previous_common.get(key, value)):
-                        raise SystemExit("Cannot resume study with fewer steps than the existing manifest")
-                elif previous_common.get(key) != value:
-                    raise SystemExit(f"Cannot resume study: manifest common setting {key} differs")
+            validate_resume_common(previous_common, common)
             study_manifest["common"] = common
         else:
             study_manifest = new_manifest

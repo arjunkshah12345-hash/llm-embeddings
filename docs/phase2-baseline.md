@@ -40,6 +40,10 @@ python3 sweep.py \
   --warmup_steps 100
 ```
 
+If the pilot warrants a 50k-step continuation, start a fresh output directory
+with `--steps 50000`. Do not use `--resume_existing` to change the step horizon:
+the cosine learning-rate schedule depends on the declared total step count.
+
 Smaller disk-friendly smoke before the pilot (not Phase 2 evidence):
 
 ```bash
