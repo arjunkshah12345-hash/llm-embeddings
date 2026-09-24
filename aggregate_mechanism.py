@@ -24,6 +24,7 @@ METRICS = (
     "shared_input_grad_norm",
     "shared_output_grad_norm",
     "shared_output_to_input_grad_ratio",
+    "shared_input_output_grad_cosine",
     "embedding_cumulative_update_norm",
     "input_correction_norm",
     "output_correction_norm",
@@ -240,6 +241,7 @@ def main() -> None:
     (output_dir / "mechanism_aggregate.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
     plot_metric(result, output_dir, "output_to_input_grad_ratio", "Output/input embedding gradient ratio", "Output / input gradient norm")
     plot_metric(result, output_dir, "input_output_grad_cosine", "Input/output effective gradient cosine", "Cosine similarity")
+    plot_metric(result, output_dir, "shared_input_output_grad_cosine", "Shared-matrix input/output gradient cosine", "Cosine similarity")
     plot_metric(result, output_dir, "input_correction_relative_norm", "Relative input correction norm", "Correction norm / shared norm")
     plot_metric(result, output_dir, "output_correction_relative_norm", "Relative output correction norm", "Correction norm / shared norm")
     plot_metric(result, output_dir, "input_output_correction_cosine", "Input/output correction alignment", "Effective correction cosine")

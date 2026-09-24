@@ -26,3 +26,9 @@ def test_fixed_checkpoint_metrics_override_stochastic_log_endpoint():
 
     assert result["final"]["partial"]["metrics"]["output_to_input_grad_ratio"]["seed_values"] == [2.5]
     assert result["trajectory"]["partial"]["10"]["output_to_input_grad_ratio"] == 9.0
+
+
+def test_shared_gradient_cosine_is_retained():
+    records = [{"seed": 1, "condition": "tied", "step": 10, "shared_input_output_grad_cosine": 0.25}]
+    result = summarize(records, {"conditions": ["tied"], "seeds": [1], "git_commit": "abc"})
+    assert result["final"]["tied"]["metrics"]["shared_input_output_grad_cosine"]["mean"] == 0.25
