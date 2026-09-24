@@ -12,6 +12,8 @@ def test_rank_aggregate_reports_paired_deltas():
             "additional_parameters_vs_tied": 1,
             "mean_final_val_loss": 4.0,
             "mean_best_val_loss": 3.9,
+            "mean_estimated_flops_total": 10.0,
+            "mean_training_wall_time_seconds": 100.0,
         },
         {
             "seed": 2,
@@ -21,6 +23,8 @@ def test_rank_aggregate_reports_paired_deltas():
             "additional_parameters_vs_tied": 1,
             "mean_final_val_loss": 4.2,
             "mean_best_val_loss": 4.1,
+            "mean_estimated_flops_total": 14.0,
+            "mean_training_wall_time_seconds": 140.0,
         },
     ]
     result = aggregate(
@@ -34,3 +38,5 @@ def test_rank_aggregate_reports_paired_deltas():
     rank = result["by_rank"]["1"]
     assert rank["run_count"] == 2
     assert rank["paired_final_delta"]["mean"] == pytest.approx(0.05)
+    assert rank["mean_estimated_flops_total"] == pytest.approx(12.0)
+    assert rank["mean_training_wall_time_seconds"] == pytest.approx(120.0)

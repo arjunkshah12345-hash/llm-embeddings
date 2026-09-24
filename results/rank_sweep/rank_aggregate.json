@@ -12,7 +12,9 @@
         "low": 5.3405762910842896
       },
       "mean_best_val_loss": 5.361305618286133,
+      "mean_estimated_flops_total": 923898869760000.0,
       "mean_final_val_loss": 5.363470339775086,
+      "mean_training_wall_time_seconds": 524.209038915496,
       "paired_best_delta": {
         "ci95": {
           "high": 0.006439757347107111,
@@ -101,6 +103,8 @@
       ],
       "std_best_val_loss": 0.029315695667716135,
       "std_final_val_loss": 0.032377074156153436,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 43.041402403786385,
       "total_parameters": 30125090
     },
     "16": {
@@ -115,7 +119,9 @@
         "low": 5.3545355796813965
       },
       "mean_best_val_loss": 5.356795716285705,
+      "mean_estimated_flops_total": 947411189760000.0,
       "mean_final_val_loss": 5.3574462890625,
+      "mean_training_wall_time_seconds": 550.5644781045282,
       "paired_best_delta": {
         "ci95": {
           "high": 0.0029029607772823596,
@@ -204,6 +210,8 @@
       ],
       "std_best_val_loss": 0.003196315838629526,
       "std_final_val_loss": 0.004116364682883315,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 55.75727335319809,
       "total_parameters": 31644320
     },
     "2": {
@@ -218,7 +226,9 @@
         "low": 5.356708431243897
       },
       "mean_best_val_loss": 5.375499713420869,
+      "mean_estimated_flops_total": 925466357760000.0,
       "mean_final_val_loss": 5.375564324855805,
+      "mean_training_wall_time_seconds": 542.4474135844953,
       "paired_best_delta": {
         "ci95": {
           "high": 0.018825030326843795,
@@ -307,6 +317,8 @@
       ],
       "std_best_val_loss": 0.026757634844195934,
       "std_final_val_loss": 0.026666260476624314,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 53.21794639042447,
       "total_parameters": 30226372
     },
     "32": {
@@ -321,7 +333,9 @@
         "low": 5.344896507263184
       },
       "mean_best_val_loss": 5.3620697379112245,
+      "mean_estimated_flops_total": 972490997760000.0,
       "mean_final_val_loss": 5.362613928318024,
+      "mean_training_wall_time_seconds": 562.3924878910063,
       "paired_best_delta": {
         "ci95": {
           "high": 0.003647780418396529,
@@ -410,6 +424,8 @@
       ],
       "std_best_val_loss": 0.024286615692220556,
       "std_final_val_loss": 0.02505621714602948,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 63.00218299312401,
       "total_parameters": 33264832
     },
     "4": {
@@ -424,7 +440,9 @@
         "low": 5.35208261013031
       },
       "mean_best_val_loss": 5.369687438011169,
+      "mean_estimated_flops_total": 928601333760000.0,
       "mean_final_val_loss": 5.369687438011169,
+      "mean_training_wall_time_seconds": 543.7735428319977,
       "paired_best_delta": {
         "ci95": {
           "high": 0.011697077751160023,
@@ -513,6 +531,8 @@
       ],
       "std_best_val_loss": 0.02489698635235532,
       "std_final_val_loss": 0.02489698635235532,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 54.18576289100068,
       "total_parameters": 30428936
     },
     "8": {
@@ -527,7 +547,9 @@
         "low": 5.3460757493972775
       },
       "mean_best_val_loss": 5.364889216423034,
+      "mean_estimated_flops_total": 934871285760000.0,
       "mean_final_val_loss": 5.365434312820435,
+      "mean_training_wall_time_seconds": 545.285812001965,
       "paired_best_delta": {
         "ci95": {
           "high": 0.008107495307922541,
@@ -616,6 +638,8 @@
       ],
       "std_best_val_loss": 0.026606260223084457,
       "std_final_val_loss": 0.027377142941088364,
+      "std_mean_estimated_flops_total": 0.0,
+      "std_mean_training_wall_time_seconds": 53.43069823146843,
       "total_parameters": 30834064
     }
   },

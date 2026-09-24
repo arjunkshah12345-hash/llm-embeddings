@@ -92,7 +92,7 @@ The current mechanism plots are descriptive endpoints from the preliminary prima
 
 \section{Limitations and continuation protocol}
 
-The present evidence has a short training horizon relative to the planned continuation, uses one model scale and one primary corpus, and has too few seeds for strong statistical claims. The exploratory rank sweep is one-seed. Representation probes are limited and must be separated from language-modeling quality. A parameter-matched control can show whether extra capacity helps, but it cannot establish that every possible allocation of capacity is equivalent.
+The present evidence has a short training horizon relative to the planned continuation, uses one model scale and one primary corpus, and has too few seeds for strong statistical claims. The exploratory rank sweep currently has two seeds. Representation probes are limited and must be separated from language-modeling quality. A parameter-matched control can show whether extra capacity helps, but it cannot establish that every possible allocation of capacity is equivalent.
 
 The active continuation protocol launches fresh 50,000-step studies rather than resuming a 10,000-step cosine schedule. It also includes multi-seed rank replication, input-only and output-only interventions, a smaller model scale, and a second dataset. If the effect changes with horizon, rank, scale, or corpus, that dependency will be the result. If partial tying does not consistently improve tied, the final paper will report that negative result.
 

@@ -70,6 +70,11 @@ def aggregate(rows: list[dict], metadata: dict, tied_rows: dict[int, dict] | Non
             "std_best_val_loss": statistics.stdev(best_values) if len(best_values) > 1 else 0.0,
             "ci95_best_val_loss": bootstrap_mean_ci(best_values, seed=6200 + rank),
         }
+        for metric in ("mean_estimated_flops_total", "mean_training_wall_time_seconds"):
+            metric_values = [float(row[metric]) for row in rank_rows if metric in row]
+            if len(metric_values) == len(rank_rows):
+                entry[metric] = statistics.mean(metric_values)
+                entry[f"std_{metric}"] = statistics.stdev(metric_values) if len(metric_values) > 1 else 0.0
         if tied_rows is not None:
             paired = []
             for row in rank_rows:
@@ -118,12 +123,12 @@ def plot_frontiers(result: dict, output_dir: Path) -> None:
         ("mean_estimated_flops_total", "Estimated training FLOPs", 1e12, "rank_vs_flops.png"),
         ("mean_training_wall_time_seconds", "Training wall-clock seconds", 1.0, "rank_vs_wall_clock.png"),
     ]:
-        if not all(key in row["seed_values"][0] for row in rows):
+        if not all(key in row for row in rows):
             continue
         plt.figure(figsize=(8, 5))
-        plt.plot([row["seed_values"][0][key] / scale for row in rows], [row["mean_final_val_loss"] for row in rows], "o-")
+        plt.plot([row[key] / scale for row in rows], [row["mean_final_val_loss"] for row in rows], "o-")
         for row in rows:
-            plt.annotate(f"r{row['rank']}", (row["seed_values"][0][key] / scale, row["mean_final_val_loss"]), xytext=(4, 4), textcoords="offset points")
+            plt.annotate(f"r{row['rank']}", (row[key] / scale, row["mean_final_val_loss"]), xytext=(4, 4), textcoords="offset points")
         plt.xlabel(f"{xlabel}{' (trillions)' if scale == 1e12 else ''}")
         plt.ylabel("Mean final validation loss")
         plt.grid(alpha=0.25)
