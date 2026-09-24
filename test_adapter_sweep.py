@@ -1,4 +1,6 @@
-from adapter_sweep import condition_name, write_summary
+import json
+
+from adapter_sweep import condition_name, summarize_condition, sweep_command, write_summary
 
 
 def test_adapter_condition_names_are_filesystem_safe():
@@ -33,3 +35,47 @@ def test_adapter_summary_writes_table_and_plot(tmp_path):
     assert "| 2 | 8 |" in summary
     assert (tmp_path / "adapter_sweep_summary.json").exists()
     assert (tmp_path / "adapter_tradeoff.png").stat().st_size > 0
+
+
+def test_adapter_condition_uses_raw_partial_metrics_without_tied_baseline(tmp_path):
+    condition_dir = tmp_path / "rank2_alpha8"
+    condition_dir.mkdir()
+    (condition_dir / "study_validation.json").write_text(json.dumps({"passed": True}))
+    run_dir = condition_dir / "seed1337_partial"
+    run_dir.mkdir()
+    (run_dir / "config.json").write_text(
+        json.dumps(
+            {
+                "model": {"vocab_size": 100, "n_embd": 16},
+                "train": {"seed": 1337, "embedding_type": "partial"},
+            }
+        )
+    )
+    (run_dir / "parameter_counts.json").write_text(
+        json.dumps(
+            {
+                "embedding_type": "partial",
+                "total_parameters": 2000,
+                "trainable_parameters": 2000,
+                "embedding_parameters": 500,
+                "transformer_parameters": 1500,
+            }
+        )
+    )
+    (run_dir / "metrics.jsonl").write_text(
+        json.dumps(
+            {
+                "split": "val",
+                "step": 2,
+                "loss": 4.0,
+                "perplexity": 54.6,
+                "tokens_seen": 30,
+            }
+        )
+        + "\n"
+    )
+
+    summary = summarize_condition(condition_dir, rank=2, alpha=8.0)
+
+    assert summary["run_count"] == 1
+    assert summary["mean_best_val_loss"] == 4.0

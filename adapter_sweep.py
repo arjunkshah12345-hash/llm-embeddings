@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from analyze import bootstrap_mean_ci
+from aggregate_results import summarize_run
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -126,6 +127,10 @@ def sweep_command(args: argparse.Namespace, condition_dir: Path, rank: int, alph
         command.append("--overwrite")
     if not args.save_optimizer:
         command.append("--no-save_optimizer")
+    # This study contains only partial conditions. The general analyzer
+    # expects a tied baseline for paired comparisons, so summarize the raw
+    # partial metrics below instead.
+    command.append("--skip_analysis")
     return command
 
 
@@ -138,8 +143,11 @@ def summarize_condition(
     validation = json.loads((condition_dir / "study_validation.json").read_text())
     if not validation.get("passed"):
         raise SystemExit(f"Fairness validation failed for {condition_dir}")
-    results = json.loads((condition_dir / "analysis" / "results.json").read_text())
-    rows = results.get("runs", [])
+    rows = [
+        summarize_run(condition_dir, run_dir)
+        for run_dir in sorted(path for path in condition_dir.iterdir() if (path / "config.json").exists())
+        if json.loads((run_dir / "config.json").read_text())["train"]["embedding_type"] == "partial"
+    ]
     best_losses = [row["best_val_loss"] for row in rows if row.get("best_val_loss") is not None]
     final_losses = [row["final_val_loss"] for row in rows if row.get("final_val_loss") is not None]
     best_perplexities = [row["best_val_perplexity"] for row in rows if row.get("best_val_perplexity") is not None]
