@@ -1,6 +1,6 @@
 import json
 
-from aggregate_results import validate_and_load
+from aggregate_results import summarize, validate_and_load
 
 
 def test_aggregate_requires_and_reports_collected_artifact_commit(tmp_path):
@@ -46,3 +46,30 @@ def test_aggregate_requires_and_reports_collected_artifact_commit(tmp_path):
 
     assert len(rows) == 1
     assert metadata["git_commit"] == "abc123"
+
+
+def test_recovery_is_not_reported_when_untied_is_worse():
+    rows = []
+    for seed in (1337, 2027):
+        for condition, loss, params in (
+            ("tied", 5.0, 100),
+            ("untied", 5.2, 200),
+            ("partial", 5.1, 110),
+        ):
+            rows.append(
+                {
+                    "seed": seed,
+                    "embedding_type": condition,
+                    "total_parameters": params,
+                    "embedding_parameters": params,
+                    "final_val_loss": loss,
+                    "best_val_loss": loss,
+                    "final_val_perplexity": 1.0,
+                    "best_val_perplexity": 1.0,
+                }
+            )
+
+    result = summarize(rows, {"conditions": ["tied", "untied", "partial"], "seeds": [1337, 2027]})
+
+    assert result["research_question"]["final_val_loss"]["recovered_fraction"] is None
+    assert result["research_question"]["final_val_loss"]["recovery_status"] == "untied_not_better_than_tied"

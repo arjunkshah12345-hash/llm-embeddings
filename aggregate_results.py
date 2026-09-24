@@ -175,7 +175,13 @@ def summarize(rows: list[dict], metadata: dict) -> dict:
             and paired_ci
             and (paired_ci["low"] > 0 or paired_ci["high"] < 0)
         )
-        denominator_ok = abs(untied_delta) > 1e-8 and bool(distinguishable)
+        denominator_ok = untied_delta > 1e-8 and bool(distinguishable)
+        if denominator_ok:
+            recovery_status = "reported"
+        elif not distinguishable:
+            recovery_status = "statistically_uncertain_or_zero_denominator"
+        else:
+            recovery_status = "untied_not_better_than_tied"
         research_question[metric] = {
             "tied": tied,
             "partial": partial,
@@ -184,7 +190,7 @@ def summarize(rows: list[dict], metadata: dict) -> dict:
             "partial_improvement_over_tied": partial_delta,
             "partial_to_untied_gap": partial - untied,
             "recovered_fraction": partial_delta / untied_delta if denominator_ok else None,
-            "recovery_status": "reported" if denominator_ok else "statistically_uncertain_or_zero_denominator",
+            "recovery_status": recovery_status,
         }
 
     return {
