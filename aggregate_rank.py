@@ -30,6 +30,16 @@ def load_rank_rows(study_dirs: list[Path]) -> tuple[list[dict], dict]:
             raise SystemExit(f"duplicate rank seed artifact: {seed}")
         seen_seeds.add(seed)
         commits.add(str(manifest.get("git_commit")))
+        condition_dirs = [
+            path for path in study_dir.iterdir()
+            if path.is_dir() and (path / "study_validation.json").exists()
+        ]
+        if not condition_dirs:
+            raise SystemExit(f"rank artifact has no validated condition studies: {study_dir}")
+        for condition_dir in condition_dirs:
+            validation = read_json(condition_dir / "study_validation.json")
+            if not validation.get("passed"):
+                raise SystemExit(f"rank condition fairness validation failed: {condition_dir}")
         summary = read_json(study_dir / "adapter_sweep_summary.json")
         for row in summary.get("conditions", []):
             rows.append({"seed": seed, **row})

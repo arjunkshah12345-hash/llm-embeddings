@@ -1,4 +1,6 @@
-from aggregate_rank import aggregate
+import json
+
+from aggregate_rank import aggregate, load_rank_rows
 import pytest
 
 
@@ -40,3 +42,16 @@ def test_rank_aggregate_reports_paired_deltas():
     assert rank["paired_final_delta"]["mean"] == pytest.approx(0.05)
     assert rank["mean_estimated_flops_total"] == pytest.approx(12.0)
     assert rank["mean_training_wall_time_seconds"] == pytest.approx(120.0)
+
+
+def test_rank_loader_rejects_unvalidated_condition(tmp_path):
+    study = tmp_path / "rank"
+    study.mkdir()
+    (study / "artifact_manifest.json").write_text(json.dumps({"seed": 1, "git_commit": "abc"}))
+    condition = study / "rank1"
+    condition.mkdir()
+    (condition / "study_validation.json").write_text(json.dumps({"passed": False}))
+    (study / "adapter_sweep_summary.json").write_text(json.dumps({"conditions": []}))
+
+    with pytest.raises(SystemExit, match="fairness validation failed"):
+        load_rank_rows([study])
