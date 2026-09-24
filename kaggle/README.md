@@ -38,6 +38,24 @@ python3 kaggle/collect.py \
 The collector refuses to replace an existing destination unless `--overwrite`
 is supplied and verifies the artifact manifest's commit and experiment ID.
 
+## Run a profile matrix without babysitting jobs
+
+`orchestrate.py` submits missing kernels, polls them, and collects each
+completed artifact into a deterministic destination. It never trains locally.
+Use an immutable commit and inspect the collected `study_validation.json` files
+before aggregation:
+
+```bash
+python3 kaggle/orchestrate.py \
+  --profiles primary \
+  --seeds 1337 2027 31415 \
+  --commit <frozen-commit>
+```
+
+The same command can run multiple independent profiles. Existing collected
+artifacts are preserved, while an existing destination without validation is a
+hard error so an interrupted or ambiguous run cannot be silently replaced.
+
 ## Launch the exploratory rank sweep
 
 After the primary result is available, launch the six-rank secondary sweep with
