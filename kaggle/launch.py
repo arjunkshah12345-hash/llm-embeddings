@@ -119,7 +119,8 @@ def main() -> None:
     if actual_commit != COMMIT:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
 
-    run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--quiet"], cwd=SOURCE)
+    dependency_file = "requirements-lock.txt" if (SOURCE / "requirements-lock.txt").exists() else "requirements.txt"
+    run([sys.executable, "-m", "pip", "install", "-r", dependency_file, "--quiet"], cwd=SOURCE)
     if CONFIG["runner"] == "sweep":
         run([
             sys.executable, "sweep.py",
