@@ -1,6 +1,6 @@
 import json
 
-from aggregate_results import summarize, validate_and_load
+from aggregate_results import summarize, summarize_run, validate_and_load
 
 
 def test_aggregate_requires_and_reports_collected_artifact_commit(tmp_path):
@@ -102,3 +102,30 @@ def test_summary_reports_runtime_and_compute_metrics():
     assert tied["mean_tokens_per_second"] == 90.0
     assert tied["mean_training_wall_time_seconds"] == 11.0
     assert tied["mean_estimated_flops_total"] == 1e12
+
+
+def test_summarize_run_prefers_final_validation_runtime(tmp_path):
+    run = tmp_path / "seed1_tied"
+    run.mkdir()
+    (run / "config.json").write_text(json.dumps({"train": {"seed": 1}}))
+    (run / "parameter_counts.json").write_text(
+        json.dumps(
+            {
+                "embedding_type": "tied",
+                "total_parameters": 10,
+                "trainable_parameters": 10,
+                "embedding_parameters": 4,
+                "transformer_parameters": 6,
+            }
+        )
+    )
+    rows = [
+        {"split": "train", "step": 0, "loss": 2.0, "perplexity": 7.4, "tokens_seen": 8, "tokens_per_second": 10.0, "training_wall_time_seconds": 1.0},
+        {"split": "val", "step": 0, "loss": 2.1, "perplexity": 8.2, "tokens_seen": 8, "tokens_per_second": 8.0, "training_wall_time_seconds": 2.0},
+    ]
+    (run / "metrics.jsonl").write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+
+    summary = summarize_run(tmp_path, run)
+
+    assert summary["tokens_per_second"] == 8.0
+    assert summary["training_wall_time_seconds"] == 2.0

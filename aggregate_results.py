@@ -64,8 +64,11 @@ def summarize_run(study_dir: Path, run_dir: Path) -> dict:
         "final_val_perplexity": float(final["perplexity"]),
         "final_val_step": int(final["step"]),
         "training_tokens": int(final.get("tokens_seen", last_train.get("tokens_seen", 0))),
-        "tokens_per_second": last_train.get("tokens_per_second"),
-        "training_wall_time_seconds": last_train.get("training_wall_time_seconds"),
+        # Validation records are emitted at the declared endpoint and carry
+        # the cumulative runtime. Prefer them over the last logged train row,
+        # which may precede the endpoint when log/eval intervals differ.
+        "tokens_per_second": final.get("tokens_per_second", last_train.get("tokens_per_second")),
+        "training_wall_time_seconds": final.get("training_wall_time_seconds", last_train.get("training_wall_time_seconds")),
         "peak_gpu_memory_mb": max((float(row.get("peak_gpu_memory_mb", 0.0)) for row in metrics), default=0.0),
         "estimated_flops_total": float(final.get("estimated_flops_total", last_train.get("estimated_flops_total", 0.0))),
         "estimated_flops_non_embedding": float(final.get("estimated_flops_non_embedding", last_train.get("estimated_flops_non_embedding", 0.0))),
