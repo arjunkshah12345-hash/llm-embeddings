@@ -23,6 +23,24 @@ def test_primary_table_is_generated_from_aggregate():
     assert "100" in table and "1.20000" in table and "3" in table
 
 
+def test_primary_table_uses_single_latex_escape_for_condition_names():
+    result = {
+        "by_condition": {
+            "capacity_control": {
+                "total_parameters": 100,
+                "additional_parameters_vs_tied": 0,
+                "mean_final_val_loss": 1.2,
+                "ci95_final_val_loss": {"low": 1.1, "high": 1.3},
+                "mean_best_val_loss": 1.0,
+                "run_count": 1,
+            }
+        }
+    }
+    table = primary_table(result)
+    assert "capacity\\_control" in table
+    assert "capacity\\\\_control" not in table
+
+
 def test_rank_table_contains_each_rank():
     result = {
         "by_rank": {

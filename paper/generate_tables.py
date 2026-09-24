@@ -32,7 +32,7 @@ def primary_table(result: dict) -> str:
         ci = value["ci95_final_val_loss"]
         ci_text = f"[{tex_number(ci['low'])}, {tex_number(ci['high'])}]"
         rows.append(
-            f"{condition.replace('_', r'\\_')} & {tex_int(value['total_parameters'])} & "
+            f"{condition.replace('_', r'\_')} & {tex_int(value['total_parameters'])} & "
             f"{tex_int(value['additional_parameters_vs_tied'])} & {tex_number(value['mean_final_val_loss'], 5)} & "
             f"{ci_text} & {tex_number(value['mean_best_val_loss'], 5)} & {value['run_count']} "
             + r"\\"
@@ -55,7 +55,7 @@ def primary_macros(result: dict) -> str:
             f"\\newcommand{{\\UntiedFinalLoss}}{{{tex_number(final['untied'], 5)}}}",
             f"\\newcommand{{\\PartialExtraParams}}{{{tex_int(partial['additional_parameters_vs_tied'])}}}",
             f"\\newcommand{{\\UntiedExtraParams}}{{{tex_int(untied['additional_parameters_vs_tied'])}}}",
-            f"\\newcommand{{\\RecoveryStatus}}{{{final['recovery_status'].replace('_', r'\\ ')}}}",
+            f"\\newcommand{{\\RecoveryStatus}}{{{final['recovery_status'].replace('_', r'\ ')}}}",
             "",
         ]
     )
