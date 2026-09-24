@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import platform
@@ -82,6 +83,53 @@ def evaluate(model: GPTModel, dataset: TokenDataset, split: str, config: TrainCo
 
 def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+
+
+BATCH_STREAM_ALGORITHM = "sha256-jsonl-start-offsets-v1"
+
+
+def batch_stream_record_bytes(step: int, micro_step: int, starts: torch.Tensor) -> bytes:
+    record = {
+        "step": int(step),
+        "micro_step": int(micro_step),
+        "starts": [int(value) for value in starts.detach().cpu().tolist()],
+    }
+    return (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def load_batch_stream_digest(path: Path, start_step: int | None = None) -> tuple[hashlib._Hash, int]:
+    """Rebuild the actual sampled-offset digest from the append-only audit log."""
+    digest = hashlib.sha256()
+    record_count = 0
+    if not path.exists():
+        return digest, record_count
+    for raw_line in path.read_bytes().splitlines(keepends=True):
+        if not raw_line.strip():
+            continue
+        record = json.loads(raw_line)
+        if start_step is not None and int(record["step"]) >= start_step:
+            continue
+        digest.update(raw_line if raw_line.endswith(b"\n") else raw_line + b"\n")
+        record_count += 1
+    return digest, record_count
+
+
+def truncate_batch_stream_log(path: Path, start_step: int) -> int:
+    """Drop sampled-offset records at or after a checkpoint resume step."""
+    if not path.exists():
+        return 0
+    kept: list[bytes] = []
+    removed = 0
+    for raw_line in path.read_bytes().splitlines(keepends=True):
+        if not raw_line.strip():
+            continue
+        record = json.loads(raw_line)
+        if int(record["step"]) >= start_step:
+            removed += 1
+        else:
+            kept.append(raw_line if raw_line.endswith(b"\n") else raw_line + b"\n")
+    path.write_bytes(b"".join(kept))
+    return removed
 
 
 def git_commit() -> str:
@@ -387,9 +435,17 @@ def main() -> None:
                 "start": train_config.ablation_start,
                 "end": train_config.ablation_end or train_config.steps,
             },
+            "batch_stream": {
+                "algorithm": BATCH_STREAM_ALGORITHM,
+                "digest": None,
+                "record_count": 0,
+                "token_count": 0,
+                "offset_log": "batch_offsets.jsonl",
+            },
         },
     )
     metrics_path = run_dir / "metrics.jsonl"
+    batch_stream_path = run_dir / "batch_offsets.jsonl"
     start_step = 0
     best_val = float("inf")
     tokens_seen = 0
@@ -406,6 +462,9 @@ def main() -> None:
         embedding_cumulative_update_norm = float(resumed.get("embedding_cumulative_update_norm", 0.0))
         restore_mode = restore_dataset_generators(dataset, train_config, resumed, start_step, model_config.block_size)
         removed = truncate_metrics(metrics_path, start_step)
+        if not batch_stream_path.exists():
+            raise ValueError(f"Cannot resume without actual batch-offset log: {batch_stream_path}")
+        truncate_batch_stream_log(batch_stream_path, start_step)
         print(
             f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}"
             f" dataset_generator={restore_mode}"
@@ -413,6 +472,9 @@ def main() -> None:
         )
     else:
         metrics_path.unlink(missing_ok=True)
+        batch_stream_path.unlink(missing_ok=True)
+    batch_stream_digest, batch_record_count = load_batch_stream_digest(batch_stream_path)
+    batch_stream_handle = batch_stream_path.open("ab", buffering=1024 * 1024)
     model.train()
     token_class_ids = dataset_class_ids(dataset).to(device)
     token_frequency_ids = dataset_frequency_bucket_ids(dataset).to(device)
@@ -434,7 +496,13 @@ def main() -> None:
         gradient_metrics = None
         path_ablation = active_path_ablation(step, train_config)
         for micro_step in range(train_config.grad_accum_steps):
-            x, y = dataset.get_batch("train", train_config.batch_size, model_config.block_size, device)
+            x, y, starts = dataset.get_batch(
+                "train", train_config.batch_size, model_config.block_size, device, return_starts=True
+            )
+            batch_record = batch_stream_record_bytes(step, micro_step, starts)
+            batch_stream_handle.write(batch_record)
+            batch_stream_digest.update(batch_record)
+            batch_record_count += 1
             logits, _ = model(x, return_hidden=True, path_ablation=path_ablation)
             loss = torch.nn.functional.cross_entropy(logits.reshape(-1, logits.size(-1)), y.reshape(-1))
             step_loss += loss.detach().item()
@@ -465,6 +533,7 @@ def main() -> None:
         training_elapsed += time.perf_counter() - step_started
         # Session wall clock resets on resume; training_wall_time_seconds stays cumulative.
         wall_elapsed = time.perf_counter() - started
+        batch_stream_handle.flush()
         memory = memory_mb(device)
         peak_memory = max(peak_memory, memory)
         flops = estimate_flops(parameter_counts, tokens_seen)
@@ -560,7 +629,18 @@ def main() -> None:
                     ),
                 )
 
+    batch_stream_handle.close()
     print(f"finished run={train_config.run_name} best_val_loss={best_val:.4f} output={run_dir}")
+    manifest_path = run_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["batch_stream"] = {
+        "algorithm": BATCH_STREAM_ALGORITHM,
+        "digest": batch_stream_digest.hexdigest(),
+        "record_count": batch_record_count,
+        "token_count": tokens_seen,
+        "offset_log": batch_stream_path.name,
+    }
+    write_json(manifest_path, manifest)
 
 
 if __name__ == "__main__":

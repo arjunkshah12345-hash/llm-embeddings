@@ -9,6 +9,10 @@ sanity_runs2/
 analysis/
 sanity_analysis/
 phase2-*/
+kaggle/generated/
+cloud_artifacts/
+paper/build/
+arxiv/build/
 *.pt.tmp
 *.pt
 *.pth

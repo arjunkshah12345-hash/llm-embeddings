@@ -76,7 +76,21 @@ def make_study(tmp_path, token_counts=(160, 160, 160)):
             "dataset": dataset,
         }
         (run_dir / "config.json").write_text(json.dumps(config))
-        (run_dir / "manifest.json").write_text(json.dumps({"dataset": dataset}))
+        expected_stream = training_batch_stream_digest(7, config, 160)
+        (run_dir / "manifest.json").write_text(
+            json.dumps(
+                {
+                    "dataset": dataset,
+                    "batch_stream": {
+                        "algorithm": "sha256-jsonl-start-offsets-v1",
+                        "digest": expected_stream,
+                        "record_count": 5,
+                        "token_count": tokens,
+                        "offset_log": "batch_offsets.jsonl",
+                    },
+                }
+            )
+        )
         (run_dir / "parameter_counts.json").write_text(
             json.dumps(
                 {

@@ -48,6 +48,7 @@ Every run records:
 - dataset split hashes and token counts;
 - tokenizer and package metadata;
 - git commit and command line;
+- the SHA-256 digest of the actual sampled training start offsets, alongside the expected deterministic stream;
 - parameter counts, training tokens, speed, memory, and approximate FLOPs;
 - train/validation metrics and embedding diagnostics.
 

@@ -224,7 +224,14 @@ class TokenDataset:
     def save_metadata(self) -> None:
         (self.root / "metadata.json").write_text(json.dumps(self.metadata(), indent=2) + "\n")
 
-    def get_batch(self, split: str, batch_size: int, block_size: int, device: torch.device):
+    def get_batch(
+        self,
+        split: str,
+        batch_size: int,
+        block_size: int,
+        device: torch.device,
+        return_starts: bool = False,
+    ):
         tokens = self.tokens[split]
         if tokens.numel() <= block_size + 1:
             raise ValueError(f"Split {split} is too short for block_size={block_size}")
@@ -236,7 +243,10 @@ class TokenDataset:
         )
         x = torch.stack([tokens[start : start + block_size] for start in starts])
         y = torch.stack([tokens[start + 1 : start + block_size + 1] for start in starts])
-        return x.to(device), y.to(device)
+        result = (x.to(device), y.to(device))
+        if return_starts:
+            return (*result, starts)
+        return result
 
     def get_fixed_batch(self, split: str, batch_index: int, batch_size: int, block_size: int, device: torch.device):
         """Return a deterministic, non-random validation batch.

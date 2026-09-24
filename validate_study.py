@@ -53,9 +53,15 @@ def training_batch_stream_digest(seed: int, config: dict[str, Any], train_token_
         raise ValueError("training split is too short for the configured block size")
     generator = torch.Generator().manual_seed(int(seed) + 1)
     digest = hashlib.sha256()
-    for _ in range(steps * grad_accum_steps):
-        starts = torch.randint(0, upper, (batch_size,), generator=generator)
-        digest.update(starts.numpy().tobytes())
+    for step in range(steps):
+        for micro_step in range(grad_accum_steps):
+            starts = torch.randint(0, upper, (batch_size,), generator=generator)
+            record = {
+                "step": step,
+                "micro_step": micro_step,
+                "starts": [int(value) for value in starts.tolist()],
+            }
+            digest.update((json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -89,6 +95,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
     dataset_hashes: dict[str, dict[str, str]] = {}
     token_counts: dict[str, int] = {}
     batch_stream_hashes: dict[str, dict[str, str]] = {}
+    actual_batch_stream_hashes: dict[str, dict[str, str]] = {}
     for entry in entries:
         run_name = entry.get("run_name", "")
         run_dir = runs_dir / run_name
@@ -142,6 +149,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             or not source_metadata["variant"]
         ):
             errors.append(f"{run_name}: dataset metadata must identify a pinned source variant")
+        stream_hash = None
         try:
             stream_hash = training_batch_stream_digest(
                 expected_seed, config, int(token_metadata.get("train", 0))
@@ -149,6 +157,24 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             batch_stream_hashes.setdefault(str(expected_seed), {})[expected_embedding_type] = stream_hash
         except (KeyError, TypeError, ValueError) as exc:
             errors.append(f"{run_name}: cannot reconstruct training batch stream ({exc})")
+        actual_stream = run_manifest.get("batch_stream", {})
+        if (
+            not isinstance(actual_stream, dict)
+            or actual_stream.get("algorithm") != "sha256-jsonl-start-offsets-v1"
+            or not isinstance(actual_stream.get("digest"), str)
+            or not actual_stream.get("digest")
+        ):
+            errors.append(f"{run_name}: manifest is missing the actual sampled-offset stream digest")
+        else:
+            actual_batch_stream_hashes.setdefault(str(expected_seed), {})[expected_embedding_type] = actual_stream["digest"]
+            if stream_hash is not None and actual_stream["digest"] != stream_hash:
+                errors.append(f"{run_name}: actual sampled-offset digest differs from the expected deterministic stream")
+            try:
+                expected_records = int(train_config["steps"]) * int(train_config["grad_accum_steps"])
+                if int(actual_stream.get("record_count", -1)) != expected_records:
+                    errors.append(f"{run_name}: sampled-offset record count does not match the declared training horizon")
+            except (KeyError, TypeError, ValueError):
+                errors.append(f"{run_name}: sampled-offset metadata has an invalid record count")
 
         required_count_keys = {
             "embedding_type",
@@ -204,6 +230,13 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             errors.append(f"{run_name}: no positive token count in metrics")
         else:
             token_counts[run_name] = tokens
+            actual_stream = run_manifest.get("batch_stream", {})
+            if isinstance(actual_stream, dict) and actual_stream.get("token_count") is not None:
+                try:
+                    if int(actual_stream["token_count"]) != tokens:
+                        errors.append(f"{run_name}: sampled-offset token count differs from metric token exposure")
+                except (TypeError, ValueError):
+                    errors.append(f"{run_name}: sampled-offset metadata has an invalid token count")
 
     if canonical_configs:
         reference_name, reference = next(iter(canonical_configs.items()))
@@ -277,6 +310,9 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
     for seed, hashes in batch_stream_hashes.items():
         if len(set(hashes.values())) > 1:
             errors.append(f"seed={seed}: embedding variants do not share the same training batch stream")
+    for seed, hashes in actual_batch_stream_hashes.items():
+        if len(set(hashes.values())) > 1:
+            errors.append(f"seed={seed}: recorded sampled-offset digests differ across embedding variants")
     if entries and len(canonical_configs) < len(entries):
         warnings.append("some run metadata could not be included in the configuration comparison")
 
@@ -289,6 +325,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         "token_counts": token_counts,
         "token_tolerance_by_seed": token_tolerance,
         "batch_stream_hashes": batch_stream_hashes,
+        "actual_batch_stream_hashes": actual_batch_stream_hashes,
         "errors": errors,
         "warnings": warnings,
     }

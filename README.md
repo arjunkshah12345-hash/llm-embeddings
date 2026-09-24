@@ -33,7 +33,7 @@ python3 sweep.py \
   --log_interval 2 --save_interval 8 --no-save_optimizer
 ```
 
-The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads the pinned WikiText-2-raw-v1 source and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the longer baseline is specified in [docs/phase2-baseline.md](docs/phase2-baseline.md).
+The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads the pinned WikiText-2-raw-v1 source and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the frozen primary study is specified in [EXPERIMENT_PROTOCOL.md](EXPERIMENT_PROTOCOL.md), with Kaggle launch and collection tooling under [`kaggle/`](kaggle/).
 
 ## Model and experiment
 
