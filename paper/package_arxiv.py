@@ -30,7 +30,7 @@ def build_package(output_dir: Path) -> None:
     (output_dir / "main.tex").write_text(main)
     shutil.copy2(ROOT / "paper" / "references.bib", output_dir / "references.bib")
 
-    for table in ("primary_table.tex", "rank_table.tex", "result_macros.tex"):
+    for table in ("primary_table.tex", "rank_table.tex", "mechanism_table.tex", "result_macros.tex"):
         shutil.copy2(ROOT / "paper" / "generated" / table, generated_dir / table)
     for source in FIGURES:
         if not source.exists():

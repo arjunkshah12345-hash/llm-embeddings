@@ -11,6 +11,7 @@ def test_arxiv_package_is_self_contained(tmp_path):
     assert (output / "references.bib").exists()
     assert (output / "generated" / "primary_table.tex").exists()
     assert (output / "generated" / "rank_table.tex").exists()
+    assert (output / "generated" / "mechanism_table.tex").exists()
     assert (output / "figures" / "architecture.png").exists()
     assert (output / "figures" / "final_loss_by_condition.png").exists()
     assert (output / "figures" / "parameter_efficiency.png").exists()

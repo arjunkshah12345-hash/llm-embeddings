@@ -1,6 +1,6 @@
 import json
 
-from paper.generate_tables import primary_table, rank_table
+from paper.generate_tables import mechanism_table, primary_table, rank_table
 
 
 def test_primary_table_is_generated_from_aggregate():
@@ -53,3 +53,40 @@ def test_rank_table_contains_each_rank():
         }
     }
     assert "1" in rank_table(result)
+
+
+def test_mechanism_table_reads_aggregate_metrics():
+    result = {
+        "final": {
+            "partial": {
+                "metrics": {
+                    "output_to_input_grad_ratio": {"mean": 1.5},
+                    "input_output_grad_cosine": {"mean": 0.1},
+                    "input_correction_norm": {"mean": 2.0},
+                    "output_correction_norm": {"mean": 3.0},
+                    "input_output_correction_cosine": {"mean": -0.2},
+                }
+            }
+        }
+    }
+    table = mechanism_table(result)
+    assert "partial" in table and "1.5000" in table and "-0.2000" in table
+
+
+def test_mechanism_table_escapes_condition_names_once():
+    result = {
+        "final": {
+            "capacity_control": {
+                "metrics": {
+                    "output_to_input_grad_ratio": {"mean": 1.0},
+                    "input_output_grad_cosine": {"mean": 0.0},
+                    "input_correction_norm": {"mean": 0.0},
+                    "output_correction_norm": {"mean": 0.0},
+                    "input_output_correction_cosine": {"mean": 0.0},
+                }
+            }
+        }
+    }
+    table = mechanism_table(result)
+    assert "capacity\\_control" in table
+    assert "capacity\\\\_control" not in table

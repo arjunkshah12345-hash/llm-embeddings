@@ -97,6 +97,13 @@ The training code records input-path and output-path contributions to the effect
 
 The current mechanism plots are descriptive endpoints from the preliminary primary study. They are not yet a stable mechanistic result: the planned test is whether the same imbalance and correction separation replicate across seeds, longer training, one-sided interventions, and frequency-matched token groups. Language-model loss alone is not treated as evidence of better input representations.
 
+\begin{table}[t]
+\centering
+\caption{Preliminary mechanism diagnostics from the primary study. Values are means across the three seeds; these diagnostics are descriptive until the longer and intervention studies replicate them.}
+\label{tab:mechanism}
+\input{generated/mechanism_table.tex}
+\end{table}
+
 \section{Limitations and continuation protocol}
 
 The present evidence has a short training horizon relative to the planned continuation, uses one model scale and one primary corpus, and has too few seeds for strong statistical claims. The exploratory rank sweep currently has two seeds. Representation probes are limited and must be separated from language-modeling quality. A parameter-matched control can show whether extra capacity helps, but it cannot establish that every possible allocation of capacity is equivalent.

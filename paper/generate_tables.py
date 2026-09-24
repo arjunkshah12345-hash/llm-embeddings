@@ -82,10 +82,40 @@ def rank_table(result: dict) -> str:
     return "\n".join(rows) + "\n"
 
 
+def mechanism_table(result: dict) -> str:
+    rows = [
+        r"\begin{tabular}{lrrrrr}",
+        r"\toprule",
+        "Condition & Out./in. grad. & Grad. cosine & Input $\\Delta_i$ norm & Output $\\Delta_o$ norm & $\\Delta_i$/$\\Delta_o$ cosine \\\\",
+        r"\midrule",
+    ]
+    for condition in ("tied", "partial", "capacity_control", "partial_input", "partial_output"):
+        entry = result.get("final", {}).get(condition)
+        if not entry:
+            continue
+        metrics = entry["metrics"]
+        values = [
+            metrics.get("output_to_input_grad_ratio", {}).get("mean"),
+            metrics.get("input_output_grad_cosine", {}).get("mean"),
+            metrics.get("input_correction_norm", {}).get("mean"),
+            metrics.get("output_correction_norm", {}).get("mean"),
+            metrics.get("input_output_correction_cosine", {}).get("mean"),
+        ]
+        escaped_condition = condition.replace("_", "\\_")
+        rows.append(
+            f"{escaped_condition} & "
+            + " & ".join(tex_number(value, 4) for value in values)
+            + r" \\"
+        )
+    rows += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(rows) + "\n"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--primary", required=True)
     parser.add_argument("--rank", default="")
+    parser.add_argument("--mechanism", default="")
     parser.add_argument("--output-dir", default="paper/generated")
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
@@ -95,6 +125,8 @@ def main() -> None:
     (output_dir / "result_macros.tex").write_text(primary_macros(primary))
     if args.rank:
         (output_dir / "rank_table.tex").write_text(rank_table(read_json(Path(args.rank))))
+    if args.mechanism:
+        (output_dir / "mechanism_table.tex").write_text(mechanism_table(read_json(Path(args.mechanism))))
 
 
 if __name__ == "__main__":
