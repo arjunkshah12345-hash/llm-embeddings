@@ -1,0 +1,40 @@
+{
+  "checkpoint_policy": "used inside Kaggle for diagnostics, removed from collected bundle",
+  "config": {
+    "alphas": [
+      8.0
+    ],
+    "batch_size": 2,
+    "block_size": 256,
+    "dataset": "wikitext2",
+    "eval_batches": 20,
+    "eval_interval": 200,
+    "experiment_id": "rank_sweep_10k",
+    "log_interval": 50,
+    "n_embd": 384,
+    "n_head": 6,
+    "n_layer": 6,
+    "ranks": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "runner": "adapter_sweep",
+    "save_interval": 1000,
+    "seeds": [
+      1337
+    ],
+    "steps": 10000
+  },
+  "experiment_id": "rank_sweep_10k",
+  "finished_at_unix": 1790234536.490422,
+  "git_commit": "2a91fbab37166133bbf60c9341d8eac40dcb07c1",
+  "kernel": "aks1321/llm-embeddings-rank-sweep-10k-seed1337",
+  "seed": 1337,
+  "source_url": "https://github.com/arjunkshah12345-hash/llm-embeddings.git",
+  "started_at_unix": 1790230869.2715878,
+  "study_dir": "rank_sweep_10k_seed1337"
+}
