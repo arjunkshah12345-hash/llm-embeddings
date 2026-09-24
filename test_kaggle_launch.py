@@ -29,9 +29,12 @@ def test_generated_kernel_passes_path_ablation_flags():
     assert '"--ablation_end", str(CONFIG.get("ablation_end", 0))' in RUN_TEMPLATE
 
 
-def test_kaggle_executable_is_a_real_file():
-    executable = Path(kaggle_executable())
-    assert executable.is_file()
+def test_kaggle_executable_honors_override(tmp_path, monkeypatch):
+    executable = tmp_path / "kaggle"
+    executable.write_text("#!/bin/sh\n")
+    executable.chmod(0o755)
+    monkeypatch.setenv("KAGGLE_CLI", str(executable))
+    assert Path(kaggle_executable()) == executable
 
 
 def test_slug_suffix_keeps_reruns_distinct():
