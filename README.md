@@ -1,6 +1,6 @@
 # Partially tied language-model embeddings
 
-> **Research status:** Experimental. The implementation and measurement pipeline are complete enough for controlled study, but current results are smoke tests and exploratory pilots only. Multi-seed, longer-training experiments are still required before making a performance claim.
+> **Research status:** Experimental. The implementation and measurement pipeline are complete, and the first three-seed 10k-step primary study is available as preliminary evidence. Fresh 50k training, rank replication, intervention, scale, and dataset studies are still required before making a final performance claim.
 
 This project studies a parameter-sharing choice in decoder-only language models. A language model uses token vectors at the input and a vocabulary projection at the output, but those roles need not require exactly the same representation.
 
@@ -68,9 +68,11 @@ The gradient decomposition evaluates two counterfactual losses: one detaches the
 
 ## Current evidence
 
+The first frozen primary study used WikiText-2-raw-v1, GPT-2 BPE, the 6-layer/384-width Transformer, six conditions, and seeds 1337, 2027, and 31415 for 10,000 steps. The fairness validator passed for every seed. Mean final validation loss was 5.3741 for tied, 5.3774 for rank-8 partial, and 5.4388 for untied; partial added 810,256 parameters over tied, while untied added 19,298,688. In this preliminary horizon, untied was worse than tied, so no recovery fraction is reported. The partial-versus-tied paired difference was uncertain across the three seeds. These values are a reproducible pilot endpoint, not a claim that partial tying works; fresh 50k runs and robustness studies are in progress. The machine-readable aggregate is [results/primary/primary_aggregate.json](results/primary/primary_aggregate.json).
+
 The tracked 30M-class pilot used one seed and five optimizer steps against the pre-cleanup dataset source. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling or is comparable with the pinned raw-source study.
 
-Substantive validation still requires longer equal-token runs, multiple seeds, adapter-budget sweeps, representation evaluations, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
+Substantive final validation still requires longer equal-token runs, multi-seed rank comparisons, intervention studies, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
 
 ## Related work
 
@@ -84,7 +86,7 @@ This project is related to those efforts but does not claim a new general soluti
 
 ## Limitations and roadmap
 
-The current study is small: it uses GPT-2 BPE, WikiText-2, short exploratory runs, one primary adapter family, and limited representation probes. The FLOP numbers are estimates based on dense-matmul conventions and factorized projection costs, not hardware-independent measurements. A positive result would require replication across seeds, training lengths, model sizes, datasets, and evaluation types. A null result is also useful because it would bound the value of role-specific corrections.
+The current evidence is still small: it uses GPT-2 BPE, WikiText-2, one 10k endpoint, one primary adapter family, and limited representation probes. The FLOP numbers are estimates based on dense-matmul conventions and factorized projection costs, not hardware-independent measurements. A positive result would require replication across training lengths, model sizes, datasets, and evaluation types. A null result is also useful because it would bound the value of role-specific corrections.
 
 The roadmap covers baseline scaling, adapter-budget comparisons, mechanism checks, input-representation evaluation, robustness, and reproducible release artifacts. It is maintained in [RESEARCH_PLAN.md](RESEARCH_PLAN.md), with detailed phase notes under [`docs/`](docs/).
 

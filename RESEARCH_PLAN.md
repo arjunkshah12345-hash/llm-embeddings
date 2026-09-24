@@ -48,7 +48,7 @@ Gate: no comparison is published unless all three runs use the same data manifes
 
 Goal: determine whether the loss signal survives beyond the six-step smoke test.
 
-Status: 30M-class one-seed smoke complete (see [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md)); multi-seed evidence pending.
+Status: three-seed 10k primary study complete and fairness-validated; fresh 50k and robustness evidence are still pending.
 
 - Run 10k–100k steps on WikiText-2 with at least three seeds.
 - Keep the transformer configuration fixed across variants and repeat the analysis at two model sizes in the 20M–50M range.
@@ -62,7 +62,7 @@ Gate: continue only if the partial model is consistently closer to untied than t
 
 Goal: map the quality/parameter tradeoff rather than overfit to rank 8.
 
-Status: runner implemented in `adapter_sweep.py`; evidence pending the longer study.
+Status: one-seed six-rank exploratory sweep complete; multi-seed replication is in progress.
 
 - Sweep ranks 1, 2, 4, 8, 16, and 32.
 - Sweep adapter scaling separately from rank.
@@ -88,7 +88,7 @@ Gate: call the mechanism supported only if the pattern replicates across seeds a
 
 Goal: test whether partial tying improves the usefulness of input embeddings independently of language-model loss.
 
-Status: intrinsic frequency/shape probes and optional predeclared single-token pair scoring are implemented in `embedding_eval.py`; semantic and downstream evidence pending.
+Status: deterministic input/output probes and predeclared single-token pair scoring are complete for the primary study; semantic and downstream evidence is still pending.
 
 - Evaluate nearest-neighbor structure with frequency-matched token probes.
 - Measure similarity on morphological, lexical, and semantic token-pair sets where appropriate.
