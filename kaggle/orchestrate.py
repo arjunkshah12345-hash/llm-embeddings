@@ -81,6 +81,19 @@ def destination_for(root: Path, profile: str, seed: int, suffix: str = "") -> Pa
     return root / f"{profile}_seed{seed}{suffix}"
 
 
+def launch_command(profile: str, commit: str, owner: str, seed: int, suffix: str = "") -> list[str]:
+    command = [
+        os.environ.get("PYTHON", "python3"), "kaggle/launch.py",
+        "--profile", profile, "--commit", commit,
+        "--owner", owner, "--seeds", str(seed),
+    ]
+    if suffix:
+        # argparse interprets a separate value beginning with '-' as another
+        # option. Attach rerun suffixes to preserve values such as '-e8'.
+        command.append(f"--slug-suffix={suffix}")
+    return command
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profiles", nargs="+", choices=sorted(PROFILE_EXPERIMENTS), required=True)
@@ -131,12 +144,7 @@ def main() -> None:
             raise SystemExit(f"destination exists without validation: {destination}; inspect before replacing")
         pending_jobs.append((profile, seed, kernel))
         if kernel_status(kaggle, kernel) == "MISSING":
-            run([
-                os.environ.get("PYTHON", "python3"), "kaggle/launch.py",
-                "--profile", profile, "--commit", args.commit,
-                "--owner", args.owner, "--seeds", str(seed),
-                *( ["--slug-suffix", args.slug_suffix] if args.slug_suffix else [] ),
-            ])
+            run(launch_command(profile, args.commit, args.owner, seed, args.slug_suffix))
 
     pending = set(pending_jobs)
     while pending:

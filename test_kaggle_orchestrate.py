@@ -7,7 +7,13 @@ from kaggle.orchestrate import (
     classify_status,
     destination_for,
     kernel_slug,
+    launch_command,
 )
+
+
+def test_suffix_forwards_as_an_attached_option_value():
+    command = launch_command("rank", "commit", "aks1321", 31415, "-e8")
+    assert command[-1] == "--slug-suffix=-e8"
 
 
 def test_kernel_slug_and_destination_are_deterministic(tmp_path):
