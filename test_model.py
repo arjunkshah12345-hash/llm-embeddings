@@ -303,11 +303,14 @@ def test_optimizer_checkpoint_resume_round_trip(tmp_path):
     train_config = TrainConfig(embedding_type="partial", steps=5, output_dir=str(tmp_path))
     model = GPTModel(model_config, "partial", seed=11)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
-    x = torch.randint(0, 97, (2, 16))
-    y = torch.randint(0, 97, (2, 16))
-    loss = model.loss(x, y)
-    loss.backward()
-    optimizer.step()
+    # Populate a representative AdamW state directly. Tests must not perform
+    # an optimizer step: all actual model training runs on Kaggle.
+    first_parameter = next(model.parameters())
+    optimizer.state[first_parameter] = {
+        "step": torch.tensor(1.0),
+        "exp_avg": torch.zeros_like(first_parameter),
+        "exp_avg_sq": torch.zeros_like(first_parameter),
+    }
     path = tmp_path / "optimizer_last.pt"
     save_checkpoint(
         path,
