@@ -218,8 +218,10 @@ def test_role_gradient_cosine_is_invariant_to_low_rank_factor_rotation():
 
     torch.testing.assert_close(before_logits, after_logits, rtol=1e-4, atol=3e-5)
     assert abs(before["input_output_grad_cosine"] - after["input_output_grad_cosine"]) < 1e-6
-    assert abs(before["input_grad_norm"] - after["input_grad_norm"]) < 1e-6
-    assert abs(before["output_grad_norm"] - after["output_grad_norm"]) < 1e-6
+    # Different BLAS kernels can reorder the equivalent factorized matmuls by a
+    # few ulps; the effective-matrix diagnostic should remain numerically stable.
+    assert abs(before["input_grad_norm"] - after["input_grad_norm"]) < 1e-5
+    assert abs(before["output_grad_norm"] - after["output_grad_norm"]) < 1e-5
 
 
 def test_fixed_validation_windows_are_deterministic():
