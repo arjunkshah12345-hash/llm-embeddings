@@ -81,9 +81,9 @@ def run(command: list[str], cwd: Path | None = None) -> None:
     subprocess.run(command, cwd=cwd, check=True)
 
 
-def capture(command: list[str]) -> str:
+def capture(command: list[str], cwd: Path | None = None) -> str:
     try:
-        return subprocess.run(command, capture_output=True, text=True, check=False).stdout
+        return subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False).stdout
     except OSError as exc:
         return f"unavailable: {exc}"
 
@@ -94,7 +94,7 @@ def main() -> None:
         shutil.rmtree(SOURCE)
     run(["git", "clone", SOURCE_URL, str(SOURCE)])
     run(["git", "checkout", COMMIT], cwd=SOURCE)
-    actual_commit = capture(["git", "rev-parse", "HEAD"]).strip()
+    actual_commit = capture(["git", "rev-parse", "HEAD"], cwd=SOURCE).strip()
     if actual_commit != COMMIT:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
 
@@ -211,7 +211,7 @@ def main() -> None:
         rendered = rendered.replace("__KERNEL_SLUG__", slug)
         (kernel_dir / "run.py").write_text(rendered)
         (kernel_dir / "kernel-metadata.json").write_text(
-            json.dumps(metadata(kernel_id, f"LLM embeddings {config['experiment_id']} seed {seed}"), indent=2) + "\n"
+            json.dumps(metadata(kernel_id, slug), indent=2) + "\n"
         )
         print(kernel_id)
         if not args.dry_run:
