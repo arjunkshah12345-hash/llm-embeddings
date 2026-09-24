@@ -68,8 +68,9 @@ def read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def load_records(study_dirs: list[Path]) -> tuple[list[dict], dict]:
+def load_records(study_dirs: list[Path]) -> tuple[list[dict], dict, list[dict]]:
     records: list[dict] = []
+    fixed_final_records: list[dict] = []
     conditions: list[str] | None = None
     seeds: list[int] = []
     commits: set[str] = set()
@@ -97,14 +98,39 @@ def load_records(study_dirs: list[Path]) -> tuple[list[dict], dict]:
             for row in rows:
                 values = {key: row[key] for key in METRICS + TOKEN_METRICS if key in row}
                 records.append({"seed": seed, "condition": condition, "step": int(row["step"]), **values})
+        mechanism_path = study_dir / "mechanism_metrics.json"
+        if mechanism_path.exists():
+            mechanism = read_json(mechanism_path)
+            for run in mechanism.get("runs", []):
+                gradient = dict(run.get("gradient_metrics", {}))
+                adapter = dict(run.get("adapter_metrics", {}))
+                checkpoint_validation = dict(run.get("checkpoint_validation", {}))
+                values = {key: gradient.get(key, adapter.get(key)) for key in METRICS + TOKEN_METRICS}
+                if checkpoint_validation.get("embedding_cumulative_update_norm") is not None:
+                    values["embedding_cumulative_update_norm"] = checkpoint_validation[
+                        "embedding_cumulative_update_norm"
+                    ]
+                fixed_final_records.append(
+                    {
+                        "seed": seed,
+                        "condition": run["embedding_type"],
+                        "step": int(run.get("checkpoint_step", -1)),
+                        **{key: value for key, value in values.items() if value is not None},
+                    }
+                )
     if len(seeds) != len(set(seeds)):
         raise SystemExit("duplicate mechanism seed artifacts")
     if len(commits) != 1:
         raise SystemExit("mechanism artifact commits differ")
-    return records, {"conditions": conditions or [], "seeds": sorted(seeds), "git_commit": next(iter(commits))}
+    return records, {
+        "conditions": conditions or [],
+        "seeds": sorted(seeds),
+        "git_commit": next(iter(commits)),
+        "final_metric_source": "mechanism_metrics.json fixed checkpoint batch when available",
+    }, fixed_final_records
 
 
-def summarize(records: list[dict], metadata: dict) -> dict:
+def summarize(records: list[dict], metadata: dict, fixed_final_records: list[dict] | None = None) -> dict:
     final_rows: dict[tuple[str, int], dict] = {}
     grouped: dict[tuple[str, int], list[dict]] = defaultdict(list)
     for row in records:
@@ -112,6 +138,12 @@ def summarize(records: list[dict], metadata: dict) -> dict:
         key = (row["condition"], row["seed"])
         if key not in final_rows or row["step"] > final_rows[key]["step"]:
             final_rows[key] = row
+
+    if fixed_final_records:
+        for row in fixed_final_records:
+            key = (row["condition"], row["seed"])
+            if key not in final_rows or row["step"] >= final_rows[key]["step"]:
+                final_rows[key] = row
 
     final: dict[str, dict] = {}
     for condition in metadata["conditions"]:
@@ -201,8 +233,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    records, metadata = load_records([Path(value) for value in args.studies])
-    result = summarize(records, metadata)
+    records, metadata, fixed_final_records = load_records([Path(value) for value in args.studies])
+    result = summarize(records, metadata, fixed_final_records=fixed_final_records)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "mechanism_aggregate.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")

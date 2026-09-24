@@ -16,3 +16,13 @@ def test_mechanism_summary_aggregates_final_seed_rows():
     assert summary["seed_values"] == [2.0, 4.0]
     assert summary["mean"] == 3.0
     assert result["trajectory"]["tied"]["5"]["output_to_input_grad_ratio"] == 1.0
+
+
+def test_fixed_checkpoint_metrics_override_stochastic_log_endpoint():
+    records = [{"seed": 1, "condition": "partial", "step": 10, "output_to_input_grad_ratio": 9.0}]
+    fixed = [{"seed": 1, "condition": "partial", "step": 11, "output_to_input_grad_ratio": 2.5}]
+
+    result = summarize(records, {"conditions": ["partial"], "seeds": [1], "git_commit": "abc"}, fixed)
+
+    assert result["final"]["partial"]["metrics"]["output_to_input_grad_ratio"]["seed_values"] == [2.5]
+    assert result["trajectory"]["partial"]["10"]["output_to_input_grad_ratio"] == 9.0
