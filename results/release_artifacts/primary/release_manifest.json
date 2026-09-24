@@ -1,0 +1,50 @@
+{
+  "checkpoints_exported": false,
+  "studies": [
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "primary_10k",
+      "git_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677",
+      "name": "seed1337",
+      "run_names": [
+        "seed1337_capacity_control",
+        "seed1337_partial",
+        "seed1337_partial_input",
+        "seed1337_partial_output",
+        "seed1337_tied",
+        "seed1337_untied"
+      ],
+      "seed": 1337
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "primary_10k",
+      "git_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677",
+      "name": "seed2027",
+      "run_names": [
+        "seed2027_capacity_control",
+        "seed2027_partial",
+        "seed2027_partial_input",
+        "seed2027_partial_output",
+        "seed2027_tied",
+        "seed2027_untied"
+      ],
+      "seed": 2027
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "primary_10k",
+      "git_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677",
+      "name": "seed31415",
+      "run_names": [
+        "seed31415_capacity_control",
+        "seed31415_partial",
+        "seed31415_partial_input",
+        "seed31415_partial_output",
+        "seed31415_tied",
+        "seed31415_untied"
+      ],
+      "seed": 31415
+    }
+  ]
+}

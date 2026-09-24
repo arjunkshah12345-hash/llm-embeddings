@@ -1,0 +1,40 @@
+{
+  "checkpoint_policy": "used inside Kaggle for diagnostics, removed from collected bundle",
+  "config": {
+    "adapter_alpha": 8,
+    "adapter_rank": 8,
+    "batch_size": 2,
+    "block_size": 256,
+    "dataset": "wikitext2",
+    "embedding_types": [
+      "tied",
+      "untied",
+      "partial",
+      "capacity_control",
+      "partial_input",
+      "partial_output"
+    ],
+    "eval_batches": 20,
+    "eval_interval": 200,
+    "experiment_id": "primary_10k",
+    "log_interval": 50,
+    "n_embd": 384,
+    "n_head": 6,
+    "n_layer": 6,
+    "save_interval": 1000,
+    "seeds": [
+      1337,
+      2027,
+      31415
+    ],
+    "steps": 10000
+  },
+  "experiment_id": "primary_10k",
+  "finished_at_unix": 1790228950.2600064,
+  "git_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677",
+  "kernel": "aks1321/llm-embeddings-primary-10k-seed2027",
+  "seed": 2027,
+  "source_url": "https://github.com/arjunkshah12345-hash/llm-embeddings.git",
+  "started_at_unix": 1790225522.8101492,
+  "study_dir": "primary_10k_seed2027"
+}
