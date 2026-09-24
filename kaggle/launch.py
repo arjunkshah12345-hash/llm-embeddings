@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,6 +12,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OWNER = "aks1321"
+
+
+def kaggle_executable() -> str:
+    """Return an existing Kaggle CLI executable, even if PATH has a stale shim."""
+    candidates = [
+        os.environ.get("KAGGLE_CLI"),
+        shutil.which("kaggle"),
+        "/opt/homebrew/bin/kaggle",
+        "/usr/local/bin/kaggle",
+        "/usr/bin/kaggle",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return str(Path(candidate))
+    raise SystemExit("Kaggle CLI executable not found; install it or set KAGGLE_CLI")
 
 PRIMARY = {
     "runner": "sweep",
@@ -349,6 +365,7 @@ def main() -> None:
         "mechanism_stop_output": MECHANISM_STOP_OUTPUT,
     }
     config = dict(profiles[args.profile])
+    kaggle = kaggle_executable()
     commit = args.commit or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     seeds = args.seeds or config["seeds"]
     generated_root = ROOT / "kaggle" / "generated"
@@ -372,10 +389,10 @@ def main() -> None:
         print(kernel_id)
         if not args.dry_run:
             if not args.overwrite:
-                status = subprocess.run(["kaggle", "kernels", "status", kernel_id], capture_output=True, text=True)
+                status = subprocess.run([kaggle, "kernels", "status", kernel_id], capture_output=True, text=True)
                 if status.returncode == 0:
                     raise SystemExit(f"Kaggle kernel already exists: {kernel_id}; use a new slug or --overwrite")
-            subprocess.run(["kaggle", "kernels", "push", "-p", str(kernel_dir)], check=True)
+            subprocess.run([kaggle, "kernels", "push", "-p", str(kernel_dir)], check=True)
 
 
 if __name__ == "__main__":

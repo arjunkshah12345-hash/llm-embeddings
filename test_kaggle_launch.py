@@ -10,6 +10,7 @@ _SPEC.loader.exec_module(_MODULE)
 MECHANISM_STOP_INPUT = _MODULE.MECHANISM_STOP_INPUT
 MECHANISM_STOP_OUTPUT = _MODULE.MECHANISM_STOP_OUTPUT
 RUN_TEMPLATE = _MODULE.RUN_TEMPLATE
+kaggle_executable = _MODULE.kaggle_executable
 
 
 def test_mechanism_profiles_are_matched_and_distinct():
@@ -25,3 +26,8 @@ def test_generated_kernel_passes_path_ablation_flags():
     assert '"--path_ablation", CONFIG.get("path_ablation", "none")' in RUN_TEMPLATE
     assert '"--ablation_start", str(CONFIG.get("ablation_start", 0))' in RUN_TEMPLATE
     assert '"--ablation_end", str(CONFIG.get("ablation_end", 0))' in RUN_TEMPLATE
+
+
+def test_kaggle_executable_is_a_real_file():
+    executable = Path(kaggle_executable())
+    assert executable.is_file()

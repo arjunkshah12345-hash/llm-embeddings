@@ -4,10 +4,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+
+
+def kaggle_executable() -> str:
+    """Return an existing Kaggle CLI executable, even if PATH has a stale shim."""
+    candidates = [
+        os.environ.get("KAGGLE_CLI"),
+        shutil.which("kaggle"),
+        "/opt/homebrew/bin/kaggle",
+        "/usr/local/bin/kaggle",
+        "/usr/bin/kaggle",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return str(Path(candidate))
+    raise SystemExit("Kaggle CLI executable not found; install it or set KAGGLE_CLI")
 
 
 def parse_args() -> argparse.Namespace:
@@ -22,6 +38,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    kaggle = kaggle_executable()
     destination = Path(args.destination)
     if destination.exists():
         if not args.overwrite:
@@ -30,7 +47,7 @@ def main() -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="llm-embeddings-kaggle-") as temp:
         output = Path(temp) / "output"
-        subprocess.run(["kaggle", "kernels", "output", args.kernel, "-p", str(output), "--force"], check=True)
+        subprocess.run([kaggle, "kernels", "output", args.kernel, "-p", str(output), "--force"], check=True)
         manifests = list(output.rglob("artifact_manifest.json"))
         if len(manifests) != 1:
             raise SystemExit(f"expected one artifact_manifest.json, found {len(manifests)}")
