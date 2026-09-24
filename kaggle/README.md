@@ -37,3 +37,18 @@ python3 kaggle/collect.py \
 
 The collector refuses to replace an existing destination unless `--overwrite`
 is supplied and verifies the artifact manifest's commit and experiment ID.
+
+## Launch the exploratory rank sweep
+
+After the primary result is available, launch the six-rank secondary sweep with
+the same model, data, optimizer, and 10,000-step horizon:
+
+```bash
+python3 kaggle/launch.py \
+  --profile rank \
+  --commit <frozen-commit> \
+  --seeds 1337
+```
+
+This runs ranks 1, 2, 4, 8, 16, and 32 at alpha 8. It is exploratory until
+the useful region is rerun with the predeclared multi-seed protocol.

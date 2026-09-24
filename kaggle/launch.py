@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OWNER = "aks1321"
 
 PRIMARY = {
+    "runner": "sweep",
     "experiment_id": "primary_10k",
     "dataset": "wikitext2",
     "steps": 10_000,
@@ -32,6 +33,7 @@ PRIMARY = {
 }
 
 VALIDATION = {
+    "runner": "sweep",
     "experiment_id": "validation_fixture",
     "dataset": "fixture",
     "steps": 3,
@@ -48,6 +50,25 @@ VALIDATION = {
     "save_interval": 3,
     "seeds": [1337],
     "embedding_types": ["tied", "untied", "partial", "capacity_control", "partial_input", "partial_output"],
+}
+
+RANK_SWEEP = {
+    "runner": "adapter_sweep",
+    "experiment_id": "rank_sweep_10k",
+    "dataset": "wikitext2",
+    "steps": 10_000,
+    "batch_size": 2,
+    "block_size": 256,
+    "n_layer": 6,
+    "n_head": 6,
+    "n_embd": 384,
+    "ranks": [1, 2, 4, 8, 16, 32],
+    "alphas": [8.0],
+    "eval_interval": 200,
+    "eval_batches": 20,
+    "log_interval": 50,
+    "save_interval": 1_000,
+    "seeds": [1337],
 }
 
 
@@ -99,37 +120,62 @@ def main() -> None:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
 
     run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt", "--quiet"], cwd=SOURCE)
-    run([
-        sys.executable, "sweep.py",
-        "--output_dir", str(STUDY),
-        "--dataset", CONFIG["dataset"],
-        "--data_dir", str(DATA),
-        "--device", "cuda",
-        "--seeds", str(SEED),
-        "--embedding_types", *CONFIG["embedding_types"],
-        "--steps", str(CONFIG["steps"]),
-        "--batch_size", str(CONFIG["batch_size"]),
-        "--block_size", str(CONFIG["block_size"]),
-        "--n_layer", str(CONFIG["n_layer"]),
-        "--n_head", str(CONFIG["n_head"]),
-        "--n_embd", str(CONFIG["n_embd"]),
-        "--adapter_rank", str(CONFIG["adapter_rank"]),
-        "--adapter_alpha", str(CONFIG["adapter_alpha"]),
-        "--eval_interval", str(CONFIG["eval_interval"]),
-        "--eval_batches", str(CONFIG["eval_batches"]),
-        "--log_interval", str(CONFIG["log_interval"]),
-        "--save_interval", str(CONFIG["save_interval"]),
-        "--no-save_optimizer",
-    ], cwd=SOURCE)
+    if CONFIG["runner"] == "sweep":
+        run([
+            sys.executable, "sweep.py",
+            "--output_dir", str(STUDY),
+            "--dataset", CONFIG["dataset"],
+            "--data_dir", str(DATA),
+            "--device", "cuda",
+            "--seeds", str(SEED),
+            "--embedding_types", *CONFIG["embedding_types"],
+            "--steps", str(CONFIG["steps"]),
+            "--batch_size", str(CONFIG["batch_size"]),
+            "--block_size", str(CONFIG["block_size"]),
+            "--n_layer", str(CONFIG["n_layer"]),
+            "--n_head", str(CONFIG["n_head"]),
+            "--n_embd", str(CONFIG["n_embd"]),
+            "--adapter_rank", str(CONFIG["adapter_rank"]),
+            "--adapter_alpha", str(CONFIG["adapter_alpha"]),
+            "--eval_interval", str(CONFIG["eval_interval"]),
+            "--eval_batches", str(CONFIG["eval_batches"]),
+            "--log_interval", str(CONFIG["log_interval"]),
+            "--save_interval", str(CONFIG["save_interval"]),
+            "--no-save_optimizer",
+        ], cwd=SOURCE)
 
-    run([
-        sys.executable, "mechanism_eval.py", "--runs_dir", str(STUDY),
-        "--checkpoint", "last.pt", "--device", "cuda",
-        "--output", str(STUDY / "mechanism_metrics.json"),
-    ], cwd=SOURCE)
-    pair_file = SOURCE / "eval" / "semantic_pairs.jsonl"
-    for run_dir in sorted(path for path in STUDY.iterdir() if path.is_dir() and (path / "config.json").exists()):
-        run([sys.executable, "embedding_eval.py", "--run_dir", str(run_dir), "--checkpoint", "best.pt", "--side", "both", "--pairs", str(pair_file)], cwd=SOURCE)
+        run([
+            sys.executable, "mechanism_eval.py", "--runs_dir", str(STUDY),
+            "--checkpoint", "last.pt", "--device", "cuda",
+            "--output", str(STUDY / "mechanism_metrics.json"),
+        ], cwd=SOURCE)
+        pair_file = SOURCE / "eval" / "semantic_pairs.jsonl"
+        for run_dir in sorted(path for path in STUDY.iterdir() if path.is_dir() and (path / "config.json").exists()):
+            run([sys.executable, "embedding_eval.py", "--run_dir", str(run_dir), "--checkpoint", "best.pt", "--side", "both", "--pairs", str(pair_file)], cwd=SOURCE)
+    elif CONFIG["runner"] == "adapter_sweep":
+        run([
+            sys.executable, "adapter_sweep.py",
+            "--output_dir", str(STUDY),
+            "--dataset", CONFIG["dataset"],
+            "--data_dir", str(DATA),
+            "--device", "cuda",
+            "--seeds", str(SEED),
+            "--ranks", *[str(rank) for rank in CONFIG["ranks"]],
+            "--alphas", *[str(alpha) for alpha in CONFIG["alphas"]],
+            "--steps", str(CONFIG["steps"]),
+            "--batch_size", str(CONFIG["batch_size"]),
+            "--block_size", str(CONFIG["block_size"]),
+            "--n_layer", str(CONFIG["n_layer"]),
+            "--n_head", str(CONFIG["n_head"]),
+            "--n_embd", str(CONFIG["n_embd"]),
+            "--eval_interval", str(CONFIG["eval_interval"]),
+            "--eval_batches", str(CONFIG["eval_batches"]),
+            "--log_interval", str(CONFIG["log_interval"]),
+            "--save_interval", str(CONFIG["save_interval"]),
+            "--no-save_optimizer",
+        ], cwd=SOURCE)
+    else:
+        raise RuntimeError(f"unknown runner: {CONFIG['runner']}")
 
     hardware = {
         "python": sys.version,
@@ -181,7 +227,7 @@ def metadata(kernel_id: str, title: str) -> dict:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", choices=["primary", "validation"], default="primary")
+    parser.add_argument("--profile", choices=["primary", "validation", "rank"], default="primary")
     parser.add_argument("--commit", default="", help="frozen source commit; defaults to the current checkout HEAD")
     parser.add_argument("--owner", default=OWNER)
     parser.add_argument("--seeds", nargs="+", type=int)
@@ -192,7 +238,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    config = dict(PRIMARY if args.profile == "primary" else VALIDATION)
+    profiles = {"primary": PRIMARY, "validation": VALIDATION, "rank": RANK_SWEEP}
+    config = dict(profiles[args.profile])
     commit = args.commit or subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     seeds = args.seeds or config["seeds"]
     generated_root = ROOT / "kaggle" / "generated"
