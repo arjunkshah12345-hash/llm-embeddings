@@ -412,24 +412,58 @@ class GPTModel(nn.Module):
         _, length = idx.shape
         if length > self.config.block_size:
             raise ValueError(f"sequence length {length} exceeds block_size={self.config.block_size}")
-        positions = torch.arange(0, length, device=idx.device)
         token_embeddings = self.embeddings.input_embeddings(idx)
         if path_ablation == "stop_input":
             token_embeddings = token_embeddings.detach()
+        hidden = self._hidden_from_token_embeddings(idx, token_embeddings)
+        logits = self.embeddings.output_logits(hidden, detach_weights=path_ablation == "stop_output")
+        if return_hidden:
+            return logits, hidden
+        return logits
+
+    def _hidden_from_token_embeddings(self, idx: torch.Tensor, token_embeddings: torch.Tensor) -> torch.Tensor:
+        """Run the shared Transformer stack from a supplied input embedding tensor."""
+        _, length = idx.shape
+        positions = torch.arange(0, length, device=idx.device)
         x = self.drop(token_embeddings + self.position_embedding(positions)[None, :, :])
         for block in self.blocks:
             x = block(x)
         hidden = self.ln_f(x)
         if self.capacity_adapter is not None:
             hidden = hidden + self.capacity_adapter(hidden)
-        logits = self.embeddings.output_logits(hidden, detach_weights=path_ablation == "stop_output")
-        if return_hidden:
-            return logits, hidden
-        return logits
+        return hidden
 
     def loss(self, idx: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         logits = self(idx)
         return F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1))
+
+    def _effective_role_gradients(
+        self,
+        idx: torch.Tensor,
+        targets: torch.Tensor,
+        hidden: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return role gradients in effective vocabulary-by-width matrix space.
+
+        Low-rank factor gradients depend on arbitrary rotations and rescaling of
+        the factors. Replaying the input path with a leaf effective matrix makes
+        the reported role cosine invariant to that factorization. The normal
+        training path remains factorized; this helper is diagnostic-only.
+        """
+        input_weight = self.embeddings.explicit_weight("input").detach().requires_grad_(True)
+        output_weight = self.embeddings.explicit_weight("output").detach().requires_grad_(True)
+        input_hidden = self._hidden_from_token_embeddings(idx, F.embedding(idx, input_weight))
+        input_loss = F.cross_entropy(
+            F.linear(input_hidden, output_weight.detach()).reshape(-1, output_weight.size(0)),
+            targets.reshape(-1),
+        )
+        output_loss = F.cross_entropy(
+            F.linear(hidden.detach(), output_weight).reshape(-1, output_weight.size(0)),
+            targets.reshape(-1),
+        )
+        input_grad = torch.autograd.grad(input_loss, input_weight, retain_graph=True)[0]
+        output_grad = torch.autograd.grad(output_loss, output_weight)[0]
+        return input_grad, output_grad
 
     def embedding_gradient_metrics(
         self,
@@ -449,45 +483,34 @@ class GPTModel(nn.Module):
         output_logits = self.embeddings.output_logits(hidden.detach())
         input_loss = F.cross_entropy(input_logits.reshape(-1, input_logits.size(-1)), targets.reshape(-1))
         output_loss = F.cross_entropy(output_logits.reshape(-1, output_logits.size(-1)), targets.reshape(-1))
-        input_params = self.embeddings.input_parameters()
-        output_params = self.embeddings.output_parameters()
-        input_grads = torch.autograd.grad(input_loss, input_params, retain_graph=True, allow_unused=True)
-        output_grads = torch.autograd.grad(output_loss, output_params, retain_graph=True, allow_unused=True)
+        effective_input_grad, effective_output_grad = self._effective_role_gradients(idx, targets, hidden)
 
         def norm(grads: Iterable[torch.Tensor | None]) -> float:
             values = [g.detach().float().pow(2).sum() for g in grads if g is not None]
             return math.sqrt(torch.stack(values).sum().item()) if values else 0.0
 
-        def vector(grads: Iterable[torch.Tensor | None]) -> torch.Tensor:
-            values = [g.detach().float().reshape(-1) for g in grads if g is not None]
-            return torch.cat(values) if values else torch.empty(0, device=idx.device)
-
-        input_vector = vector(input_grads)
-        output_vector = vector(output_grads)
+        input_vector = effective_input_grad.detach().float().reshape(-1)
+        output_vector = effective_output_grad.detach().float().reshape(-1)
         vector_denominator = input_vector.norm() * output_vector.norm()
         overall_cosine = (
             torch.dot(input_vector, output_vector).item() / vector_denominator.item()
-            if vector_denominator.item() > 0 and input_vector.numel() == output_vector.numel()
+            if vector_denominator.item() > 0
             else 0.0
         )
 
         metrics = {
             "input_side_loss": input_loss.detach().item(),
             "output_side_loss": output_loss.detach().item(),
-            "input_grad_norm": norm(input_grads),
-            "output_grad_norm": norm(output_grads),
+            "input_grad_norm": norm([effective_input_grad]),
+            "output_grad_norm": norm([effective_output_grad]),
             "input_output_grad_cosine": overall_cosine,
         }
         metrics["output_to_input_grad_ratio"] = metrics["output_grad_norm"] / max(metrics["input_grad_norm"], 1e-12)
 
         shared = getattr(self.embeddings, "shared", None)
-        input_matrix = None
-        output_matrix = None
         if shared is not None:
             shared_input_grad = torch.autograd.grad(input_loss, shared, retain_graph=True, allow_unused=True)[0]
             shared_output_grad = torch.autograd.grad(output_loss, shared, retain_graph=True, allow_unused=True)[0]
-            input_matrix = shared_input_grad
-            output_matrix = shared_output_grad
             metrics["shared_input_grad_norm"] = norm([shared_input_grad])
             metrics["shared_output_grad_norm"] = norm([shared_output_grad])
             metrics["shared_output_to_input_grad_ratio"] = metrics["shared_output_grad_norm"] / max(
@@ -500,24 +523,13 @@ class GPTModel(nn.Module):
                 if shared_denominator.item() > 0
                 else 0.0
             )
-            if input_vector.numel() != output_vector.numel():
-                # One-sided corrections have different parameter-vector sizes.
-                # Their meaningful common coordinate system is the shared matrix.
-                metrics["input_output_grad_cosine"] = metrics["shared_input_output_grad_cosine"]
         else:
             metrics["shared_input_grad_norm"] = 0.0
             metrics["shared_output_grad_norm"] = 0.0
             metrics["shared_output_to_input_grad_ratio"] = 0.0
             metrics["shared_input_output_grad_cosine"] = 0.0
-            vocab, width = self.config.vocab_size, self.config.n_embd
-            for grad in input_grads:
-                if grad is not None and tuple(grad.shape) == (vocab, width):
-                    input_matrix = grad
-                    break
-            for grad in output_grads:
-                if grad is not None and tuple(grad.shape) == (vocab, width):
-                    output_matrix = grad
-                    break
+        input_matrix = effective_input_grad
+        output_matrix = effective_output_grad
         if token_class_ids is not None:
             metrics.update(token_class_grad_means("input_token_grad", input_matrix, idx, token_class_ids))
             metrics.update(token_class_grad_means("output_token_grad", output_matrix, targets, token_class_ids))

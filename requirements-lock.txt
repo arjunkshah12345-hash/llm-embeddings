@@ -1,4 +1,6 @@
-# Locked environment used for the substantive Phase 2 runs on Apple MPS.
+# Core dependency lock used for the substantive Phase 2 reference runs.
+# Reference interpreter: Python 3.12.8.
+# Platform-specific CUDA/MPS wheels may require a compatible torch build.
 # requirements.txt remains the portable installation entry point.
 matplotlib==3.11.0
 numpy==2.4.6

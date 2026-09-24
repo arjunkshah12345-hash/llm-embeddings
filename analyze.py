@@ -141,8 +141,8 @@ def plot_gradient_alignment(runs, path: Path) -> None:
                     label=f"{name} shared",
                 )
     plt.xlabel("Step")
-    plt.ylabel("Input/output gradient cosine")
-    plt.title("Input/output embedding-gradient alignment")
+    plt.ylabel("Effective embedding-matrix gradient cosine")
+    plt.title("Input/output effective-embedding gradient alignment")
     plt.ylim(-1.05, 1.05)
     plt.grid(alpha=0.25)
     if plotted:
@@ -240,7 +240,7 @@ def plot_correction_alignment(runs, path: Path) -> None:
         axes[2].plot(steps, [r["input_output_right_subspace_overlap"] for r in rows], marker="o", label=name)
     axes[0].set_ylabel("Matrix cosine")
     axes[0].set_ylim(-1.05, 1.05)
-    axes[0].set_title("Input/output correction alignment")
+    axes[0].set_title("Input/output effective-correction alignment")
     axes[1].set_ylabel("Left overlap")
     axes[2].set_ylabel("Right overlap")
     axes[2].set_xlabel("Step")

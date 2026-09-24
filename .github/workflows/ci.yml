@@ -18,3 +18,16 @@ jobs:
         run: python -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py mechanism_eval.py validate_study.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
       - name: Test
         run: python -m pytest -q
+      - name: End-to-end smoke
+        run: |
+          python sweep.py \
+            --output_dir runs/ci-e2e \
+            --dataset fixture --device cpu --seeds 1337 \
+            --steps 3 --batch_size 1 --block_size 8 \
+            --n_layer 1 --n_head 1 --n_embd 16 \
+            --adapter_rank 2 --adapter_alpha 2 \
+            --warmup_steps 1 --eval_interval 1 --eval_batches 1 \
+            --log_interval 1 --save_interval 3 --no-save_optimizer \
+            --skip_analysis
+          python validate_study.py --runs_dir runs/ci-e2e
+          python analyze.py --runs_dir runs/ci-e2e --output_dir runs/ci-e2e/analysis

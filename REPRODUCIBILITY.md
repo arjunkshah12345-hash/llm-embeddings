@@ -10,7 +10,7 @@ Install the Python dependencies from a clean checkout:
 python3 -m pip install -r requirements.txt
 ```
 
-The substantive Phase 2 runs used the versions recorded in [requirements-lock.txt](requirements-lock.txt). That file is pinned to the Apple MPS environment used for the release; `requirements.txt` remains the portable installation entry point.
+The substantive Phase 2 runs use the exact versions recorded in [requirements-lock.txt](requirements-lock.txt). The lock records the core Python packages and the Python version used for the reference environment; `requirements.txt` remains the portable installation entry point for other CPU/CUDA platforms.
 
 The code requires Python 3.9 or newer and PyTorch 2.1 or newer. CUDA, Apple MPS, and CPU are supported; `--device auto` selects CUDA, then MPS, then CPU.
 
@@ -51,11 +51,13 @@ Every run records:
 - parameter counts, training tokens, speed, memory, and approximate FLOPs;
 - train/validation metrics and embedding diagnostics.
 
-`validate_study.py` refuses incomplete or unfair comparisons. It checks the full seed-by-embedding matrix, shared configuration, dataset hashes, finite loss/perplexity, and token exposure within one percent. Treat a failed validation as a failed experiment rather than analyzing around it.
+`validate_study.py` refuses incomplete or unfair comparisons. It checks the full seed-by-embedding matrix, shared configuration, pinned source metadata and dataset hashes, finite loss/perplexity, a validation record at exactly the configured final step, and exactly equal token exposure. Treat a failed validation as a failed experiment rather than analyzing around it.
 
 ## Data
 
-The default WikiText-2 files are downloaded from the public URLs declared in [`data.py`](data.py) and tokenized with the GPT-2 BPE tokenizer from `tiktoken`. Tiny Shakespeare is downloaded once and split deterministically into disjoint contiguous train, validation, and test portions. Dataset hashes are written into each run manifest.
+The default corpus is WikiText-2-raw-v1, with each split downloaded from the pinned URLs and verified against the SHA-256 values declared in [`data.py`](data.py). The source is the raw variant described by the [Salesforce WikiText dataset card](https://huggingface.co/datasets/Salesforce/wikitext), rather than the preprocessed word-level files used by the old PyTorch example. Tiny Shakespeare is downloaded from a pinned `char-rnn` commit, verified by SHA-256, and split deterministically into disjoint contiguous train, validation, and test portions. Dataset source metadata and final file hashes are written into each run manifest.
+
+The repository also provides a deterministic `fixture` dataset for CI integration tests. It is synthetic and must never be used as research evidence.
 
 Do not commit downloaded data, model checkpoints, optimizer states, generated plots, or run directories. The repository `.gitignore` covers these artifacts.
 

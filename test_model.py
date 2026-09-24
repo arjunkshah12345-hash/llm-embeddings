@@ -156,33 +156,70 @@ def test_gradient_decomposition_matches_direct_counterfactual_losses():
     y = torch.randint(0, 97, (2, 8))
     _, hidden = model(x, return_hidden=True)
 
+    input_weight = model.embeddings.explicit_weight("input").detach().requires_grad_(True)
+    output_weight = model.embeddings.explicit_weight("output").detach().requires_grad_(True)
+    effective_hidden = model._hidden_from_token_embeddings(x, F.embedding(x, input_weight))
     input_loss = F.cross_entropy(
-        model.embeddings.output_logits(hidden, detach_weights=True).reshape(-1, 97), y.reshape(-1)
+        F.linear(effective_hidden, output_weight.detach()).reshape(-1, 97), y.reshape(-1)
     )
-    output_loss = F.cross_entropy(
-        model.embeddings.output_logits(hidden.detach()).reshape(-1, 97), y.reshape(-1)
-    )
-    input_grads = torch.autograd.grad(input_loss, model.embeddings.input_parameters(), retain_graph=True, allow_unused=True)
-    output_grads = torch.autograd.grad(output_loss, model.embeddings.output_parameters(), retain_graph=True, allow_unused=True)
+    output_loss = F.cross_entropy(F.linear(hidden.detach(), output_weight).reshape(-1, 97), y.reshape(-1))
+    input_grad = torch.autograd.grad(input_loss, input_weight, retain_graph=True)[0]
+    output_grad = torch.autograd.grad(output_loss, output_weight)[0]
 
-    def norm(grads):
-        return torch.cat([grad.detach().float().reshape(-1) for grad in grads if grad is not None]).norm().item()
+    def norm(grad):
+        return grad.detach().float().norm().item()
 
     def cosine(left, right):
-        left = torch.cat([grad.detach().float().reshape(-1) for grad in left if grad is not None])
-        right = torch.cat([grad.detach().float().reshape(-1) for grad in right if grad is not None])
+        left = left.detach().float().reshape(-1)
+        right = right.detach().float().reshape(-1)
         return torch.dot(left, right).item() / (left.norm() * right.norm()).item()
 
     metrics = model.embedding_gradient_metrics(x, y)
-    assert abs(metrics["input_grad_norm"] - norm(input_grads)) < 1e-6
-    assert abs(metrics["output_grad_norm"] - norm(output_grads)) < 1e-6
-    assert abs(metrics["input_output_grad_cosine"] - cosine(input_grads, output_grads)) < 1e-6
+    assert abs(metrics["input_grad_norm"] - norm(input_grad)) < 1e-6
+    assert abs(metrics["output_grad_norm"] - norm(output_grad)) < 1e-6
+    assert abs(metrics["input_output_grad_cosine"] - cosine(input_grad, output_grad)) < 1e-6
 
-    shared_input = torch.autograd.grad(input_loss, model.embeddings.shared, retain_graph=True)[0]
-    shared_output = torch.autograd.grad(output_loss, model.embeddings.shared, retain_graph=True)[0]
+    current_input_loss = F.cross_entropy(
+        model.embeddings.output_logits(hidden, detach_weights=True).reshape(-1, 97), y.reshape(-1)
+    )
+    current_output_loss = F.cross_entropy(
+        model.embeddings.output_logits(hidden.detach()).reshape(-1, 97), y.reshape(-1)
+    )
+    shared_input = torch.autograd.grad(current_input_loss, model.embeddings.shared, retain_graph=True)[0]
+    shared_output = torch.autograd.grad(current_output_loss, model.embeddings.shared, retain_graph=True)[0]
     assert abs(metrics["shared_input_grad_norm"] - shared_input.float().norm().item()) < 1e-6
     assert abs(metrics["shared_output_grad_norm"] - shared_output.float().norm().item()) < 1e-6
-    assert abs(metrics["shared_input_output_grad_cosine"] - cosine([shared_input], [shared_output])) < 1e-6
+    assert abs(metrics["shared_input_output_grad_cosine"] - cosine(shared_input, shared_output)) < 1e-6
+
+
+def test_role_gradient_cosine_is_invariant_to_low_rank_factor_rotation():
+    model = make_model("partial")
+    model.eval()
+    with torch.no_grad():
+        model.embeddings.input_a.normal_()
+        model.embeddings.input_b.normal_()
+        model.embeddings.output_a.normal_()
+        model.embeddings.output_b.normal_()
+    x = torch.randint(0, 97, (2, 8))
+    y = torch.randint(0, 97, x.shape)
+    before_logits = model(x)
+    before = model.embedding_gradient_metrics(x, y)
+
+    def rotate(a: torch.Tensor, b: torch.Tensor) -> None:
+        rotation, _ = torch.linalg.qr(torch.randn(model.config.adapter_rank, model.config.adapter_rank))
+        a.copy_(a @ rotation)
+        b.copy_(b @ rotation)
+
+    with torch.no_grad():
+        rotate(model.embeddings.input_a, model.embeddings.input_b)
+        rotate(model.embeddings.output_a, model.embeddings.output_b)
+    after_logits = model(x)
+    after = model.embedding_gradient_metrics(x, y)
+
+    torch.testing.assert_close(before_logits, after_logits, rtol=1e-4, atol=3e-5)
+    assert abs(before["input_output_grad_cosine"] - after["input_output_grad_cosine"]) < 1e-6
+    assert abs(before["input_grad_norm"] - after["input_grad_norm"]) < 1e-6
+    assert abs(before["output_grad_norm"] - after["output_grad_norm"]) < 1e-6
 
 
 def test_fixed_validation_windows_are_deterministic():

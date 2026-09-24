@@ -13,7 +13,7 @@ On each logged training step the trainer records the mean embedding-row gradient
 
 Keys look like `output_token_grad_rare_mean`. `analyze.py` plots the output-side means in `token_type_gradients.png` when those keys exist.
 
-The logged side-gradient norms use two counterfactual losses evaluated from the same hidden states: the input-side loss detaches output weights, and the output-side loss detaches the hidden states. For partial tying, `input_grad_norm` and `output_grad_norm` include the shared matrix and the corresponding low-rank factors; `shared_*` metrics isolate the two pressures on the shared matrix. These diagnostics are measurement-only and do not alter the optimizer update.
+The logged side-gradient norms use two counterfactual losses: the input-side loss detaches output weights, and the output-side loss detaches the hidden states. `input_grad_norm`, `output_grad_norm`, and `input_output_grad_cosine` are computed in effective vocabulary-by-width embedding-matrix space. This avoids comparing arbitrary low-rank factor coordinates, which can change under rotations that leave the represented correction unchanged. The `shared_*` metrics isolate the two pressures on the shared matrix. These diagnostics are measurement-only and do not alter the optimizer update; the default study uses zero dropout so the diagnostic replay is deterministic.
 
 ## Path ablations
 

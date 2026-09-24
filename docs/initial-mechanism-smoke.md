@@ -1,8 +1,8 @@
-# Initial 30M mechanism smoke
+# Historical 30M mechanism smoke (pre-cleanup)
 
-This is the first end-to-end run using the mechanism instrumentation added in
-the current codebase. It is an instrumentation and pipeline check, not evidence
-for a general performance claim.
+This historical run used the pre-cleanup dataset source and is retained only as
+an instrumentation record. It is not comparable to the pinned WikiText-2-raw-v1
+study and is not evidence for a general performance claim.
 
 ## Reproduction
 
@@ -20,8 +20,8 @@ python3 sweep.py \
   --log_interval 5 --save_interval 5 --no-save_optimizer
 ```
 
-The run used the GPT-2 tokenizer and the WikiText-2 files whose hashes are
-stored in `study_validation.json`. Optimizer checkpoints were disabled to keep
+The run used the GPT-2 tokenizer and the then-current WikiText-2 files whose
+hashes are stored in `study_validation.json`. Optimizer checkpoints were disabled to keep
 the short smoke run small; compact `best.pt` and `last.pt` checkpoints were
 written for all three models.
 

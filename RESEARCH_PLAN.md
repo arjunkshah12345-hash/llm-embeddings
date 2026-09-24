@@ -39,10 +39,10 @@ Status: implemented.
 - Make multi-run studies resumable: completed runs are preserved, incomplete runs resume from `optimizer_last.pt`, and the fairness gate still blocks analysis until the full matrix is complete.
 - Record wall-clock time, peak allocated memory, FLOPs estimates (`estimated_flops_*` via the 6ND rule), and tokens per second in a common metrics schema.
 - Add a sweep runner that records the exact shared configuration and run matrix. (Implemented.)
-- Enforce the comparison gate before analysis: complete seed × embedding matrix, identical dataset hashes and shared settings, and token exposure within one percent. (Implemented in `validate_study.py` and called by `sweep.py`.)
+- Enforce the comparison gate before analysis: complete seed × embedding matrix, identical dataset hashes and shared settings, and exactly equal token exposure. (Implemented in `validate_study.py` and called by `sweep.py`.)
 - Reject missing or non-finite train/validation losses and perplexities before any study summary is generated.
 
-Gate: no comparison is published unless all three runs use the same data manifest and the same token budget within one percent.
+Gate: no comparison is published unless all three runs use the same data manifest and exactly the same token budget.
 
 ## Phase 2 — Baseline training study
 
@@ -77,7 +77,7 @@ Gate: select the simplest adapter family on the Pareto frontier and freeze it be
 Goal: test whether the shared matrix is actually receiving unequal role pressure and whether the correction directions explain the difference.
 
 - Track input-side, output-side, and combined gradient norms for the shared matrix.
-- Track update norms, cumulative parameter displacement, cosine similarity of input/output gradients, and the output-to-input ratio over training. (Gradient cosine and embedding update-path logging/plotting are implemented.)
+- Track update norms, cumulative parameter displacement, cosine similarity of input/output effective embedding-matrix gradients, and the output-to-input ratio over training. (Effective gradient cosine and embedding update-path logging/plotting are implemented.)
 - Measure correction norm, rank utilization, singular values, and alignment between corrections and the shared matrix. Effective rank, top singular value, and shared-matrix cosine are now logged and plotted.
 - Compare token-frequency buckets and token types such as punctuation, whitespace, common words, and rare words. (Logged as mean row-gradient by class; see [docs/phase4-mechanism.md](docs/phase4-mechanism.md).)
 - Run ablations that stop gradients through the input or output path for controlled intervals. (`--path_ablation stop_input|stop_output` with `--ablation_start` / `--ablation_end`.)

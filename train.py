@@ -265,7 +265,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         choices=["tied", "untied", "partial", "partial_input", "partial_output", "capacity_control"],
         required=True,
     )
-    parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare"], default="wikitext2")
+    parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare", "fixture"], default="wikitext2")
     parser.add_argument("--data_dir", default="data")
     parser.add_argument("--output_dir", default="runs")
     parser.add_argument("--run_name", default="")

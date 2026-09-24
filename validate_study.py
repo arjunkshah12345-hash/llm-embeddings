@@ -121,6 +121,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             "dataset",
             "tokenizer",
             "vocab_size",
+            "source",
             "token_counts",
             "sha256",
         }
@@ -134,6 +135,13 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         token_metadata = dataset.get("token_counts", {})
         if set(token_metadata) != required_splits:
             errors.append(f"{run_name}: dataset metadata must contain train/val/test token counts")
+        source_metadata = dataset.get("source")
+        if (
+            not isinstance(source_metadata, dict)
+            or not isinstance(source_metadata.get("variant"), str)
+            or not source_metadata["variant"]
+        ):
+            errors.append(f"{run_name}: dataset metadata must identify a pinned source variant")
         try:
             stream_hash = training_batch_stream_digest(
                 expected_seed, config, int(token_metadata.get("train", 0))
@@ -163,6 +171,12 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         train_or_validation = [row for row in metrics if row.get("split") in {"train", "val"}]
         if not train_or_validation:
             errors.append(f"{run_name}: metrics contain no train or validation records")
+        expected_final_step = int(train_config.get("steps", -1)) - 1
+        validation_steps = [int(row.get("step", -1)) for row in metrics if row.get("split") == "val"]
+        if expected_final_step < 0 or expected_final_step not in validation_steps or max(validation_steps, default=-1) != expected_final_step:
+            errors.append(
+                f"{run_name}: validation metrics must include exactly the declared final step {expected_final_step}"
+            )
         for row in train_or_validation:
             for metric in ("loss", "perplexity"):
                 value = row.get(metric)
@@ -212,15 +226,15 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         if len(values) < len(embedding_types):
             continue
         minimum, maximum = min(values), max(values)
-        allowed_delta = max(1, maximum * 0.01)
+        allowed_delta = 0
         token_tolerance[str(seed)] = {
             "minimum": minimum,
             "maximum": maximum,
             "delta": maximum - minimum,
             "allowed_delta": allowed_delta,
         }
-        if maximum - minimum > allowed_delta:
-            errors.append(f"seed={seed}: token exposure differs by more than 1% across embedding types")
+        if maximum != minimum:
+            errors.append(f"seed={seed}: token exposure must match exactly across embedding types")
 
     expected_common = study.get("common", {})
     if expected_common and canonical_configs:

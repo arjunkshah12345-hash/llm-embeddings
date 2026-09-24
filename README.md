@@ -33,7 +33,7 @@ python3 sweep.py \
   --log_interval 2 --save_interval 8 --no-save_optimizer
 ```
 
-The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads WikiText-2 and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the longer baseline is specified in [docs/phase2-baseline.md](docs/phase2-baseline.md).
+The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads the pinned WikiText-2-raw-v1 source and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the longer baseline is specified in [docs/phase2-baseline.md](docs/phase2-baseline.md).
 
 ## Model and experiment
 
@@ -48,7 +48,7 @@ output: hidden @ shared.T + scale * (hidden @ output_B) @ output_A.T
 
 The full correction matrices are reconstructed only for analysis metrics and explicit evaluation. At zero effective correction, partial tying is functionally identical to tied. Untied input and output matrices start from the same initialized values, while the Transformer, optimizer, schedule, seed, tokenizer, data exposure, and validation windows remain shared across variants.
 
-The default dataset is raw WikiText-2 tokenized with GPT-2 BPE. Tiny Shakespeare is also available with deterministic, disjoint 90/5/5 character splits. Every run records dataset hashes, configuration, package versions, git commit, parameter counts, throughput, memory, approximate FLOPs, losses, and embedding-gradient measurements.
+The default dataset is the pinned WikiText-2-raw-v1 corpus tokenized with GPT-2 BPE. Tiny Shakespeare is also available with a pinned source commit and deterministic, disjoint 90/5/5 character splits. Every run records dataset source metadata and hashes, configuration, package versions, git commit, parameter counts, throughput, memory, approximate FLOPs, losses, and embedding-gradient measurements.
 
 ## Measurements
 
@@ -57,18 +57,18 @@ The training metrics include:
 - train and validation loss/perplexity;
 - total, Transformer, shared, correction, and embedding parameter counts;
 - training speed, wall time, peak allocated GPU memory, and approximate FLOPs;
-- input-side and output-side embedding gradient norms, cosine alignment, and their ratio;
+- input-side and output-side effective embedding-matrix gradient norms, cosine alignment, and their ratio;
 - token-class gradient means for whitespace, punctuation, common, rare, and other tokens;
 - partial-correction norms, relative norms, effective ranks, top singular values, and alignment with the shared matrix;
 - controlled ablations that stop input or output gradients for selected step intervals.
 
-`validate_study.py` is a hard comparison gate. It requires the complete seed-by-variant matrix, matching configurations and dataset hashes, finite metrics, and token exposure within one percent. `analyze.py` produces loss, parameter-efficiency, FLOP, gradient, update, token-class, and correction plots plus paired seed-level summaries.
+`validate_study.py` is a hard comparison gate. It requires the complete seed-by-variant matrix, matching configurations and pinned dataset metadata, finite metrics, an observed validation record at exactly the declared final step, and exactly equal token exposure. `analyze.py` produces loss, parameter-efficiency, FLOP, gradient, update, token-class, and correction plots plus paired seed-level summaries.
 
-The gradient decomposition evaluates two counterfactual losses from the same hidden states: one detaches the output weights to measure pressure arriving through the input path, and the other detaches the hidden states to measure direct output-prediction pressure. For partial tying, side norms include the shared matrix and the relevant low-rank factors; `shared_*` fields isolate the shared matrix.
+The gradient decomposition evaluates two counterfactual losses: one detaches the output weights to measure pressure arriving through the input path, and the other detaches the hidden states to measure direct output-prediction pressure. The role-level norms and cosine are computed in effective vocabulary-by-width matrix space, so they do not depend on arbitrary low-rank factor rotations. The `shared_*` fields isolate the two pressures on the shared matrix. The normal training path remains factorized; full correction matrices are used only for analysis.
 
 ## Current evidence
 
-The tracked 30M-class pilot used one seed and five optimizer steps. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling.
+The tracked 30M-class pilot used one seed and five optimizer steps against the pre-cleanup dataset source. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling or is comparable with the pinned raw-source study.
 
 Substantive validation still requires longer equal-token runs, multiple seeds, adapter-budget sweeps, representation evaluations, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
 

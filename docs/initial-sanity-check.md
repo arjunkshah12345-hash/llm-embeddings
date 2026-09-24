@@ -1,6 +1,6 @@
-# Initial sanity check
+# Historical initial sanity check (pre-cleanup)
 
-This is the first end-to-end run of the experiment. It used six optimizer steps, one sample per batch, context length 64, two validation batches per checkpoint, seed 1337, and the same 384-wide, six-layer, six-head transformer for all variants. It ran on Apple MPS.
+This historical run used the pre-cleanup dataset source. It used six optimizer steps, one sample per batch, context length 64, two validation batches per checkpoint, seed 1337, and the same 384-wide, six-layer, six-head transformer for all variants. It ran on Apple MPS and is retained as an instrumentation record only.
 
 | Variant | Total parameters | Embedding parameters | Extra vs tied | Best logged validation loss | Best logged perplexity |
 |---|---:|---:|---:|---:|---:|

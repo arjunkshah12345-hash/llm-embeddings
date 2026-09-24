@@ -8,7 +8,7 @@ Hold these fixed across all variants and seeds:
 
 | Setting | Value |
 |---|---|
-| Dataset | WikiText-2 (raw), GPT-2 BPE |
+| Dataset | WikiText-2-raw-v1, GPT-2 BPE; pinned split URLs and SHA-256 values in `data.py` |
 | Seeds | `1337 2027 31415` |
 | Steps | `10000` (pilot) then `50000` if signal holds |
 | Batch size × grad accum | `2 × 1` |
@@ -18,7 +18,7 @@ Hold these fixed across all variants and seeds:
 | LR schedule | `3e-4` → `3e-5`, warmup `100` |
 | Eval | every `200` steps, `20` fixed validation batches |
 
-Token budget must match within 1% across the three embedding types. `sweep.py` writes `study_validation.json` and refuses to analyze the study if the matrix, shared settings, dataset hashes, or token exposure fail validation.
+Token exposure must match exactly across the three embedding types. `sweep.py` writes `study_validation.json` and refuses to analyze the study if the matrix, shared settings, pinned dataset metadata, final validation step, or token exposure fail validation.
 
 ## Commands
 

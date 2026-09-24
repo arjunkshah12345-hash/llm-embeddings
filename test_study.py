@@ -48,6 +48,7 @@ def make_study(tmp_path, token_counts=(160, 160, 160)):
         "dataset": "fixture",
         "tokenizer": "fixture",
         "vocab_size": 97,
+        "source": {"variant": "fixture-v1", "sha256": "fixture"},
         "token_counts": {"train": 160, "val": 160, "test": 160},
         "sha256": {"train": "a", "val": "b", "test": "c"},
     }
@@ -111,6 +112,47 @@ def test_study_validation_rejects_unequal_token_exposure(tmp_path):
 
     assert not result["passed"]
     assert any("token exposure" in error for error in result["errors"])
+
+
+def test_study_validation_requires_a_source_variant(tmp_path):
+    make_study(tmp_path)
+    for run_name in ("seed7_tied", "seed7_partial", "seed7_untied"):
+        config_path = tmp_path / run_name / "config.json"
+        config = json.loads(config_path.read_text())
+        del config["dataset"]["source"]["variant"]
+        config_path.write_text(json.dumps(config))
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert any("pinned source variant" in error for error in result["errors"])
+
+
+def test_study_validation_requires_exact_token_exposure(tmp_path):
+    make_study(tmp_path, token_counts=(160, 160, 161))
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert result["token_tolerance_by_seed"]["7"]["allowed_delta"] == 0
+    assert any("must match exactly" in error for error in result["errors"])
+
+
+def test_study_validation_rejects_premature_final_validation(tmp_path):
+    make_study(tmp_path)
+    manifest = json.loads((tmp_path / "study_manifest.json").read_text())
+    manifest["common"]["steps"] = 6
+    (tmp_path / "study_manifest.json").write_text(json.dumps(manifest))
+    for run_name in ("seed7_tied", "seed7_partial", "seed7_untied"):
+        config_path = tmp_path / run_name / "config.json"
+        config = json.loads(config_path.read_text())
+        config["train"]["steps"] = 6
+        config_path.write_text(json.dumps(config))
+
+    result = validate_study(tmp_path)
+
+    assert not result["passed"]
+    assert any("declared final step 5" in error for error in result["errors"])
 
 
 def test_study_validation_rejects_non_finite_metrics(tmp_path):

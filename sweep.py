@@ -41,7 +41,7 @@ def upsert_run(manifest: dict, entry: dict) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output_dir", default="runs/study-001")
-    parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare"], default="wikitext2")
+    parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare", "fixture"], default="wikitext2")
     parser.add_argument("--data_dir", default="data")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--seeds", nargs="+", type=int, default=[1337])

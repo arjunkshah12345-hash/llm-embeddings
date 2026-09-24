@@ -2,7 +2,53 @@ import hashlib
 import json
 from pathlib import Path
 
-from data import TokenDataset, TINY_SHAKESPEARE_SPLIT_VERSION
+import pytest
+
+from data import (
+    TINY_SHAKESPEARE_COMMIT,
+    TINY_SHAKESPEARE_SHA256,
+    TINY_SHAKESPEARE_SPLIT_VERSION,
+    TINY_SHAKESPEARE_VARIANT,
+    WIKITEXT2,
+    WIKITEXT2_SOURCE_MANIFEST_VERSION,
+    WIKITEXT2_VARIANT,
+    TokenDataset,
+)
+
+
+def test_sources_are_pinned_to_expected_variants_and_hashes():
+    assert WIKITEXT2_VARIANT == "wikitext-2-raw-v1"
+    assert WIKITEXT2_SOURCE_MANIFEST_VERSION == 1
+    for specification in WIKITEXT2.values():
+        assert "main" not in specification["url"]
+        assert len(specification["sha256"]) == 64
+    assert len(TINY_SHAKESPEARE_COMMIT) == 40
+    assert TINY_SHAKESPEARE_VARIANT == "tiny-shakespeare-char-rnn-v1"
+    assert len(TINY_SHAKESPEARE_SHA256) == 64
+
+
+def test_cached_wikitext_requires_the_pinned_source_manifest(tmp_path, monkeypatch):
+    root = tmp_path / "wikitext2"
+    root.mkdir()
+    for split, specification in WIKITEXT2.items():
+        path = root / f"{split}.txt"
+        path.write_text("cached text\n", encoding="utf-8")
+    (root / "source_manifest.json").write_text(
+        json.dumps(
+            {
+                "version": WIKITEXT2_SOURCE_MANIFEST_VERSION,
+                "variant": WIKITEXT2_VARIANT,
+                "files": WIKITEXT2,
+            }
+        )
+    )
+
+    def fail_if_downloaded(*args, **kwargs):
+        raise AssertionError("pinned cached files should not be downloaded")
+
+    monkeypatch.setattr("data.urllib.request.urlretrieve", fail_if_downloaded)
+    with pytest.raises(AssertionError, match="should not be downloaded"):
+        TokenDataset(str(tmp_path), "wikitext2", seed=1)
 
 
 def test_tiny_shakespeare_splits_are_disjoint(tmp_path):
