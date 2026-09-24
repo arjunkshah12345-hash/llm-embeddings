@@ -94,3 +94,15 @@ python3 embedding_eval.py \
 The pair file is a small, predeclared single-token probe. It is an exploratory representation diagnostic, not a substitute for a downstream task.
 
 Rank sweeps default to compact checkpoints without optimizer state to keep exploratory artifacts small. Pass `--save_optimizer` only when an interrupted rank condition must be resumed.
+
+For a public release, export compact per-run provenance and raw metrics without
+committing checkpoints or large sampled-offset logs:
+
+```bash
+python3 export_release_artifacts.py \
+  --studies primary1337=cloud_artifacts/primary_seed1337 \
+  --output-dir results/release_artifacts
+```
+
+Add every completed seed study to `--studies` before publishing the resulting
+`release_manifest.json`.
