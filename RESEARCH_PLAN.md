@@ -23,7 +23,7 @@ Status: implemented.
 - Input/output gradient decomposition using an input-path loss and an output-path loss.
 - Low-rank partial adapters initialized to zero effective correction.
 
-Exit condition: all three variants train, save checkpoints, report finite losses/perplexities, and produce non-empty gradient and correction metrics. This is satisfied by the local sanity run.
+Exit condition: all three variants train, save checkpoints, report finite losses/perplexities, and produce non-empty gradient and correction metrics. This is satisfied by the historical instrumentation sanity run; it is not treated as research evidence.
 
 ## Phase 1 — Experimental hardening
 
@@ -62,7 +62,7 @@ Gate: continue only if the partial model is consistently closer to untied than t
 
 Goal: map the quality/parameter tradeoff rather than overfit to rank 8.
 
-Status: one-seed six-rank exploratory sweep complete; multi-seed replication is in progress.
+Status: two-seed six-rank exploratory sweep complete; the third predeclared seed is queued for the next available Kaggle GPU session.
 
 - Sweep ranks 1, 2, 4, 8, 16, and 32.
 - Sweep adapter scaling separately from rank.
