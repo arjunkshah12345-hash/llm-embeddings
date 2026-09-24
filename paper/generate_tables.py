@@ -31,8 +31,9 @@ def primary_table(result: dict) -> str:
     for condition, value in result["by_condition"].items():
         ci = value["ci95_final_val_loss"]
         ci_text = f"[{tex_number(ci['low'])}, {tex_number(ci['high'])}]"
+        escaped_condition = condition.replace("_", "\\_")
         rows.append(
-            f"{condition.replace('_', r'\_')} & {tex_int(value['total_parameters'])} & "
+            f"{escaped_condition} & {tex_int(value['total_parameters'])} & "
             f"{tex_int(value['additional_parameters_vs_tied'])} & {tex_number(value['mean_final_val_loss'], 5)} & "
             f"{ci_text} & {tex_number(value['mean_best_val_loss'], 5)} & {value['run_count']} "
             + r"\\"
@@ -47,6 +48,7 @@ def primary_macros(result: dict) -> str:
     tied = result["by_condition"]["tied"]
     partial = result["by_condition"]["partial"]
     untied = result["by_condition"]["untied"]
+    recovery_status = final["recovery_status"].replace("_", "\\ ")
     return "\n".join(
         [
             f"\\newcommand{{\\PrimarySeedCount}}{{{tied['run_count']}}}",
@@ -55,7 +57,7 @@ def primary_macros(result: dict) -> str:
             f"\\newcommand{{\\UntiedFinalLoss}}{{{tex_number(final['untied'], 5)}}}",
             f"\\newcommand{{\\PartialExtraParams}}{{{tex_int(partial['additional_parameters_vs_tied'])}}}",
             f"\\newcommand{{\\UntiedExtraParams}}{{{tex_int(untied['additional_parameters_vs_tied'])}}}",
-            f"\\newcommand{{\\RecoveryStatus}}{{{final['recovery_status'].replace('_', r'\ ')}}}",
+            f"\\newcommand{{\\RecoveryStatus}}{{{recovery_status}}}",
             "",
         ]
     )
