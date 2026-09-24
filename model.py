@@ -226,7 +226,7 @@ class EmbeddingSystem(nn.Module):
             counts["output_correction_parameters"] = self.output_a.numel() + self.output_b.numel()
         return counts
 
-    def adapter_metrics(self) -> dict[str, float]:
+    def adapter_metrics(self) -> dict[str, object]:
         if not (self.input_correction_enabled or self.output_correction_enabled):
             return {
                 "input_correction_norm": 0.0,
@@ -237,6 +237,8 @@ class EmbeddingSystem(nn.Module):
                 "output_correction_effective_rank": 0.0,
                 "input_correction_top_singular_value": 0.0,
                 "output_correction_top_singular_value": 0.0,
+                "input_correction_singular_values": [],
+                "output_correction_singular_values": [],
                 "input_correction_shared_cosine": 0.0,
                 "output_correction_shared_cosine": 0.0,
                 "input_output_correction_cosine": 0.0,
@@ -272,6 +274,7 @@ class EmbeddingSystem(nn.Module):
                 f"{side}_correction_relative_norm": correction_norm / max(shared_norm, 1e-12),
                 f"{side}_correction_effective_rank": effective_rank,
                 f"{side}_correction_top_singular_value": top,
+                f"{side}_correction_singular_values": singular_values.tolist(),
                 f"{side}_correction_shared_cosine": shared_cosine,
             }
 

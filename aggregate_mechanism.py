@@ -60,6 +60,11 @@ TOKEN_METRICS = (
     "output_token_freq_grad_q3_mean",
 )
 
+SPECTRUM_METRICS = (
+    "input_correction_singular_values",
+    "output_correction_singular_values",
+)
+
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text())
@@ -106,7 +111,7 @@ def load_records(study_dirs: list[Path]) -> tuple[list[dict], dict, list[dict]]:
                 gradient = dict(run.get("gradient_metrics", {}))
                 adapter = dict(run.get("adapter_metrics", {}))
                 checkpoint_validation = dict(run.get("checkpoint_validation", {}))
-                values = {key: gradient.get(key, adapter.get(key)) for key in METRICS + TOKEN_METRICS}
+                values = {key: gradient.get(key, adapter.get(key)) for key in METRICS + TOKEN_METRICS + SPECTRUM_METRICS}
                 if checkpoint_validation.get("embedding_cumulative_update_norm") is not None:
                     values["embedding_cumulative_update_norm"] = checkpoint_validation[
                         "embedding_cumulative_update_norm"
@@ -160,6 +165,15 @@ def summarize(records: list[dict], metadata: dict, fixed_final_records: list[dic
                 "std": statistics.stdev(values) if len(values) > 1 else 0.0,
                 "ci95": bootstrap_mean_ci(values, seed=7000 + len(metric)),
             }
+        for metric in SPECTRUM_METRICS:
+            spectra = [row[metric] for row in rows if isinstance(row.get(metric), list) and row[metric]]
+            if spectra:
+                width = max(len(spectrum) for spectrum in spectra)
+                padded = [list(spectrum) + [0.0] * (width - len(spectrum)) for spectrum in spectra]
+                metric_summary[metric] = {
+                    "seed_values": padded,
+                    "mean": [statistics.mean(values) for values in zip(*padded)],
+                }
         final[condition] = {"seed_count": len(rows), "metrics": metric_summary}
 
     trajectory: dict[str, dict[str, dict[str, float]]] = {}
@@ -225,6 +239,31 @@ def plot_final_token_roles(result: dict, output_dir: Path) -> None:
     plt.close()
 
 
+def plot_final_spectra(result: dict, output_dir: Path) -> None:
+    for metric, title, filename in (
+        ("input_correction_singular_values", "Input correction singular spectrum", "input_correction_spectrum.png"),
+        ("output_correction_singular_values", "Output correction singular spectrum", "output_correction_spectrum.png"),
+    ):
+        plt.figure(figsize=(8, 5))
+        plotted = False
+        for condition in result["metadata"]["conditions"]:
+            values = result["final"].get(condition, {}).get("metrics", {}).get(metric, {}).get("mean")
+            if values:
+                plotted = True
+                plt.plot(range(1, len(values) + 1), values, "o-", label=condition)
+        if not plotted:
+            plt.close()
+            continue
+        plt.xlabel("Singular-value index")
+        plt.ylabel("Singular value")
+        plt.title(title)
+        plt.grid(alpha=0.25)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_dir / filename, dpi=180)
+        plt.close()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--studies", nargs="+", required=True)
@@ -246,6 +285,7 @@ def main() -> None:
     plot_metric(result, output_dir, "output_correction_relative_norm", "Relative output correction norm", "Correction norm / shared norm")
     plot_metric(result, output_dir, "input_output_correction_cosine", "Input/output correction alignment", "Effective correction cosine")
     plot_final_token_roles(result, output_dir)
+    plot_final_spectra(result, output_dir)
     print(json.dumps(result["final"], indent=2, sort_keys=True))
 
 

@@ -111,6 +111,8 @@ def test_partial_adapter_metrics_report_effective_rank_and_alignment():
     initial = model.embeddings.adapter_metrics()
     assert initial["input_correction_effective_rank"] == 0.0
     assert initial["output_correction_effective_rank"] == 0.0
+    assert initial["input_correction_singular_values"] == [0.0, 0.0, 0.0, 0.0]
+    assert initial["output_correction_singular_values"] == [0.0, 0.0, 0.0, 0.0]
     with torch.no_grad():
         model.embeddings.input_a.zero_()
         model.embeddings.input_b.zero_()
@@ -121,6 +123,8 @@ def test_partial_adapter_metrics_report_effective_rank_and_alignment():
     expected_input_norm = model.embeddings.correction("input").float().norm().item()
     assert abs(metrics["input_correction_norm"] - expected_input_norm) < 1e-6
     assert metrics["input_correction_effective_rank"] == 1.0
+    assert len(metrics["input_correction_singular_values"]) == 4
+    assert metrics["input_correction_singular_values"][0] > 0.0
     assert 0.0 < metrics["output_correction_effective_rank"] <= 4.0
     assert -1.0 <= metrics["input_correction_shared_cosine"] <= 1.0
     assert -1.0 <= metrics["output_correction_shared_cosine"] <= 1.0
