@@ -10,6 +10,8 @@ Install the Python dependencies from a clean checkout:
 python3 -m pip install -r requirements.txt
 ```
 
+The substantive Phase 2 runs used the versions recorded in [requirements-lock.txt](requirements-lock.txt). That file is pinned to the Apple MPS environment used for the release; `requirements.txt` remains the portable installation entry point.
+
 The code requires Python 3.9 or newer and PyTorch 2.1 or newer. CUDA, Apple MPS, and CPU are supported; `--device auto` selects CUDA, then MPS, then CPU.
 
 ## Smallest end-to-end experiment
@@ -62,8 +64,30 @@ Do not commit downloaded data, model checkpoints, optimizer states, generated pl
 Run the source checks before sharing changes:
 
 ```bash
-python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py validate_study.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py mechanism_eval.py validate_study.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
 python3 -m pytest -q
 ```
 
 The GitHub Actions workflow repeats compilation and the test suite on pushes and pull requests. Results from short smoke tests belong in the exploratory record; they must not be described as evidence for the main hypothesis.
+
+After a validated study, the checkpoint-level mechanism report can be regenerated with:
+
+```bash
+python3 mechanism_eval.py --runs_dir runs/phase2-pilot-10k --checkpoint last.pt
+```
+
+This command refuses to analyze a study whose fairness validator did not pass. The fixed-batch report complements the stepwise JSONL measurements and is written to `mechanism_metrics.json`.
+
+Input and output representation probes can be run together from a validated checkpoint:
+
+```bash
+python3 embedding_eval.py \
+  --run_dir runs/phase2-pilot-10k/seed1337_partial \
+  --checkpoint last.pt --side both \
+  --pairs eval/semantic_pairs.jsonl \
+  --output runs/phase2-pilot-10k/seed1337_partial/embedding_eval.json
+```
+
+The pair file is a small, predeclared single-token probe. It is an exploratory representation diagnostic, not a substitute for a downstream task.
+
+Rank sweeps default to compact checkpoints without optimizer state to keep exploratory artifacts small. Pass `--save_optimizer` only when an interrupted rank condition must be resumed.

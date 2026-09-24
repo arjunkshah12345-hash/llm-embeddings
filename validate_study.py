@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
 from typing import Any
+
+import torch
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -32,6 +35,28 @@ def _final_tokens(metrics: list[dict[str, Any]]) -> int | None:
         return int(validation[-1]["tokens_seen"])
     training = [row for row in metrics if row.get("split") == "train" and "tokens_seen" in row]
     return int(training[-1]["tokens_seen"]) if training else None
+
+
+def training_batch_stream_digest(seed: int, config: dict[str, Any], train_token_count: int) -> str:
+    """Hash the exact random start-index stream implied by a run configuration."""
+    train_config = config.get("train", config)
+    model_config = config.get("model", {})
+    block_value = train_config.get("block_size")
+    if block_value is None:
+        block_value = model_config["block_size"]
+    block_size = int(block_value)
+    batch_size = int(train_config["batch_size"])
+    grad_accum_steps = int(train_config["grad_accum_steps"])
+    steps = int(train_config["steps"])
+    upper = train_token_count - block_size
+    if upper <= 0:
+        raise ValueError("training split is too short for the configured block size")
+    generator = torch.Generator().manual_seed(int(seed) + 1)
+    digest = hashlib.sha256()
+    for _ in range(steps * grad_accum_steps):
+        starts = torch.randint(0, upper, (batch_size,), generator=generator)
+        digest.update(starts.numpy().tobytes())
+    return digest.hexdigest()
 
 
 def validate_study(runs_dir: Path) -> dict[str, Any]:
@@ -63,6 +88,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
     canonical_configs: dict[str, dict[str, Any]] = {}
     dataset_hashes: dict[str, dict[str, str]] = {}
     token_counts: dict[str, int] = {}
+    batch_stream_hashes: dict[str, dict[str, str]] = {}
     for entry in entries:
         run_name = entry.get("run_name", "")
         run_dir = runs_dir / run_name
@@ -108,6 +134,13 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         token_metadata = dataset.get("token_counts", {})
         if set(token_metadata) != required_splits:
             errors.append(f"{run_name}: dataset metadata must contain train/val/test token counts")
+        try:
+            stream_hash = training_batch_stream_digest(
+                expected_seed, config, int(token_metadata.get("train", 0))
+            )
+            batch_stream_hashes.setdefault(str(expected_seed), {})[expected_embedding_type] = stream_hash
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append(f"{run_name}: cannot reconstruct training batch stream ({exc})")
 
         required_count_keys = {
             "embedding_type",
@@ -207,6 +240,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
             "dropout": reference_model.get("dropout"),
             "adapter_rank": reference_model.get("adapter_rank"),
             "adapter_alpha": reference_model.get("adapter_alpha"),
+            "capacity_control_width": reference_model.get("capacity_control_width"),
             "learning_rate": reference_train.get("learning_rate"),
             "min_learning_rate": reference_train.get("min_learning_rate"),
             "warmup_steps": reference_train.get("warmup_steps"),
@@ -226,6 +260,9 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
 
     if not entries:
         errors.append("study manifest contains no runs")
+    for seed, hashes in batch_stream_hashes.items():
+        if len(set(hashes.values())) > 1:
+            errors.append(f"seed={seed}: embedding variants do not share the same training batch stream")
     if entries and len(canonical_configs) < len(entries):
         warnings.append("some run metadata could not be included in the configuration comparison")
 
@@ -237,6 +274,7 @@ def validate_study(runs_dir: Path) -> dict[str, Any]:
         "dataset_hashes": dataset_hashes,
         "token_counts": token_counts,
         "token_tolerance_by_seed": token_tolerance,
+        "batch_stream_hashes": batch_stream_hashes,
         "errors": errors,
         "warnings": warnings,
     }

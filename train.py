@@ -17,7 +17,7 @@ import torch
 from config import ModelConfig, TrainConfig, as_dict
 from data import TokenDataset
 from model import GPTModel
-from token_classes import dataset_class_ids
+from token_classes import dataset_class_ids, dataset_frequency_bucket_ids
 
 
 def choose_device(requested: str) -> torch.device:
@@ -151,9 +151,20 @@ def optimizer_checkpoint_payload(
     tokens_seen: int,
     training_elapsed: float,
     embedding_cumulative_update_norm: float = 0.0,
+    dataset_generators: dict[str, torch.Generator] | None = None,
 ) -> dict:
     """Full resume checkpoint with AdamW state and RNG."""
     payload = compact_checkpoint_payload(model, model_config, train_config, device, step, best_val_loss)
+    rng = {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch": torch.get_rng_state(),
+        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+    }
+    if dataset_generators is not None:
+        rng["dataset_generators"] = {
+            split: generator.get_state() for split, generator in dataset_generators.items()
+        }
     payload.update(
         {
             "kind": "optimizer",
@@ -161,12 +172,7 @@ def optimizer_checkpoint_payload(
             "tokens_seen": tokens_seen,
             "training_wall_time_seconds": training_elapsed,
             "embedding_cumulative_update_norm": embedding_cumulative_update_norm,
-            "rng": {
-                "python": random.getstate(),
-                "numpy": np.random.get_state(),
-                "torch": torch.get_rng_state(),
-                "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
-            },
+            "rng": rng,
         }
     )
     return payload
@@ -206,6 +212,31 @@ def load_resume_checkpoint(
     return checkpoint
 
 
+def restore_dataset_generators(
+    dataset: TokenDataset,
+    train_config: TrainConfig,
+    checkpoint: dict,
+    completed_steps: int,
+    block_size: int,
+) -> str:
+    """Restore train sampling exactly, including compatibility with old checkpoints."""
+    saved = (checkpoint.get("rng") or {}).get("dataset_generators")
+    if saved:
+        for split, state in saved.items():
+            if split in dataset.generators:
+                dataset.generators[split].set_state(state)
+        return "checkpoint"
+
+    # Older checkpoints did not save the dataset generators. Replaying the
+    # deterministic start draws preserves the old run's stream when extending
+    # one of those checkpoints.
+    generator = dataset.generators["train"]
+    upper = dataset.tokens["train"].numel() - block_size
+    for _ in range(max(completed_steps, 0) * train_config.grad_accum_steps):
+        torch.randint(0, upper, (train_config.batch_size,), generator=generator)
+    return "replayed_legacy"
+
+
 def truncate_metrics(path: Path, start_step: int) -> int:
     """Drop metric rows at or after start_step so resume does not duplicate history."""
     if not path.exists() or start_step <= 0:
@@ -229,7 +260,11 @@ def truncate_metrics(path: Path, start_step: int) -> int:
 
 def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--embedding_type", choices=["tied", "untied", "partial"], required=True)
+    parser.add_argument(
+        "--embedding_type",
+        choices=["tied", "untied", "partial", "partial_input", "partial_output", "capacity_control"],
+        required=True,
+    )
     parser.add_argument("--dataset", choices=["wikitext2", "tiny_shakespeare"], default="wikitext2")
     parser.add_argument("--data_dir", default="data")
     parser.add_argument("--output_dir", default="runs")
@@ -246,6 +281,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--adapter_rank", type=int, default=8)
     parser.add_argument("--adapter_alpha", type=float, default=8.0)
+    parser.add_argument("--capacity_control_width", type=int, default=0)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--min_learning_rate", type=float, default=3e-5)
     parser.add_argument("--warmup_steps", type=int, default=100)
@@ -284,6 +320,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         dropout=args.dropout,
         adapter_rank=args.adapter_rank,
         adapter_alpha=args.adapter_alpha,
+        capacity_control_width=args.capacity_control_width,
     )
     train_config = TrainConfig(
         dataset=args.dataset,
@@ -367,15 +404,18 @@ def main() -> None:
         tokens_seen = int(resumed.get("tokens_seen", 0))
         training_elapsed = float(resumed.get("training_wall_time_seconds", 0.0))
         embedding_cumulative_update_norm = float(resumed.get("embedding_cumulative_update_norm", 0.0))
+        restore_mode = restore_dataset_generators(dataset, train_config, resumed, start_step, model_config.block_size)
         removed = truncate_metrics(metrics_path, start_step)
         print(
             f"resumed from {args.resume} at step={start_step} tokens_seen={tokens_seen}"
+            f" dataset_generator={restore_mode}"
             + (f" truncated_metrics={removed}" if removed else "")
         )
     else:
         metrics_path.unlink(missing_ok=True)
     model.train()
     token_class_ids = dataset_class_ids(dataset).to(device)
+    token_frequency_ids = dataset_frequency_bucket_ids(dataset).to(device)
 
     print(f"run={train_config.run_name} embedding={train_config.embedding_type} device={device}")
     print(json.dumps(parameter_counts, sort_keys=True))
@@ -400,7 +440,7 @@ def main() -> None:
             step_loss += loss.detach().item()
             should_measure = step % train_config.log_interval == 0 and micro_step == train_config.grad_accum_steps - 1
             if should_measure:
-                gradient_metrics = model.embedding_gradient_metrics(x, y, token_class_ids)
+                gradient_metrics = model.embedding_gradient_metrics(x, y, token_class_ids, token_frequency_ids)
             (loss / train_config.grad_accum_steps).backward()
             tokens_seen += x.numel()
         grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.grad_clip)
@@ -494,6 +534,7 @@ def main() -> None:
                         tokens_seen,
                         training_elapsed,
                         embedding_cumulative_update_norm,
+                        dataset.generators,
                     ),
                 )
         elif step % train_config.save_interval == 0:
@@ -515,6 +556,7 @@ def main() -> None:
                         tokens_seen,
                         training_elapsed,
                         embedding_cumulative_update_norm,
+                        dataset.generators,
                     ),
                 )
 

@@ -69,7 +69,7 @@ class TransformerBlock(nn.Module):
 
 
 class EmbeddingSystem(nn.Module):
-    """Input/output embeddings for tied, untied, and low-rank partially tied models."""
+    """Input/output embeddings for tied, untied, and low-rank role corrections."""
 
     def __init__(
         self,
@@ -80,59 +80,66 @@ class EmbeddingSystem(nn.Module):
         adapter_alpha: float,
     ):
         super().__init__()
-        if embedding_type not in {"tied", "untied", "partial"}:
-            raise ValueError("embedding_type must be tied, untied, or partial")
+        valid_types = {"tied", "untied", "partial", "partial_input", "partial_output", "capacity_control"}
+        if embedding_type not in valid_types:
+            raise ValueError(f"embedding_type must be one of {sorted(valid_types)}")
         if adapter_rank <= 0:
             raise ValueError("adapter_rank must be positive")
         self.embedding_type = embedding_type
+        self.base_embedding_type = "tied" if embedding_type == "capacity_control" else embedding_type
+        self.input_correction_enabled = embedding_type in {"partial", "partial_input"}
+        self.output_correction_enabled = embedding_type in {"partial", "partial_output"}
         self.vocab_size = vocab_size
         self.n_embd = n_embd
         self.adapter_rank = adapter_rank
         self.adapter_scale = adapter_alpha / adapter_rank
 
-        if embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             self.input_weight = nn.Parameter(torch.empty(vocab_size, n_embd))
             self.output_weight = nn.Parameter(torch.empty(vocab_size, n_embd))
         else:
             self.shared = nn.Parameter(torch.empty(vocab_size, n_embd))
-            if embedding_type == "partial":
+            if self.input_correction_enabled:
                 self.input_a = nn.Parameter(torch.empty(vocab_size, adapter_rank))
                 self.input_b = nn.Parameter(torch.empty(n_embd, adapter_rank))
+            if self.output_correction_enabled:
                 self.output_a = nn.Parameter(torch.empty(vocab_size, adapter_rank))
                 self.output_b = nn.Parameter(torch.empty(n_embd, adapter_rank))
 
     def reset_parameters(self, seed: int) -> None:
         with torch.random.fork_rng(devices=[]):
             torch.manual_seed(seed)
-            if self.embedding_type == "untied":
+            if self.base_embedding_type == "untied":
                 nn.init.normal_(self.input_weight, mean=0.0, std=0.02)
                 with torch.no_grad():
                     self.output_weight.copy_(self.input_weight)
             else:
                 nn.init.normal_(self.shared, mean=0.0, std=0.02)
-                if self.embedding_type == "partial":
+                if self.input_correction_enabled:
                     nn.init.normal_(self.input_a, mean=0.0, std=0.02)
                     nn.init.zeros_(self.input_b)
+                if self.output_correction_enabled:
                     nn.init.normal_(self.output_a, mean=0.0, std=0.02)
                     nn.init.zeros_(self.output_b)
 
     def correction(self, side: str) -> torch.Tensor:
         """Materialize a correction matrix for analysis-only measurements."""
-        if self.embedding_type != "partial":
-            return torch.zeros((), device=self.device, dtype=self.dtype)
+        if side not in {"input", "output"}:
+            raise ValueError(f"unknown embedding side {side!r}")
+        enabled = self.input_correction_enabled if side == "input" else self.output_correction_enabled
+        if not enabled:
+            return torch.zeros_like(self.shared)
         if side == "input":
             return self.adapter_scale * (self.input_a @ self.input_b.transpose(0, 1))
-        if side == "output":
-            return self.adapter_scale * (self.output_a @ self.output_b.transpose(0, 1))
-        raise ValueError(f"unknown embedding side {side!r}")
+        return self.adapter_scale * (self.output_a @ self.output_b.transpose(0, 1))
 
     def explicit_weight(self, side: str) -> torch.Tensor:
         """Materialize the effective vocabulary-by-width matrix for analysis."""
         if side not in {"input", "output"}:
             raise ValueError(f"unknown embedding side {side!r}")
-        if self.embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             return self.input_weight if side == "input" else self.output_weight
-        if self.embedding_type == "tied":
+        if not (self.input_correction_enabled or self.output_correction_enabled):
             return self.shared
         return self.shared + self.correction(side)
 
@@ -142,20 +149,20 @@ class EmbeddingSystem(nn.Module):
 
     def input_embeddings(self, token_ids: torch.Tensor) -> torch.Tensor:
         """Look up input vectors without materializing a partial correction."""
-        if self.embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             return F.embedding(token_ids, self.input_weight)
         shared = F.embedding(token_ids, self.shared)
-        if self.embedding_type == "tied":
+        if not self.input_correction_enabled:
             return shared
         correction = F.embedding(token_ids, self.input_a) @ self.input_b.transpose(0, 1)
         return shared + self.adapter_scale * correction
 
     def output_logits(self, hidden: torch.Tensor, detach_weights: bool = False) -> torch.Tensor:
         """Project hidden states to logits without materializing a partial correction."""
-        if self.embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             weight = self.output_weight.detach() if detach_weights else self.output_weight
             return F.linear(hidden, weight)
-        if self.embedding_type == "tied":
+        if not self.output_correction_enabled:
             weight = self.shared.detach() if detach_weights else self.shared
             return F.linear(hidden, weight)
 
@@ -167,16 +174,16 @@ class EmbeddingSystem(nn.Module):
         return logits + self.adapter_scale * low_rank_logits
 
     def input_parameters(self) -> list[nn.Parameter]:
-        if self.embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             return [self.input_weight]
-        if self.embedding_type == "tied":
+        if not self.input_correction_enabled:
             return [self.shared]
         return [self.shared, self.input_a, self.input_b]
 
     def output_parameters(self) -> list[nn.Parameter]:
-        if self.embedding_type == "untied":
+        if self.base_embedding_type == "untied":
             return [self.output_weight]
-        if self.embedding_type == "tied":
+        if not self.output_correction_enabled:
             return [self.shared]
         return [self.shared, self.output_a, self.output_b]
 
@@ -192,18 +199,16 @@ class EmbeddingSystem(nn.Module):
         return next(self.parameters()).dtype
 
     def parameter_counts(self) -> dict[str, int]:
-        if self.embedding_type == "partial":
-            input_correction_compute_parameters = self.n_embd * self.adapter_rank
-            output_correction_compute_parameters = self.adapter_rank * (self.vocab_size + self.n_embd)
-        else:
-            input_correction_compute_parameters = 0
-            output_correction_compute_parameters = 0
+        input_correction_compute_parameters = self.n_embd * self.adapter_rank if self.input_correction_enabled else 0
+        output_correction_compute_parameters = (
+            self.adapter_rank * (self.vocab_size + self.n_embd) if self.output_correction_enabled else 0
+        )
         output_projection_parameters = self.vocab_size * self.n_embd
         counts = {
             "embedding_parameters": sum(p.numel() for p in self.unique_parameters()),
             "input_side_parameters": sum(p.numel() for p in self.input_parameters()),
             "output_side_parameters": sum(p.numel() for p in self.output_parameters()),
-            "shared_parameters": int(self.shared.numel()) if self.embedding_type != "untied" else 0,
+            "shared_parameters": int(self.shared.numel()) if self.base_embedding_type != "untied" else 0,
             "input_correction_parameters": 0,
             "output_correction_parameters": 0,
             "output_projection_parameters": output_projection_parameters,
@@ -215,14 +220,14 @@ class EmbeddingSystem(nn.Module):
                 + output_correction_compute_parameters
             ),
         }
-        if self.embedding_type == "partial":
-            correction_count = self.input_a.numel() + self.input_b.numel()
-            counts["input_correction_parameters"] = correction_count
+        if self.input_correction_enabled:
+            counts["input_correction_parameters"] = self.input_a.numel() + self.input_b.numel()
+        if self.output_correction_enabled:
             counts["output_correction_parameters"] = self.output_a.numel() + self.output_b.numel()
         return counts
 
     def adapter_metrics(self) -> dict[str, float]:
-        if self.embedding_type != "partial":
+        if not (self.input_correction_enabled or self.output_correction_enabled):
             return {
                 "input_correction_norm": 0.0,
                 "output_correction_norm": 0.0,
@@ -234,6 +239,9 @@ class EmbeddingSystem(nn.Module):
                 "output_correction_top_singular_value": 0.0,
                 "input_correction_shared_cosine": 0.0,
                 "output_correction_shared_cosine": 0.0,
+                "input_output_correction_cosine": 0.0,
+                "input_output_left_subspace_overlap": 0.0,
+                "input_output_right_subspace_overlap": 0.0,
             }
 
         def factor_singular_values(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
@@ -268,10 +276,40 @@ class EmbeddingSystem(nn.Module):
             }
 
         with torch.no_grad():
-            return {
-                **side_metrics("input", self.input_a, self.input_b),
-                **side_metrics("output", self.output_a, self.output_b),
+            metrics = {
+                "input_output_correction_cosine": 0.0,
+                "input_output_left_subspace_overlap": 0.0,
+                "input_output_right_subspace_overlap": 0.0,
             }
+            if self.input_correction_enabled:
+                metrics.update(side_metrics("input", self.input_a, self.input_b))
+            if self.output_correction_enabled:
+                metrics.update(side_metrics("output", self.output_a, self.output_b))
+            if self.input_correction_enabled and self.output_correction_enabled:
+                input_correction = self.correction("input").float()
+                output_correction = self.correction("output").float()
+                denominator = input_correction.norm() * output_correction.norm()
+                metrics["input_output_correction_cosine"] = (
+                    torch.sum(input_correction * output_correction).item() / denominator.item()
+                    if denominator.item() > 0
+                    else 0.0
+                )
+
+                def subspace_overlap(left: torch.Tensor, right: torch.Tensor) -> float:
+                    left_q, _ = torch.linalg.qr(left.detach().float().cpu(), mode="reduced")
+                    right_q, _ = torch.linalg.qr(right.detach().float().cpu(), mode="reduced")
+                    singular = torch.linalg.svdvals(left_q.transpose(0, 1) @ right_q)
+                    return float((singular.pow(2).mean()).item()) if singular.numel() else 0.0
+
+                metrics["input_output_left_subspace_overlap"] = subspace_overlap(self.input_a, self.output_a)
+                metrics["input_output_right_subspace_overlap"] = subspace_overlap(self.input_b, self.output_b)
+            for side in ("input", "output"):
+                metrics.setdefault(f"{side}_correction_norm", 0.0)
+                metrics.setdefault(f"{side}_correction_relative_norm", 0.0)
+                metrics.setdefault(f"{side}_correction_effective_rank", 0.0)
+                metrics.setdefault(f"{side}_correction_top_singular_value", 0.0)
+                metrics.setdefault(f"{side}_correction_shared_cosine", 0.0)
+            return metrics
 
 
 def token_class_grad_means(prefix: str, grad: torch.Tensor | None, token_ids: torch.Tensor, class_ids: torch.Tensor) -> dict[str, float]:
@@ -293,6 +331,31 @@ def token_class_grad_means(prefix: str, grad: torch.Tensor | None, token_ids: to
     return metrics
 
 
+def token_frequency_grad_means(
+    prefix: str,
+    grad: torch.Tensor | None,
+    token_ids: torch.Tensor,
+    frequency_ids: torch.Tensor,
+    bucket_count: int = 4,
+) -> dict[str, float]:
+    """Mean row-gradient norms within equal-count frequency strata."""
+    metrics: dict[str, float] = {}
+    row_norm = None if grad is None else grad.detach().float().norm(dim=1)
+    flat = token_ids.reshape(-1)
+    labels = frequency_ids.to(flat.device)[flat] if row_norm is not None else None
+    for bucket in range(bucket_count):
+        if labels is None:
+            count = 0
+            mean = 0.0
+        else:
+            mask = labels == bucket
+            count = int(mask.sum().item())
+            mean = row_norm[flat[mask]].mean().item() if count else 0.0
+        metrics[f"{prefix}_q{bucket}_count"] = float(count)
+        metrics[f"{prefix}_q{bucket}_mean"] = mean
+    return metrics
+
+
 class GPTModel(nn.Module):
     def __init__(self, config: ModelConfig, embedding_type: str, seed: int = 1337):
         super().__init__()
@@ -302,6 +365,17 @@ class GPTModel(nn.Module):
         self.drop = nn.Dropout(config.dropout)
         self.blocks = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_layer)])
         self.ln_f = nn.LayerNorm(config.n_embd)
+        self.capacity_control_width = 0
+        self.capacity_adapter = None
+        if embedding_type == "capacity_control":
+            self.capacity_control_width = config.capacity_control_width or math.ceil(
+                config.adapter_rank * (config.vocab_size + config.n_embd) / config.n_embd
+            )
+            self.capacity_adapter = nn.Sequential(
+                nn.Linear(config.n_embd, self.capacity_control_width, bias=False),
+                nn.GELU(),
+                nn.Linear(self.capacity_control_width, config.n_embd, bias=False),
+            )
         self.embeddings = EmbeddingSystem(
             embedding_type,
             config.vocab_size,
@@ -311,6 +385,10 @@ class GPTModel(nn.Module):
         )
         self._reset_transformer_parameters(seed + 1)
         self.embeddings.reset_parameters(seed + 2)
+        if self.capacity_adapter is not None:
+            # Start as the same function as tied; the control receives a
+            # residual capacity budget without changing initialization behavior.
+            nn.init.zeros_(self.capacity_adapter[-1].weight)
 
     def _reset_transformer_parameters(self, seed: int) -> None:
         with torch.random.fork_rng(devices=[]):
@@ -342,6 +420,8 @@ class GPTModel(nn.Module):
         for block in self.blocks:
             x = block(x)
         hidden = self.ln_f(x)
+        if self.capacity_adapter is not None:
+            hidden = hidden + self.capacity_adapter(hidden)
         logits = self.embeddings.output_logits(hidden, detach_weights=path_ablation == "stop_output")
         if return_hidden:
             return logits, hidden
@@ -356,6 +436,7 @@ class GPTModel(nn.Module):
         idx: torch.Tensor,
         targets: torch.Tensor,
         token_class_ids: torch.Tensor | None = None,
+        token_frequency_ids: torch.Tensor | None = None,
     ) -> dict[str, float]:
         """Measure input-path and output-path pressure on embedding parameters.
 
@@ -386,7 +467,7 @@ class GPTModel(nn.Module):
         vector_denominator = input_vector.norm() * output_vector.norm()
         overall_cosine = (
             torch.dot(input_vector, output_vector).item() / vector_denominator.item()
-            if vector_denominator.item() > 0
+            if vector_denominator.item() > 0 and input_vector.numel() == output_vector.numel()
             else 0.0
         )
 
@@ -419,6 +500,10 @@ class GPTModel(nn.Module):
                 if shared_denominator.item() > 0
                 else 0.0
             )
+            if input_vector.numel() != output_vector.numel():
+                # One-sided corrections have different parameter-vector sizes.
+                # Their meaningful common coordinate system is the shared matrix.
+                metrics["input_output_grad_cosine"] = metrics["shared_input_output_grad_cosine"]
         else:
             metrics["shared_input_grad_norm"] = 0.0
             metrics["shared_output_grad_norm"] = 0.0
@@ -436,6 +521,9 @@ class GPTModel(nn.Module):
         if token_class_ids is not None:
             metrics.update(token_class_grad_means("input_token_grad", input_matrix, idx, token_class_ids))
             metrics.update(token_class_grad_means("output_token_grad", output_matrix, targets, token_class_ids))
+        if token_frequency_ids is not None:
+            metrics.update(token_frequency_grad_means("input_token_freq_grad", input_matrix, idx, token_frequency_ids))
+            metrics.update(token_frequency_grad_means("output_token_freq_grad", output_matrix, targets, token_frequency_ids))
         return metrics
 
     def combined_embedding_grad_norm(self) -> float:
@@ -450,6 +538,10 @@ class GPTModel(nn.Module):
             "total_parameters": total,
             "trainable_parameters": sum(p.numel() for p in self.parameters() if p.requires_grad),
             "transformer_parameters": total - embedding["embedding_parameters"],
+            "capacity_control_width": self.capacity_control_width,
+            "capacity_control_parameters": (
+                sum(p.numel() for p in self.capacity_adapter.parameters()) if self.capacity_adapter is not None else 0
+            ),
             **embedding,
         }
 

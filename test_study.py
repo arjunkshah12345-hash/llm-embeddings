@@ -1,6 +1,6 @@
 import json
 
-from validate_study import validate_study
+from validate_study import training_batch_stream_digest, validate_study
 
 
 MODEL = {
@@ -148,3 +148,14 @@ def test_study_validation_rejects_run_metadata_mismatch(tmp_path):
 
     assert not result["passed"]
     assert any("config seed does not match study entry" in error for error in result["errors"])
+
+
+def test_training_batch_stream_digest_is_seed_paired_and_sensitive_to_budget():
+    config = {"steps": 5, "batch_size": 2, "grad_accum_steps": 1, "block_size": 16}
+    first = training_batch_stream_digest(7, config, 160)
+    second = training_batch_stream_digest(7, config, 160)
+    changed = training_batch_stream_digest(8, config, 160)
+    longer = training_batch_stream_digest(7, {**config, "steps": 6}, 160)
+    assert first == second
+    assert first != changed
+    assert first != longer

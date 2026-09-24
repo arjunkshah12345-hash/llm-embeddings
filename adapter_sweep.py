@@ -57,6 +57,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument(
+        "--save_optimizer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="write optimizer checkpoints for rank-sweep resume (default: false)",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -118,10 +124,17 @@ def sweep_command(args: argparse.Namespace, condition_dir: Path, rank: int, alph
     ]
     if args.overwrite:
         command.append("--overwrite")
+    if not args.save_optimizer:
+        command.append("--no-save_optimizer")
     return command
 
 
-def summarize_condition(condition_dir: Path, rank: int, alpha: float) -> dict:
+def summarize_condition(
+    condition_dir: Path,
+    rank: int,
+    alpha: float,
+    tied_counts: dict | None = None,
+) -> dict:
     validation = json.loads((condition_dir / "study_validation.json").read_text())
     if not validation.get("passed"):
         raise SystemExit(f"Fairness validation failed for {condition_dir}")
@@ -132,19 +145,40 @@ def summarize_condition(condition_dir: Path, rank: int, alpha: float) -> dict:
     best_perplexities = [row["best_val_perplexity"] for row in rows if row.get("best_val_perplexity") is not None]
     if not best_losses:
         raise SystemExit(f"No validation results found for {condition_dir}")
+    first = rows[0]
+    if tied_counts is None:
+        # All rank conditions use the same Transformer. Infer the tied total
+        # from the condition's transformer count and one vocabulary matrix.
+        config = json.loads((condition_dir / rows[0]["run_name"] / "config.json").read_text())
+        model_config = config["model"]
+        tied_embedding_parameters = int(model_config["vocab_size"]) * int(model_config["n_embd"])
+        tied_total_parameters = int(first["total_parameters"]) - int(first["embedding_parameters"]) + tied_embedding_parameters
+    else:
+        tied_total_parameters = int(tied_counts["total_parameters"])
+        expected_transformer = int(first["total_parameters"]) - int(first["embedding_parameters"])
+        actual_transformer = int(tied_counts["total_parameters"]) - int(tied_counts["embedding_parameters"])
+        if expected_transformer != actual_transformer:
+            raise SystemExit(f"Tied baseline Transformer count differs for {condition_dir}")
+    additional_parameters = int(first["total_parameters"]) - tied_total_parameters
     return {
         "condition": condition_dir.name,
         "adapter_rank": rank,
         "adapter_alpha": alpha,
         "run_count": len(rows),
-        "total_parameters": rows[0]["total_parameters"],
-        "embedding_parameters": rows[0]["embedding_parameters"],
-        "additional_parameters_vs_tied": None,
+        "total_parameters": first["total_parameters"],
+        "embedding_parameters": first["embedding_parameters"],
+        "additional_parameters_vs_tied": additional_parameters,
         "mean_best_val_loss": statistics.mean(best_losses),
         "std_best_val_loss": statistics.stdev(best_losses) if len(best_losses) > 1 else 0.0,
         "mean_best_val_loss_ci95": bootstrap_mean_ci(best_losses, seed=1000 + rank),
         "mean_final_val_loss": statistics.mean(final_losses) if final_losses else None,
         "mean_best_val_perplexity": statistics.mean(best_perplexities) if best_perplexities else None,
+        "mean_training_wall_time_seconds": statistics.mean(
+            [row["training_wall_time_seconds"] for row in rows if row.get("training_wall_time_seconds") is not None]
+        ) if any(row.get("training_wall_time_seconds") is not None for row in rows) else None,
+        "mean_estimated_flops_total": statistics.mean(
+            [row["estimated_flops_total"] for row in rows if row.get("estimated_flops_total") is not None]
+        ) if any(row.get("estimated_flops_total") is not None for row in rows) else None,
         "run_dir": str(condition_dir),
     }
 
@@ -213,6 +247,32 @@ def write_summary(output_dir: Path, summaries: list[dict]) -> None:
     plt.savefig(output_dir / "adapter_tradeoff.png", dpi=160)
     plt.close()
 
+    plots = [
+        ("additional_parameters_vs_tied", "Additional trainable parameters vs tied", 1e6, "rank_sweep_vs_extra_parameters.png"),
+        ("total_parameters", "Total trainable parameters", 1e6, "rank_sweep_vs_total_parameters.png"),
+        ("mean_estimated_flops_total", "Estimated training FLOPs", 1e12, "rank_sweep_vs_estimated_flops.png"),
+        ("mean_training_wall_time_seconds", "Training wall-clock seconds", 1.0, "rank_sweep_vs_wall_clock.png"),
+    ]
+    for x_key, xlabel, scale, filename in plots:
+        plt.figure(figsize=(8, 5))
+        plotted = False
+        for row in summaries:
+            x = row.get(x_key)
+            y = row.get("mean_final_val_loss")
+            if x is None or y is None:
+                continue
+            plotted = True
+            plt.scatter(x / scale, y, s=90, label=f"r{row['adapter_rank']} α{row['adapter_alpha']:g}")
+        plt.xlabel(f"{xlabel}{' (millions)' if scale == 1e6 else ' (trillions)' if scale == 1e12 else ''}")
+        plt.ylabel("Mean final validation loss")
+        plt.title(f"Rank sweep: validation loss vs {xlabel.lower()}")
+        plt.grid(alpha=0.25)
+        if plotted:
+            plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_dir / filename, dpi=160)
+        plt.close()
+
 
 def main() -> None:
     args = parse_args()
@@ -235,8 +295,14 @@ def main() -> None:
             condition_alphas.append(alpha)
 
     validate_cross_condition_manifests(condition_dirs, condition_ranks, condition_alphas)
+    tied_counts = None
+    if args.baseline_run_dir:
+        tied_counts_path = Path(args.baseline_run_dir) / "parameter_counts.json"
+        if not tied_counts_path.exists():
+            raise SystemExit(f"missing tied baseline parameter counts: {tied_counts_path}")
+        tied_counts = json.loads(tied_counts_path.read_text())
     summaries = [
-        summarize_condition(condition_dir, rank, alpha)
+        summarize_condition(condition_dir, rank, alpha, tied_counts=tied_counts)
         for condition_dir, rank, alpha in zip(condition_dirs, condition_ranks, condition_alphas)
     ]
     if args.baseline_run_dir:

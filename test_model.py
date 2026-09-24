@@ -23,6 +23,7 @@ def test_embedding_parameter_relationships():
     expected_partial = 97 * 32 + 2 * 4 * (97 + 32)
     assert partial.parameter_counts()["embedding_parameters"] == expected_partial
     assert tied.embeddings.explicit_weight("input") is tied.embeddings.explicit_weight("output")
+    assert untied.embeddings.input_weight is not untied.embeddings.output_weight
     assert torch.equal(untied.embeddings.explicit_weight("input"), untied.embeddings.explicit_weight("output"))
     assert torch.equal(partial.embeddings.explicit_weight("input"), partial.embeddings.shared)
     assert torch.equal(partial.embeddings.explicit_weight("output"), partial.embeddings.shared)
@@ -33,6 +34,46 @@ def test_embedding_parameter_relationships():
     token_ids = torch.randint(0, 97, (2, 8))
     torch.testing.assert_close(tied(token_ids), untied(token_ids))
     torch.testing.assert_close(tied(token_ids), partial(token_ids))
+
+
+def test_one_sided_corrections_start_as_tied_and_keep_role_specific_parameters():
+    tied = make_model("tied")
+    input_only = make_model("partial_input")
+    output_only = make_model("partial_output")
+    token_ids = torch.randint(0, 97, (2, 8))
+    hidden = torch.randn(2, 8, 32)
+
+    for model in (input_only, output_only):
+        assert torch.equal(model.embeddings.explicit_weight("input"), model.embeddings.shared)
+        assert torch.equal(model.embeddings.explicit_weight("output"), model.embeddings.shared)
+        torch.testing.assert_close(model(token_ids), tied(token_ids))
+
+    assert input_only.parameter_counts()["input_correction_parameters"] > 0
+    assert input_only.parameter_counts()["output_correction_parameters"] == 0
+    assert output_only.parameter_counts()["input_correction_parameters"] == 0
+    assert output_only.parameter_counts()["output_correction_parameters"] > 0
+    with torch.no_grad():
+        input_only.embeddings.input_b.normal_()
+        output_only.embeddings.output_b.normal_()
+    assert not torch.allclose(input_only.embeddings.input_embeddings(token_ids), tied.embeddings.input_embeddings(token_ids))
+    assert not torch.allclose(output_only.embeddings.output_logits(hidden), tied.embeddings.output_logits(hidden))
+    for model in (input_only, output_only):
+        metrics = model.embedding_gradient_metrics(token_ids, torch.randint(0, 97, token_ids.shape))
+        assert -1.0 <= metrics["input_output_grad_cosine"] <= 1.0
+        assert metrics["shared_input_grad_norm"] > 0
+
+
+def test_parameter_matched_capacity_control_is_tied_at_initialization():
+    tied = make_model("tied")
+    control = make_model("capacity_control")
+    token_ids = torch.randint(0, 97, (2, 8))
+    torch.testing.assert_close(control(token_ids), tied(token_ids))
+    tied_counts = tied.parameter_counts()
+    control_counts = control.parameter_counts()
+    partial_extra = make_model("partial").parameter_counts()["embedding_parameters"] - tied_counts["embedding_parameters"]
+    control_extra = control_counts["total_parameters"] - tied_counts["total_parameters"]
+    assert abs(control_extra - partial_extra) <= 2 * tied.config.n_embd
+    assert control_counts["capacity_control_parameters"] == control_extra
 
 
 def test_partial_factorized_paths_match_explicit_matrices():
@@ -83,6 +124,9 @@ def test_partial_adapter_metrics_report_effective_rank_and_alignment():
     assert 0.0 < metrics["output_correction_effective_rank"] <= 4.0
     assert -1.0 <= metrics["input_correction_shared_cosine"] <= 1.0
     assert -1.0 <= metrics["output_correction_shared_cosine"] <= 1.0
+    assert -1.0 <= metrics["input_output_correction_cosine"] <= 1.0
+    assert 0.0 <= metrics["input_output_left_subspace_overlap"] <= 1.0
+    assert 0.0 <= metrics["input_output_right_subspace_overlap"] <= 1.0
 
 
 def test_gradient_decomposition_and_forward():
@@ -250,6 +294,24 @@ def test_optimizer_checkpoint_resume_round_trip(tmp_path):
     for name, parameter in model.state_dict().items():
         assert torch.equal(parameter, restored.state_dict()[name]), name
     assert restored_opt.state_dict()["state"]
+
+
+def test_optimizer_checkpoint_preserves_dataset_generator_state(tmp_path):
+    from train import restore_dataset_generators
+
+    dataset = object.__new__(TokenDataset)
+    dataset.tokens = {"train": torch.arange(100, dtype=torch.long)}
+    dataset.generators = {"train": torch.Generator().manual_seed(8)}
+    config = TrainConfig(steps=5, batch_size=2, grad_accum_steps=1)
+    state = dataset.generators["train"].get_state()
+    expected = torch.randint(0, 92, (2,), generator=dataset.generators["train"])
+    checkpoint = {"rng": {"dataset_generators": {"train": state}}}
+    restored = object.__new__(TokenDataset)
+    restored.tokens = dataset.tokens
+    restored.generators = {"train": torch.Generator().manual_seed(999)}
+    restore_dataset_generators(restored, config, checkpoint, completed_steps=1, block_size=8)
+    actual = torch.randint(0, 92, (2,), generator=restored.generators["train"])
+    assert torch.equal(expected, actual)
 
 
 def test_flops_estimate_scales_with_tokens_and_embedding_cost():
