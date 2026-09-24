@@ -6,6 +6,7 @@ from embedding_eval import (
     nearest_neighbor_statistics,
     pair_similarity,
     quantile_bucket_labels,
+    ridge_linear_probe,
 )
 
 
@@ -21,6 +22,20 @@ def test_nearest_centroid_probe_beats_majority_on_separable_vectors():
     assert result["accuracy"] == 1.0
     assert result["macro_accuracy"] == 1.0
     assert result["majority_baseline"] == 0.5
+
+
+def test_ridge_linear_probe_is_deterministic_with_frozen_embeddings():
+    embeddings = torch.tensor([[1.0, 0.0], [0.9, 0.1], [-1.0, 0.0], [-0.9, -0.1], [1.0, 0.2], [-1.0, -0.2]])
+    labels = torch.tensor([0, 0, 1, 1, 0, 1])
+    train_mask = torch.tensor([True, True, True, True, False, False])
+
+    first = ridge_linear_probe(embeddings, labels, train_mask)
+    second = ridge_linear_probe(embeddings, labels, train_mask)
+
+    assert first == second
+    assert first["accuracy"] == 1.0
+    assert first["train_count"] == 4
+    assert first["test_count"] == 2
 
 
 def test_nearest_neighbor_statistics_reports_bucket_agreement():
@@ -65,3 +80,4 @@ def test_embedding_matrix_evaluation_supports_output_side_equally():
     )
     assert result["active_token_count"] == 5
     assert "token_shape_probe" in result
+    assert "token_shape_linear_probe" in result

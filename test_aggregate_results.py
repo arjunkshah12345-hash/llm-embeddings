@@ -73,6 +73,7 @@ def test_recovery_is_not_reported_when_untied_is_worse():
 
     assert result["research_question"]["final_val_loss"]["recovered_fraction"] is None
     assert result["research_question"]["final_val_loss"]["recovery_status"] == "untied_not_better_than_tied"
+    assert "untied_minus_tied_final_val_perplexity" in result["paired_comparisons"]
 
 
 def test_summary_reports_runtime_and_compute_metrics():
@@ -102,6 +103,7 @@ def test_summary_reports_runtime_and_compute_metrics():
     assert tied["mean_tokens_per_second"] == 90.0
     assert tied["mean_training_wall_time_seconds"] == 11.0
     assert tied["mean_estimated_flops_total"] == 1e12
+    assert result["paired_comparisons"]["partial_minus_tied_final_val_perplexity"]["mean_delta"] == 0.0
 
 
 def test_summarize_run_prefers_final_validation_runtime(tmp_path):

@@ -170,7 +170,12 @@ def summarize(rows: list[dict], metadata: dict) -> dict:
     for condition in metadata["conditions"]:
         if condition == "tied":
             continue
-        for metric in ("final_val_loss", "best_val_loss"):
+        for metric in (
+            "final_val_loss",
+            "best_val_loss",
+            "final_val_perplexity",
+            "best_val_perplexity",
+        ):
             deltas = paired_delta(rows, condition, metric)
             paired[f"{condition}_minus_tied_{metric}"] = {
                 "condition": condition,

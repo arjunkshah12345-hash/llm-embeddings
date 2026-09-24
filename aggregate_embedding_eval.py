@@ -23,6 +23,10 @@ METRIC_PATHS = {
     "neighbor_cosine": ("nearest_neighbors", "mean_neighbor_cosine"),
     "shape_probe_accuracy": ("token_shape_probe", "accuracy"),
     "shape_probe_macro_accuracy": ("token_shape_probe", "macro_accuracy"),
+    "frequency_linear_probe_accuracy": ("frequency_bucket_linear_probe", "accuracy"),
+    "frequency_linear_probe_macro_accuracy": ("frequency_bucket_linear_probe", "macro_accuracy"),
+    "shape_linear_probe_accuracy": ("token_shape_linear_probe", "accuracy"),
+    "shape_linear_probe_macro_accuracy": ("token_shape_linear_probe", "macro_accuracy"),
 }
 
 
@@ -110,6 +114,8 @@ def plot_metrics(result: dict, output_dir: Path) -> None:
     metrics = [
         ("frequency_probe_macro_accuracy", "Frequency probe macro accuracy", "frequency_probe.png"),
         ("shape_probe_macro_accuracy", "Token-shape probe macro accuracy", "shape_probe.png"),
+        ("frequency_linear_probe_macro_accuracy", "Frozen frequency linear-probe macro accuracy", "frequency_linear_probe.png"),
+        ("shape_linear_probe_macro_accuracy", "Frozen token-shape linear-probe macro accuracy", "shape_linear_probe.png"),
         ("frequency_neighbor_agreement", "Frequency-bucket neighbor agreement", "neighbor_agreement.png"),
         ("neighbor_cosine", "Mean nearest-neighbor cosine", "neighbor_cosine.png"),
     ]

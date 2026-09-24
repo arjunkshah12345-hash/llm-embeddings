@@ -65,6 +65,54 @@ def nearest_centroid_probe(embeddings: torch.Tensor, labels: torch.Tensor, train
     }
 
 
+def ridge_linear_probe(
+    embeddings: torch.Tensor,
+    labels: torch.Tensor,
+    train_mask: torch.Tensor,
+    ridge: float = 1e-3,
+) -> dict:
+    """Fit a deterministic linear probe while keeping embeddings frozen."""
+    if embeddings.ndim != 2 or labels.ndim != 1 or embeddings.size(0) != labels.numel():
+        raise ValueError("embeddings and labels have incompatible shapes")
+    if train_mask.dtype is not torch.bool or train_mask.shape != labels.shape:
+        raise ValueError("train_mask must be a boolean vector matching labels")
+    if ridge <= 0:
+        raise ValueError("ridge must be positive")
+    test_mask = ~train_mask
+    if not train_mask.any() or not test_mask.any():
+        raise ValueError("probe requires both training and test examples")
+
+    x = torch.cat([embeddings.float(), torch.ones((embeddings.size(0), 1))], dim=1)
+    classes = torch.unique(labels[train_mask], sorted=True)
+    class_to_column = {int(label): index for index, label in enumerate(classes.tolist())}
+    targets = torch.zeros((int(train_mask.sum().item()), classes.numel()), dtype=x.dtype)
+    for row, label in enumerate(labels[train_mask].tolist()):
+        targets[row, class_to_column[int(label)]] = 1.0
+    x_train = x[train_mask]
+    regularizer = torch.eye(x_train.size(1), dtype=x.dtype)
+    regularizer[-1, -1] = 0.0
+    weights = torch.linalg.solve(x_train.T @ x_train + ridge * regularizer, x_train.T @ targets)
+    predictions = classes[(x[test_mask] @ weights).argmax(dim=1)]
+    held_out = labels[test_mask]
+    accuracy = (predictions == held_out).float().mean().item()
+    per_class_accuracy = {}
+    for label in torch.unique(held_out, sorted=True):
+        class_mask = held_out == label
+        per_class_accuracy[str(int(label))] = (predictions[class_mask] == label).float().mean().item()
+    macro_accuracy = sum(per_class_accuracy.values()) / max(len(per_class_accuracy), 1)
+    counts = torch.bincount(held_out, minlength=int(classes.max().item()) + 1)
+    return {
+        "accuracy": accuracy,
+        "macro_accuracy": macro_accuracy,
+        "per_class_accuracy": per_class_accuracy,
+        "majority_baseline": counts.max().item() / max(int(held_out.numel()), 1),
+        "train_count": int(train_mask.sum().item()),
+        "test_count": int(test_mask.sum().item()),
+        "class_count": int(classes.numel()),
+        "ridge": ridge,
+    }
+
+
 def nearest_neighbor_statistics(
     embeddings: torch.Tensor,
     token_ids: torch.Tensor,
@@ -191,7 +239,9 @@ def evaluate_embedding_matrix(
     result = {
         "active_token_count": int(token_ids.numel()),
         "frequency_bucket_probe": nearest_centroid_probe(embeddings, frequency_labels, train_mask),
+        "frequency_bucket_linear_probe": ridge_linear_probe(embeddings, frequency_labels, train_mask),
         "token_shape_probe": nearest_centroid_probe(embeddings, shape_labels, train_mask),
+        "token_shape_linear_probe": ridge_linear_probe(embeddings, shape_labels, train_mask),
         "nearest_neighbors": nearest_neighbor_statistics(
             embeddings,
             token_ids,
