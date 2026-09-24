@@ -28,6 +28,10 @@ def kaggle_executable() -> str:
             return str(Path(candidate))
     raise SystemExit("Kaggle CLI executable not found; install it or set KAGGLE_CLI")
 
+
+def kernel_slug(experiment_id: str, seed: int, suffix: str = "") -> str:
+    return f"llm-embeddings-{experiment_id.replace('_', '-')}-seed{seed}{suffix}"
+
 PRIMARY = {
     "runner": "sweep",
     "experiment_id": "primary_10k",
@@ -347,6 +351,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--commit", default="", help="frozen source commit; defaults to the current checkout HEAD")
     parser.add_argument("--owner", default=OWNER)
     parser.add_argument("--seeds", nargs="+", type=int)
+    parser.add_argument(
+        "--slug-suffix",
+        default="",
+        help="optional suffix for a fresh kernel slug when rerunning a completed condition",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--overwrite", action="store_true", help="explicitly replace an existing Kaggle kernel")
     return parser.parse_args()
@@ -371,7 +380,7 @@ def main() -> None:
     generated_root = ROOT / "kaggle" / "generated"
     generated_root.mkdir(parents=True, exist_ok=True)
     for seed in seeds:
-        slug = f"llm-embeddings-{config['experiment_id'].replace('_', '-')}-seed{seed}"
+        slug = kernel_slug(config["experiment_id"], seed, args.slug_suffix)
         kernel_id = f"{args.owner}/{slug}"
         kernel_dir = generated_root / slug
         if kernel_dir.exists():

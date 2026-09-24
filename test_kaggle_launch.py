@@ -11,6 +11,7 @@ MECHANISM_STOP_INPUT = _MODULE.MECHANISM_STOP_INPUT
 MECHANISM_STOP_OUTPUT = _MODULE.MECHANISM_STOP_OUTPUT
 RUN_TEMPLATE = _MODULE.RUN_TEMPLATE
 kaggle_executable = _MODULE.kaggle_executable
+kernel_slug = _MODULE.kernel_slug
 
 
 def test_mechanism_profiles_are_matched_and_distinct():
@@ -31,3 +32,8 @@ def test_generated_kernel_passes_path_ablation_flags():
 def test_kaggle_executable_is_a_real_file():
     executable = Path(kaggle_executable())
     assert executable.is_file()
+
+
+def test_slug_suffix_keeps_reruns_distinct():
+    assert kernel_slug("long_50k", 1337) == "llm-embeddings-long-50k-seed1337"
+    assert kernel_slug("long_50k", 1337, "-exact56f") == "llm-embeddings-long-50k-seed1337-exact56f"
