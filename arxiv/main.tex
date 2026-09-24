@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+\title{Partial Tying of Input and Output Embeddings in Decoder-Only Language Models}
+\author{Arjun Shah}
+\date{Research draft --- September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Weight tying reduces the parameter cost of a language model by using one token matrix both for input lookup and output prediction. The two roles, however, receive different learning signals. We study a middle ground in which a shared vocabulary matrix is augmented with independent low-rank input and output corrections. This manuscript documents the method and the reproducible measurement pipeline. In the current three-seed, 10,000-step WikiText-2-raw-v1 study, the untied model is not better than the tied model, and the rank-8 partial model is statistically indistinguishable from tied at this horizon. These are preliminary endpoints rather than evidence that partial tying succeeds or fails: fresh 50,000-step runs, rank replication, mechanism interventions, and robustness studies are still in progress. The code, manifests, fairness checks, and raw compact metrics are released with the project.
+\end{abstract}
+
+\paragraph{Research status.}
+This is an explicitly provisional research draft. All numerical values in the current version are generated from checked-in machine-readable artifacts. The manuscript must be regenerated after the outstanding Kaggle studies finish before it can support a final scientific claim.
+
+\section{Introduction}
+
+Decoder-only language models commonly use weight tying, setting the input embedding and output classifier to the same matrix. This is an effective parameter-saving convention, but it imposes one representation on two pathways with different objectives. The input pathway consumes token identities and produces hidden-state features; the output pathway turns a contextual hidden state into a distribution over the vocabulary. Prior work has argued that tied representations can be pulled toward the output-prediction role \citep{press2017using,inan2017tying,derby2020analysing}.
+
+We test whether a small amount of role-specific freedom is enough to retain the quality of untying without paying for two full vocabulary matrices. Let $W_{\mathrm{shared}}\in\mathbb{R}^{V\times D}$ be a shared base. Our partial model uses
+\begin{equation}
+ W_{\mathrm{input}} = W_{\mathrm{shared}} + s A_{\mathrm{input}}B_{\mathrm{input}}^\top,
+ \qquad
+ W_{\mathrm{output}} = W_{\mathrm{shared}} + s A_{\mathrm{output}}B_{\mathrm{output}}^\top,
+\end{equation}
+where $A\in\mathbb{R}^{V\times r}$, $B\in\mathbb{R}^{D\times r}$, and $s=\alpha/r$. The corrections are initialized to zero as effective matrices and remain factorized during normal computation. Input lookup uses only the selected rows; output logits use the equivalent factorized multiplication, so the full correction matrices need not be materialized.
+
+The central question is quantitative: how much of any untied quality benefit can these role-specific corrections recover per added parameter and unit of compute? We compare tied, fully untied, rank-8 partial, input-only, output-only, and parameter-capacity-matched tied models under a common protocol. We do not assume that untying helps at this scale or training horizon.
+
+\section{Related work}
+
+Weight tying was introduced and analyzed as a way to reuse the output embedding in the input pathway \citep{inan2017tying,press2017using}. Press and Wolf report that the tied representation evolves more like the output embedding than the untied input embedding, which motivates measuring pathway-specific pressure rather than treating a shared matrix as neutral \citep{press2017using}. Subsequent work examined the geometry and specialization of input and output representations \citep{gulordava2018represent,derby2020analysing}.
+
+Several studies have questioned whether input/output coupling is universally appropriate. Chung et al. investigate decoupled embedding designs in pretrained language models \citep{chung2021rethinking}, while Bertolotti and Cazzola analyze the distributional assumptions induced by tying \citep{bertolotti2024tying}. Parameter-efficient low-rank updates provide the computational template for our residual parameterization \citep{hu2022lora}. These works establish the motivation and relevant design space; they do not by themselves establish the result studied here.
+
+Rather than choosing between fully tied and fully untied embeddings, this project studies whether a large shared base plus small role-specific low-rank residuals can recover much of the flexibility of untying at a fraction of the parameter cost. The contribution is an empirical, controlled comparison and a mechanism-oriented measurement pipeline, rather than a claim of architectural novelty beyond these ideas.
+
+\section{Method and fair comparison}
+
+All conditions use the same decoder-only Transformer. The primary configuration has six layers, six attention heads, width 384, context length 256, GPT-2 BPE tokenization, and WikiText-2-raw-v1. Optimizer settings, schedule, batch size, data order, validation windows, initialization seed, and token exposure are shared within each matched seed. The primary study uses seeds 1337, 2027, and 31415.
+
+The tied model uses one parameter for both lookup and projection. The untied model copies the tied initialization into independent input and output parameters before training. The partial model starts with zero effective corrections and therefore has the same initial function as tied. The capacity control adds approximately the partial model's parameter budget elsewhere in the Transformer without separating embedding roles. Input-only and output-only variants allocate one correction to isolate asymmetry.
+
+For input lookup, the implementation computes $W_{\mathrm{shared}}[x]+sA_{\mathrm{input}}[x]B_{\mathrm{input}}^\top$. For output projection, it computes $hW_{\mathrm{shared}}^\top+s(hB_{\mathrm{output}})A_{\mathrm{output}}^\top$. Tests compare these operations with explicit small-matrix reconstruction. The study validator requires exact equality of actual batch-stream digests, dataset hashes, configuration fields, run matrices, and final validation steps.
+
+\section{Current preliminary results}
+
+Table~\ref{tab:primary} is generated by \texttt{paper/generate\_tables.py} from \texttt{results/primary/primary\_aggregate.json}. The mean final validation losses are 5.37413 for tied, 5.37736 for rank-8 partial, and 5.43876 for untied. In this 10,000-step endpoint, untied is worse than tied for all three seeds, so an untied-benefit recovery fraction is not defined. The partial and tied paired comparison is uncertain at this horizon. The rank-8 partial condition adds 810,256 parameters, whereas full untying adds 19,298,688.
+
+\begin{table}[t]
+\centering
+\caption{Primary three-seed endpoint. Confidence intervals are bootstrap intervals over seeds; they are descriptive at this sample size.}
+\label{tab:primary}
+\input{generated/primary_table.tex}
+\end{table}
+
+The capacity control has a slightly lower mean loss than tied in this preliminary snapshot, while the embedding-specific partial model is nearly tied. This prevents attributing any small difference to role-specific freedom without the remaining matched controls and longer training. The current result supports a cautious statement: the hypothesized untied advantage is not visible in this first endpoint, and partial tying has not yet demonstrated a benefit.
+
+The first rank sweep is exploratory and uses one seed. It does not justify selecting a rank. Its purpose was to identify the cost and measurement path for a multi-seed sweep. The machine-generated frontier plots report validation loss against parameter count, estimated FLOPs, and wall-clock cost, but they should not be interpreted as a general rank law from one seed.
+
+\begin{table}[t]
+\centering
+\caption{One-seed exploratory rank sweep at 10,000 steps. These values are not a final rank-selection result.}
+\label{tab:rank}
+\input{generated/rank_table.tex}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\linewidth]{final_loss_by_condition.png}
+\includegraphics[width=0.48\linewidth]{parameter_efficiency.png}
+\caption{Preliminary primary comparisons generated from the aggregate artifact.}
+\label{fig:primary}
+\end{figure}
+
+\section{Mechanism measurements}
+
+The training code records input-path and output-path contributions to the effective $V\times D$ gradient, rather than concatenating arbitrary low-rank factor gradients. It also records their cosine similarity, output-to-input norm ratio, correction norms, effective correction alignment, token-class statistics, and frequency-aware summaries. This makes the gradient diagnostic invariant to rotations of the low-rank factors.
+
+The current mechanism plots are descriptive endpoints from the preliminary primary study. They are not yet a stable mechanistic result: the planned test is whether the same imbalance and correction separation replicate across seeds, longer training, one-sided interventions, and frequency-matched token groups. Language-model loss alone is not treated as evidence of better input representations.
+
+\section{Limitations and continuation protocol}
+
+The present evidence has a short training horizon relative to the planned continuation, uses one model scale and one primary corpus, and has too few seeds for strong statistical claims. The exploratory rank sweep is one-seed. Representation probes are limited and must be separated from language-modeling quality. A parameter-matched control can show whether extra capacity helps, but it cannot establish that every possible allocation of capacity is equivalent.
+
+The active continuation protocol launches fresh 50,000-step studies rather than resuming a 10,000-step cosine schedule. It also includes multi-seed rank replication, input-only and output-only interventions, a smaller model scale, and a second dataset. If the effect changes with horizon, rank, scale, or corpus, that dependency will be the result. If partial tying does not consistently improve tied, the final paper will report that negative result.
+
+\section{Conclusion}
+
+This project provides a controlled test of shared embeddings with low-rank role-specific corrections. The current artifacts show that the implementation, factorized computation, provenance checks, and fairness gate are functioning. They do not yet show that partial tying improves language modeling or recovers an untied advantage. The final conclusion will be written only after the active cloud studies, raw artifact inspection, and preregistered analyses are complete.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
