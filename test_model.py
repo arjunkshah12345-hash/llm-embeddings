@@ -216,7 +216,8 @@ def test_role_gradient_cosine_is_invariant_to_low_rank_factor_rotation():
     after_logits = model(x)
     after = model.embedding_gradient_metrics(x, y)
 
-    torch.testing.assert_close(before_logits, after_logits, rtol=1e-4, atol=3e-5)
+    # Equivalent low-rank rotations can reorder floating-point accumulation.
+    torch.testing.assert_close(before_logits, after_logits, rtol=1e-4, atol=1e-4)
     assert abs(before["input_output_grad_cosine"] - after["input_output_grad_cosine"]) < 1e-6
     # Different BLAS kernels can reorder the equivalent factorized matmuls by a
     # few ulps; the effective-matrix diagnostic should remain numerically stable.
