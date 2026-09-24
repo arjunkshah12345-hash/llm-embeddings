@@ -65,3 +65,15 @@ python3 kaggle/launch.py --profile second_dataset --commit <frozen-commit> --see
 the Transformer size. `second_dataset` uses the pinned Tiny Shakespeare
 source. These are secondary studies and must be validated and analyzed
 separately from the frozen primary matrix.
+
+For the planned causal mechanism checks, submit matched three-seed path
+ablations after a GPU slot is available:
+
+```bash
+python3 kaggle/launch.py --profile mechanism_stop_input --commit <frozen-commit> --seeds 1337 2027 31415
+python3 kaggle/launch.py --profile mechanism_stop_output --commit <frozen-commit> --seeds 1337 2027 31415
+```
+
+Each profile runs tied and partial models with the selected path detached for
+steps `[0, 5000)`. Keep these studies separate from the primary comparison;
+they are interventions for mechanism analysis.
