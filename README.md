@@ -72,6 +72,8 @@ The first frozen primary study used WikiText-2-raw-v1, GPT-2 BPE, the 6-layer/38
 
 The tracked 30M-class pilot used one seed and five optimizer steps against the pre-cleanup dataset source. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling or is comparable with the pinned raw-source study.
 
+A provisional manuscript draft is in [`paper/main.tex`](paper/main.tex), with generated tables and references under [`paper/`](paper/). It is intentionally labeled preliminary and will be regenerated from the final cloud aggregates.
+
 Substantive final validation still requires longer equal-token runs, multi-seed rank comparisons, intervention studies, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
 
 ## Related work
