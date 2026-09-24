@@ -67,7 +67,7 @@ Do not commit downloaded data, model checkpoints, optimizer states, generated pl
 Run the source checks before sharing changes:
 
 ```bash
-python3 -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py sweep.py adapter_sweep.py embedding_eval.py mechanism_eval.py validate_study.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py
+python3 -m py_compile $(git ls-files '*.py')
 python3 -m pytest -q
 ```
 
