@@ -91,7 +91,9 @@ def validate_and_load(study_dirs: list[Path]) -> tuple[list[dict], dict]:
             pass
         for run_dir in sorted(path for path in study_dir.iterdir() if (path / "config.json").exists()):
             all_rows.append(summarize_run(study_dir, run_dir))
-        artifact_manifest = study_dir.parent / "artifact_manifest.json"
+        # The collector copies the kernel's artifact root directly into the
+        # destination, so provenance lives alongside study_manifest.json.
+        artifact_manifest = study_dir / "artifact_manifest.json"
         if artifact_manifest.exists():
             commit = read_json(artifact_manifest).get("git_commit")
             if reference_commit is None:
