@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIGURES = (
+    ROOT / "results" / "primary" / "figures" / "architecture.png",
     ROOT / "results" / "primary" / "figures" / "final_loss_by_condition.png",
     ROOT / "results" / "primary" / "figures" / "parameter_efficiency.png",
 )
@@ -32,6 +33,8 @@ def build_package(output_dir: Path) -> None:
     for table in ("primary_table.tex", "rank_table.tex", "result_macros.tex"):
         shutil.copy2(ROOT / "paper" / "generated" / table, generated_dir / table)
     for source in FIGURES:
+        if not source.exists():
+            raise SystemExit(f"missing paper figure; run paper/generate_figures.py: {source}")
         shutil.copy2(source, figures_dir / source.name)
 
     readme = (

@@ -38,6 +38,13 @@ where $A\in\mathbb{R}^{V\times r}$, $B\in\mathbb{R}^{D\times r}$, and $s=\alpha/
 
 The central question is quantitative: how much of any untied quality benefit can these role-specific corrections recover per added parameter and unit of compute? We compare tied, fully untied, rank-8 partial, input-only, output-only, and parameter-capacity-matched tied models under a common protocol. We do not assume that untying helps at this scale or training horizon.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{architecture.png}
+\caption{The three embedding parameterizations. Partial tying keeps one vocabulary-sized base while adding independent low-rank residuals to the input and output paths.}
+\label{fig:architecture}
+\end{figure}
+
 \section{Related work}
 
 Weight tying was introduced and analyzed as a way to reuse the output embedding in the input pathway \citep{inan2017tying,press2017using}. Press and Wolf report that the tied representation evolves more like the output embedding than the untied input embedding, which motivates measuring pathway-specific pressure rather than treating a shared matrix as neutral \citep{press2017using}. Subsequent work examined the geometry and specialization of input and output representations \citep{gulordava2018represent,derby2020analysing}.
