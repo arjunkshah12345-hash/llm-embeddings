@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt pytest
       - name: Compile
-        run: python -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py aggregate_results.py aggregate_mechanism.py aggregate_rank.py aggregate_embedding_eval.py sweep.py adapter_sweep.py embedding_eval.py mechanism_eval.py validate_study.py kaggle/launch.py kaggle/collect.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py test_aggregate_results.py test_aggregate_mechanism.py test_aggregate_rank.py test_aggregate_embedding_eval.py test_kaggle_launch.py
+        run: python -m py_compile config.py data.py token_classes.py model.py train.py evaluate.py analyze.py aggregate_results.py aggregate_mechanism.py aggregate_rank.py aggregate_embedding_eval.py paper/generate_tables.py sweep.py adapter_sweep.py embedding_eval.py mechanism_eval.py validate_study.py kaggle/launch.py kaggle/collect.py test_model.py test_data.py test_token_classes.py test_study.py test_sweep.py test_analyze.py test_adapter_sweep.py test_embedding_eval.py test_aggregate_results.py test_aggregate_mechanism.py test_aggregate_rank.py test_aggregate_embedding_eval.py test_paper_tables.py test_kaggle_launch.py
       - name: Test
         run: python -m pytest -q
       - name: End-to-end smoke
