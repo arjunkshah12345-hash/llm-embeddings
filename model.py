@@ -311,6 +311,7 @@ class EmbeddingSystem(nn.Module):
                 metrics.setdefault(f"{side}_correction_relative_norm", 0.0)
                 metrics.setdefault(f"{side}_correction_effective_rank", 0.0)
                 metrics.setdefault(f"{side}_correction_top_singular_value", 0.0)
+                metrics.setdefault(f"{side}_correction_singular_values", [])
                 metrics.setdefault(f"{side}_correction_shared_cosine", 0.0)
             return metrics
 
