@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+from analyze import bootstrap_mean_ci
 
 
 def read_json(path: Path) -> dict:
@@ -32,6 +35,7 @@ def parse_study_args(values: list[str]) -> dict[str, Path]:
 
 def aggregate(studies: dict[str, dict]) -> dict:
     comparison = []
+    paired_comparisons = {}
     for name, result in studies.items():
         for condition, value in result.get("by_condition", {}).items():
             comparison.append(
@@ -46,7 +50,33 @@ def aggregate(studies: dict[str, dict]) -> dict:
                     "mean_best_val_loss": value.get("mean_best_val_loss"),
                 }
             )
-    return {"studies": studies, "comparison": comparison}
+        runs = result.get("runs", [])
+        by_key = {(int(row["seed"]), row["embedding_type"]): row for row in runs}
+        variants = sorted({row["embedding_type"] for row in runs if row["embedding_type"] != "tied"})
+        study_pairs = {}
+        for variant in variants:
+            seeds = sorted(
+                seed for seed, condition in by_key
+                if condition == "tied" and (seed, variant) in by_key
+            )
+            for metric in ("final_val_loss", "best_val_loss", "final_val_perplexity", "best_val_perplexity"):
+                deltas = [
+                    float(by_key[(seed, variant)][metric]) - float(by_key[(seed, "tied")][metric])
+                    for seed in seeds
+                    if by_key[(seed, variant)].get(metric) is not None
+                    and by_key[(seed, "tied")].get(metric) is not None
+                ]
+                study_pairs[f"{variant}_minus_tied_{metric}"] = {
+                    "variant": variant,
+                    "metric": metric,
+                    "seeds": seeds,
+                    "deltas": deltas,
+                    "mean_delta": statistics.mean(deltas) if deltas else None,
+                    "std_delta": statistics.stdev(deltas) if len(deltas) > 1 else 0.0 if deltas else None,
+                    "ci95": bootstrap_mean_ci(deltas, seed=8100 + len(name) + len(metric)) if deltas else None,
+                }
+        paired_comparisons[name] = study_pairs
+    return {"studies": studies, "comparison": comparison, "paired_comparisons": paired_comparisons}
 
 
 def plot(result: dict, output: Path) -> None:
