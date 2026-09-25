@@ -13,6 +13,12 @@ kaggle/generated/
 cloud_artifacts/
 paper/build/
 arxiv/build/
+paper/*.aux
+paper/*.log
+paper/*.blg
+arxiv/*.aux
+arxiv/*.log
+arxiv/*.blg
 *.pt.tmp
 *.pt
 *.pth

@@ -1,0 +1,44 @@
+{
+  "actual_batch_stream_hashes": {
+    "1337": {
+      "partial": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+      "tied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1"
+    }
+  },
+  "batch_stream_hashes": {
+    "1337": {
+      "partial": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+      "tied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1"
+    }
+  },
+  "dataset_hashes": {
+    "seed1337_partial": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "seed1337_tied": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    }
+  },
+  "errors": [],
+  "expected_run_count": 2,
+  "observed_run_count": 2,
+  "passed": true,
+  "runs_dir": "/kaggle/working/mechanism_stop_input_10k_seed1337",
+  "token_counts": {
+    "seed1337_partial": 5120000,
+    "seed1337_tied": 5120000
+  },
+  "token_tolerance_by_seed": {
+    "1337": {
+      "allowed_delta": 0,
+      "delta": 0,
+      "maximum": 5120000,
+      "minimum": 5120000
+    }
+  },
+  "warnings": []
+}

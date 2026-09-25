@@ -1,0 +1,624 @@
+{
+  "checkpoint": "last.pt",
+  "runs": [
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 5.47983341217041,
+        "embedding_cumulative_update_norm": 19.250755118010172,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "wikitext2",
+        "sha256": {
+          "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+        },
+        "source": {
+          "files": {
+            "test": {
+              "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+            },
+            "train": {
+              "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+            },
+            "val": {
+              "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+            }
+          },
+          "manifest_version": 1,
+          "variant": "wikitext-2-raw-v1"
+        },
+        "token_counts": {
+          "test": 286221,
+          "train": 2417786,
+          "val": 249887
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "capacity_control",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 1.4398365105432998,
+        "input_output_grad_cosine": 0.0010494644528851401,
+        "input_side_loss": 4.842772960662842,
+        "input_token_freq_grad_q0_count": 3.0,
+        "input_token_freq_grad_q0_mean": 0.05356859415769577,
+        "input_token_freq_grad_q1_count": 11.0,
+        "input_token_freq_grad_q1_mean": 0.060088008642196655,
+        "input_token_freq_grad_q2_count": 35.0,
+        "input_token_freq_grad_q2_mean": 0.06976497918367386,
+        "input_token_freq_grad_q3_count": 463.0,
+        "input_token_freq_grad_q3_mean": 0.12736749649047852,
+        "input_token_grad_common_count": 307.0,
+        "input_token_grad_common_mean": 0.132686048746109,
+        "input_token_grad_other_count": 170.0,
+        "input_token_grad_other_mean": 0.10116938501596451,
+        "input_token_grad_punctuation_count": 15.0,
+        "input_token_grad_punctuation_mean": 0.07537265866994858,
+        "input_token_grad_rare_count": 2.0,
+        "input_token_grad_rare_mean": 0.06104877591133118,
+        "input_token_grad_whitespace_count": 18.0,
+        "input_token_grad_whitespace_mean": 0.16936103999614716,
+        "output_grad_norm": 2.5723634091548075,
+        "output_side_loss": 4.842772960662842,
+        "output_to_input_grad_ratio": 1.7865663152160007,
+        "output_token_freq_grad_q0_count": 3.0,
+        "output_token_freq_grad_q0_mean": 0.10496684908866882,
+        "output_token_freq_grad_q1_count": 11.0,
+        "output_token_freq_grad_q1_mean": 0.12390460073947906,
+        "output_token_freq_grad_q2_count": 35.0,
+        "output_token_freq_grad_q2_mean": 0.11016589403152466,
+        "output_token_freq_grad_q3_count": 463.0,
+        "output_token_freq_grad_q3_mean": 0.2220809906721115,
+        "output_token_grad_common_count": 308.0,
+        "output_token_grad_common_mean": 0.22282978892326355,
+        "output_token_grad_other_count": 170.0,
+        "output_token_grad_other_mean": 0.21785831451416016,
+        "output_token_grad_punctuation_count": 15.0,
+        "output_token_grad_punctuation_mean": 0.07492966204881668,
+        "output_token_grad_rare_count": 2.0,
+        "output_token_grad_rare_mean": 0.09952227026224136,
+        "output_token_grad_whitespace_count": 17.0,
+        "output_token_grad_whitespace_mean": 0.08039268106222153,
+        "shared_input_grad_norm": 1.4398365105432998,
+        "shared_input_output_grad_cosine": 0.0010494644528851401,
+        "shared_output_grad_norm": 2.5723634091548075,
+        "shared_output_to_input_grad_ratio": 1.7865663152160007
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 808448,
+        "capacity_control_width": 1579,
+        "embedding_compute_parameters": 12865792,
+        "embedding_parameters": 12865792,
+        "embedding_type": "capacity_control",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 12865792,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 12865792,
+        "output_side_parameters": 12865792,
+        "shared_parameters": 12865792,
+        "total_parameters": 16890112,
+        "trainable_parameters": 16890112,
+        "transformer_parameters": 4024320
+      },
+      "run_dir": "/kaggle/working/small_scale_10k_seed1337/seed1337_capacity_control",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 8.0,
+        "input_correction_norm": 14.101191520690918,
+        "input_correction_relative_norm": 0.060106069522495524,
+        "input_correction_shared_cosine": 0.036292621480825356,
+        "input_correction_singular_values": [
+          12.62171745300293,
+          4.662772178649902,
+          2.9104878902435303,
+          2.2079920768737793,
+          1.3739277124404907,
+          1.1658656597137451,
+          0.8899767398834229,
+          0.6397140026092529
+        ],
+        "input_correction_top_singular_value": 12.62171745300293,
+        "input_output_correction_cosine": -0.0030844437188294756,
+        "input_output_left_subspace_overlap": 0.0008606142364442348,
+        "input_output_right_subspace_overlap": 0.15458425879478455,
+        "output_correction_effective_rank": 8.0,
+        "output_correction_norm": 102.5036849975586,
+        "output_correction_relative_norm": 0.43692007216092066,
+        "output_correction_shared_cosine": 0.20307409930941953,
+        "output_correction_singular_values": [
+          102.29347229003906,
+          5.269204616546631,
+          2.4052352905273438,
+          1.9158048629760742,
+          1.607235074043274,
+          1.273359775543213,
+          1.0615336894989014,
+          0.7082676291465759
+        ],
+        "output_correction_top_singular_value": 102.29347229003906
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 5.487345004081726,
+        "embedding_cumulative_update_norm": 20.199231318436862,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "wikitext2",
+        "sha256": {
+          "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+        },
+        "source": {
+          "files": {
+            "test": {
+              "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+            },
+            "train": {
+              "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+            },
+            "val": {
+              "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+            }
+          },
+          "manifest_version": 1,
+          "variant": "wikitext-2-raw-v1"
+        },
+        "token_counts": {
+          "test": 286221,
+          "train": 2417786,
+          "val": 249887
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "partial",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 1.0381628171312833,
+        "input_output_grad_cosine": 0.015067308526877685,
+        "input_side_loss": 5.094874382019043,
+        "input_token_freq_grad_q0_count": 3.0,
+        "input_token_freq_grad_q0_mean": 0.04312890022993088,
+        "input_token_freq_grad_q1_count": 11.0,
+        "input_token_freq_grad_q1_mean": 0.048441480845212936,
+        "input_token_freq_grad_q2_count": 35.0,
+        "input_token_freq_grad_q2_mean": 0.05348895490169525,
+        "input_token_freq_grad_q3_count": 463.0,
+        "input_token_freq_grad_q3_mean": 0.09210608899593353,
+        "input_token_grad_common_count": 307.0,
+        "input_token_grad_common_mean": 0.0970640480518341,
+        "input_token_grad_other_count": 170.0,
+        "input_token_grad_other_mean": 0.07399661093950272,
+        "input_token_grad_punctuation_count": 15.0,
+        "input_token_grad_punctuation_mean": 0.04625482112169266,
+        "input_token_grad_rare_count": 2.0,
+        "input_token_grad_rare_mean": 0.05402662605047226,
+        "input_token_grad_whitespace_count": 18.0,
+        "input_token_grad_whitespace_mean": 0.11108417063951492,
+        "output_grad_norm": 1.1959607230374578,
+        "output_side_loss": 5.094874382019043,
+        "output_to_input_grad_ratio": 1.1519972621849544,
+        "output_token_freq_grad_q0_count": 3.0,
+        "output_token_freq_grad_q0_mean": 0.04415561258792877,
+        "output_token_freq_grad_q1_count": 11.0,
+        "output_token_freq_grad_q1_mean": 0.05172097682952881,
+        "output_token_freq_grad_q2_count": 35.0,
+        "output_token_freq_grad_q2_mean": 0.05109153687953949,
+        "output_token_freq_grad_q3_count": 463.0,
+        "output_token_freq_grad_q3_mean": 0.10920113325119019,
+        "output_token_grad_common_count": 308.0,
+        "output_token_grad_common_mean": 0.10792967677116394,
+        "output_token_grad_other_count": 170.0,
+        "output_token_grad_other_mean": 0.1108623743057251,
+        "output_token_grad_punctuation_count": 15.0,
+        "output_token_grad_punctuation_mean": 0.027530750259757042,
+        "output_token_grad_rare_count": 2.0,
+        "output_token_grad_rare_mean": 0.04440510272979736,
+        "output_token_grad_whitespace_count": 17.0,
+        "output_token_grad_whitespace_mean": 0.027000324800610542,
+        "shared_input_grad_norm": 1.0381626448905266,
+        "shared_input_output_grad_cosine": 0.015067191351001555,
+        "shared_output_grad_norm": 1.1959607728757529,
+        "shared_output_to_input_grad_ratio": 1.1519975013181736
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 13271944,
+        "embedding_parameters": 13674000,
+        "embedding_type": "partial",
+        "input_correction_compute_parameters": 2048,
+        "input_correction_parameters": 404104,
+        "input_side_parameters": 13269896,
+        "output_correction_compute_parameters": 404104,
+        "output_correction_parameters": 404104,
+        "output_projection_parameters": 12865792,
+        "output_side_parameters": 13269896,
+        "shared_parameters": 12865792,
+        "total_parameters": 16889872,
+        "trainable_parameters": 16889872,
+        "transformer_parameters": 3215872
+      },
+      "run_dir": "/kaggle/working/small_scale_10k_seed1337/seed1337_partial",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 5.494445323944092,
+        "embedding_cumulative_update_norm": 19.854185964845342,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "wikitext2",
+        "sha256": {
+          "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+        },
+        "source": {
+          "files": {
+            "test": {
+              "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+            },
+            "train": {
+              "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+            },
+            "val": {
+              "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+            }
+          },
+          "manifest_version": 1,
+          "variant": "wikitext-2-raw-v1"
+        },
+        "token_counts": {
+          "test": 286221,
+          "train": 2417786,
+          "val": 249887
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "tied",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 1.0251820960767273,
+        "input_output_grad_cosine": -0.010698986786071498,
+        "input_side_loss": 5.127410888671875,
+        "input_token_freq_grad_q0_count": 3.0,
+        "input_token_freq_grad_q0_mean": 0.03990764915943146,
+        "input_token_freq_grad_q1_count": 11.0,
+        "input_token_freq_grad_q1_mean": 0.051407892256975174,
+        "input_token_freq_grad_q2_count": 35.0,
+        "input_token_freq_grad_q2_mean": 0.05360987037420273,
+        "input_token_freq_grad_q3_count": 463.0,
+        "input_token_freq_grad_q3_mean": 0.08970791846513748,
+        "input_token_grad_common_count": 307.0,
+        "input_token_grad_common_mean": 0.09312848001718521,
+        "input_token_grad_other_count": 170.0,
+        "input_token_grad_other_mean": 0.076824851334095,
+        "input_token_grad_punctuation_count": 15.0,
+        "input_token_grad_punctuation_mean": 0.04748200997710228,
+        "input_token_grad_rare_count": 2.0,
+        "input_token_grad_rare_mean": 0.046858325600624084,
+        "input_token_grad_whitespace_count": 18.0,
+        "input_token_grad_whitespace_mean": 0.09109485894441605,
+        "output_grad_norm": 1.2404761852114132,
+        "output_side_loss": 5.127410888671875,
+        "output_to_input_grad_ratio": 1.2100057052874758,
+        "output_token_freq_grad_q0_count": 3.0,
+        "output_token_freq_grad_q0_mean": 0.04509330913424492,
+        "output_token_freq_grad_q1_count": 11.0,
+        "output_token_freq_grad_q1_mean": 0.05289880931377411,
+        "output_token_freq_grad_q2_count": 35.0,
+        "output_token_freq_grad_q2_mean": 0.05224055424332619,
+        "output_token_freq_grad_q3_count": 463.0,
+        "output_token_freq_grad_q3_mean": 0.11215981096029282,
+        "output_token_grad_common_count": 308.0,
+        "output_token_grad_common_mean": 0.10887026786804199,
+        "output_token_grad_other_count": 170.0,
+        "output_token_grad_other_mean": 0.11741704493761063,
+        "output_token_grad_punctuation_count": 15.0,
+        "output_token_grad_punctuation_mean": 0.02791021391749382,
+        "output_token_grad_rare_count": 2.0,
+        "output_token_grad_rare_mean": 0.04519220441579819,
+        "output_token_grad_whitespace_count": 17.0,
+        "output_token_grad_whitespace_mean": 0.02785903960466385,
+        "shared_input_grad_norm": 1.0251820960767273,
+        "shared_input_output_grad_cosine": -0.010698986786071498,
+        "shared_output_grad_norm": 1.2404761852114132,
+        "shared_output_to_input_grad_ratio": 1.2100057052874758
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 12865792,
+        "embedding_parameters": 12865792,
+        "embedding_type": "tied",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 12865792,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 12865792,
+        "output_side_parameters": 12865792,
+        "shared_parameters": 12865792,
+        "total_parameters": 16081664,
+        "trainable_parameters": 16081664,
+        "transformer_parameters": 3215872
+      },
+      "run_dir": "/kaggle/working/small_scale_10k_seed1337/seed1337_tied",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 5.4849624872207645,
+        "embedding_cumulative_update_norm": 26.270424739716187,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "wikitext2",
+        "sha256": {
+          "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+        },
+        "source": {
+          "files": {
+            "test": {
+              "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+            },
+            "train": {
+              "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+            },
+            "val": {
+              "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+              "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+            }
+          },
+          "manifest_version": 1,
+          "variant": "wikitext-2-raw-v1"
+        },
+        "token_counts": {
+          "test": 286221,
+          "train": 2417786,
+          "val": 249887
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "untied",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 1.3044714834503872,
+        "input_output_grad_cosine": -0.009803472856662394,
+        "input_side_loss": 4.910737991333008,
+        "input_token_freq_grad_q0_count": 3.0,
+        "input_token_freq_grad_q0_mean": 0.08440303057432175,
+        "input_token_freq_grad_q1_count": 11.0,
+        "input_token_freq_grad_q1_mean": 0.05547742173075676,
+        "input_token_freq_grad_q2_count": 35.0,
+        "input_token_freq_grad_q2_mean": 0.06040842831134796,
+        "input_token_freq_grad_q3_count": 463.0,
+        "input_token_freq_grad_q3_mean": 0.119160495698452,
+        "input_token_grad_common_count": 307.0,
+        "input_token_grad_common_mean": 0.13026142120361328,
+        "input_token_grad_other_count": 170.0,
+        "input_token_grad_other_mean": 0.08530277758836746,
+        "input_token_grad_punctuation_count": 15.0,
+        "input_token_grad_punctuation_mean": 0.06318071484565735,
+        "input_token_grad_rare_count": 2.0,
+        "input_token_grad_rare_mean": 0.1012151688337326,
+        "input_token_grad_whitespace_count": 18.0,
+        "input_token_grad_whitespace_mean": 0.13928882777690887,
+        "output_grad_norm": 1.1689292505064257,
+        "output_side_loss": 4.910737991333008,
+        "output_to_input_grad_ratio": 0.8960941387653443,
+        "output_token_freq_grad_q0_count": 3.0,
+        "output_token_freq_grad_q0_mean": 0.04444527626037598,
+        "output_token_freq_grad_q1_count": 11.0,
+        "output_token_freq_grad_q1_mean": 0.05217369273304939,
+        "output_token_freq_grad_q2_count": 35.0,
+        "output_token_freq_grad_q2_mean": 0.05148434638977051,
+        "output_token_freq_grad_q3_count": 463.0,
+        "output_token_freq_grad_q3_mean": 0.10377620905637741,
+        "output_token_grad_common_count": 308.0,
+        "output_token_grad_common_mean": 0.10356985032558441,
+        "output_token_grad_other_count": 170.0,
+        "output_token_grad_other_mean": 0.10518321394920349,
+        "output_token_grad_punctuation_count": 15.0,
+        "output_token_grad_punctuation_mean": 0.025191744789481163,
+        "output_token_grad_rare_count": 2.0,
+        "output_token_grad_rare_mean": 0.04465320706367493,
+        "output_token_grad_whitespace_count": 17.0,
+        "output_token_grad_whitespace_mean": 0.018219929188489914,
+        "shared_input_grad_norm": 0.0,
+        "shared_input_output_grad_cosine": 0.0,
+        "shared_output_grad_norm": 0.0,
+        "shared_output_to_input_grad_ratio": 0.0
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 12865792,
+        "embedding_parameters": 25731584,
+        "embedding_type": "untied",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 12865792,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 12865792,
+        "output_side_parameters": 12865792,
+        "shared_parameters": 0,
+        "total_parameters": 28947456,
+        "trainable_parameters": 28947456,
+        "transformer_parameters": 3215872
+      },
+      "run_dir": "/kaggle/working/small_scale_10k_seed1337/seed1337_untied",
+      "seed": 1337
+    }
+  ],
+  "runs_dir": "/kaggle/working/small_scale_10k_seed1337",
+  "study_validation": {
+    "actual_batch_stream_hashes": {
+      "1337": {
+        "capacity_control": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "partial": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "tied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "untied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1"
+      }
+    },
+    "batch_stream_hashes": {
+      "1337": {
+        "capacity_control": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "partial": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "tied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1",
+        "untied": "c8684e931f4c2f3c9be0a02963f8668b1b1334b573e3ed5ecb6ca67d4320c8c1"
+      }
+    },
+    "dataset_hashes": {
+      "seed1337_capacity_control": {
+        "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+        "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+        "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+      },
+      "seed1337_partial": {
+        "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+        "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+        "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+      },
+      "seed1337_tied": {
+        "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+        "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+        "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+      },
+      "seed1337_untied": {
+        "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+        "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+        "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+      }
+    },
+    "errors": [],
+    "expected_run_count": 4,
+    "observed_run_count": 4,
+    "passed": true,
+    "runs_dir": "/kaggle/working/small_scale_10k_seed1337",
+    "token_counts": {
+      "seed1337_capacity_control": 5120000,
+      "seed1337_partial": 5120000,
+      "seed1337_tied": 5120000,
+      "seed1337_untied": 5120000
+    },
+    "token_tolerance_by_seed": {
+      "1337": {
+        "allowed_delta": 0,
+        "delta": 0,
+        "maximum": 5120000,
+        "minimum": 5120000
+      }
+    },
+    "warnings": []
+  }
+}

@@ -1,6 +1,6 @@
 # Phase 2 — baseline training study
 
-This is the first token-matched comparison that can be treated as evidence, not instrumentation.
+The final Phase 2 record contains the preserved 10k Study 1 and a fresh-from-step-zero 50k primary study. The 10k endpoint is retained as preliminary context; the 50k endpoint is the primary result used by the paper.
 
 ## Shared configuration
 
@@ -10,7 +10,7 @@ Hold these fixed across all variants and seeds:
 |---|---|
 | Dataset | WikiText-2-raw-v1, GPT-2 BPE; pinned split URLs and SHA-256 values in `data.py` |
 | Seeds | `1337 2027 31415` |
-| Steps | `10000` (pilot) then `50000` if signal holds |
+| Steps | `10000` Study 1 and fresh `50000` primary |
 | Batch size × grad accum | `2 × 1` |
 | Block size | `256` |
 | Transformer | `n_layer=6`, `n_head=6`, `n_embd=384` (~30M tied) |
@@ -40,9 +40,11 @@ python3 sweep.py \
   --warmup_steps 100
 ```
 
-If the pilot warrants a 50k-step continuation, start a fresh output directory
-with `--steps 50000`. Do not use `--resume_existing` to change the step horizon:
-the cosine learning-rate schedule depends on the declared total step count.
+The released 50k study was launched from step zero in a fresh output directory.
+Do not use `--resume_existing` to change the step horizon: the cosine
+learning-rate schedule depends on the declared total step count. The final
+50k aggregate is under `results/long_50k/` and its compact source artifacts are
+under `results/release_artifacts/long_50k/`.
 
 Smaller disk-friendly smoke before the pilot (not Phase 2 evidence):
 

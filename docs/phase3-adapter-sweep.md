@@ -1,5 +1,11 @@
 # Phase 3 — adapter budget sweep
 
+The released confirmatory rank study uses ranks 1, 2, 4, 8, 16, and 32 with
+three seeds at 10,000 steps. Its aggregate and Pareto plots are under
+`results/rank_sweep/`. The rank study does not identify a stable improvement
+over tied embeddings; the exploratory tooling records below are retained for
+historical reproduction.
+
 Phase 3 tests whether rank 8 is a useful operating point or an arbitrary choice. The runner creates one validated study per rank/scaling condition and then produces a top-level parameter-quality summary.
 
 ## Tooling check
@@ -27,7 +33,7 @@ The command writes one directory per condition, each with its own `study_validat
 
 ## Research sweep
 
-After the tooling check, run the predeclared rank set with the same model and training settings as Phase 2:
+The historical command used to launch the predeclared rank set was:
 
 ```bash
 python3 adapter_sweep.py \
@@ -46,4 +52,6 @@ python3 adapter_sweep.py \
   --warmup_steps 100
 ```
 
-Do not select a rank from this sweep using the same validation result that is later presented as a final comparison. Freeze the adapter family and rank using the predeclared gate, then evaluate the selected configuration on held-out test data and representation probes.
+The released analysis does not select a winning rank from these validation
+results. All ranks are reported with paired seed differences and parameter,
+FLOP, and wall-clock costs.

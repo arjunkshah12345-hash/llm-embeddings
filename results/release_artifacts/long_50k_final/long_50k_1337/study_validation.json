@@ -1,0 +1,60 @@
+{
+  "actual_batch_stream_hashes": {
+    "1337": {
+      "capacity_control": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "partial": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "tied": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "untied": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab"
+    }
+  },
+  "batch_stream_hashes": {
+    "1337": {
+      "capacity_control": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "partial": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "tied": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab",
+      "untied": "8c381afb957f1baf5f3f322445a2a8cdd2cb7d1ca1d1b37fefd16292665ecdab"
+    }
+  },
+  "dataset_hashes": {
+    "seed1337_capacity_control": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "seed1337_partial": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "seed1337_tied": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "seed1337_untied": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    }
+  },
+  "errors": [],
+  "expected_run_count": 4,
+  "observed_run_count": 4,
+  "passed": true,
+  "runs_dir": "/kaggle/working/long_50k_seed1337",
+  "token_counts": {
+    "seed1337_capacity_control": 25600000,
+    "seed1337_partial": 25600000,
+    "seed1337_tied": 25600000,
+    "seed1337_untied": 25600000
+  },
+  "token_tolerance_by_seed": {
+    "1337": {
+      "allowed_delta": 0,
+      "delta": 0,
+      "maximum": 25600000,
+      "minimum": 25600000
+    }
+  },
+  "warnings": []
+}

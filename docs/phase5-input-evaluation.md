@@ -1,6 +1,6 @@
 # Phase 5 — input-representation evaluation
 
-`embedding_eval.py` provides the first deterministic intrinsic evaluation of the effective input matrix. It is designed to answer whether role-specific input corrections change measurable token representation structure, independently of language-model validation loss.
+`embedding_eval.py` provides a deterministic intrinsic evaluation of the effective input matrix. The completed 50k primary and robustness aggregates are under each study's `embedding_eval/` directory. These measurements answer whether role-specific input corrections change token representation structure independently of language-model validation loss.
 
 Run it on a saved checkpoint:
 

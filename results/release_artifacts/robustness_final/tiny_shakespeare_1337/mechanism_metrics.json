@@ -1,0 +1,580 @@
+{
+  "checkpoint": "last.pt",
+  "runs": [
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 4.482095634937286,
+        "embedding_cumulative_update_norm": 16.051673082534755,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "tiny_shakespeare",
+        "sha256": {
+          "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+          "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+          "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+        },
+        "source": {
+          "commit": "6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e",
+          "sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+          "split_version": 1,
+          "url": "https://raw.githubusercontent.com/karpathy/char-rnn/6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e/data/tinyshakespeare/input.txt",
+          "variant": "tiny-shakespeare-char-rnn-v1"
+        },
+        "token_counts": {
+          "test": 17995,
+          "train": 301966,
+          "val": 18065
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "capacity_control",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 3.148251814371642,
+        "input_output_grad_cosine": -0.009552177545605296,
+        "input_side_loss": 1.8124139308929443,
+        "input_token_freq_grad_q0_count": 4.0,
+        "input_token_freq_grad_q0_mean": 0.1587357521057129,
+        "input_token_freq_grad_q1_count": 16.0,
+        "input_token_freq_grad_q1_mean": 0.17033138871192932,
+        "input_token_freq_grad_q2_count": 20.0,
+        "input_token_freq_grad_q2_mean": 0.17345181107521057,
+        "input_token_freq_grad_q3_count": 472.0,
+        "input_token_freq_grad_q3_mean": 0.41294658184051514,
+        "input_token_grad_common_count": 287.0,
+        "input_token_grad_common_mean": 0.20569095015525818,
+        "input_token_grad_other_count": 77.0,
+        "input_token_grad_other_mean": 0.15763646364212036,
+        "input_token_grad_punctuation_count": 74.0,
+        "input_token_grad_punctuation_mean": 0.6205153465270996,
+        "input_token_grad_rare_count": 5.0,
+        "input_token_grad_rare_mean": 0.1675734966993332,
+        "input_token_grad_whitespace_count": 69.0,
+        "input_token_grad_whitespace_mean": 1.2146774530410767,
+        "output_grad_norm": 2.5934506898556777,
+        "output_side_loss": 1.8124139308929443,
+        "output_to_input_grad_ratio": 0.8237748575309892,
+        "output_token_freq_grad_q0_count": 4.0,
+        "output_token_freq_grad_q0_mean": 0.049542009830474854,
+        "output_token_freq_grad_q1_count": 16.0,
+        "output_token_freq_grad_q1_mean": 0.06971992552280426,
+        "output_token_freq_grad_q2_count": 20.0,
+        "output_token_freq_grad_q2_mean": 0.11260932683944702,
+        "output_token_freq_grad_q3_count": 472.0,
+        "output_token_freq_grad_q3_mean": 0.25955620408058167,
+        "output_token_grad_common_count": 286.0,
+        "output_token_grad_common_mean": 0.20191483199596405,
+        "output_token_grad_other_count": 77.0,
+        "output_token_grad_other_mean": 0.10520967096090317,
+        "output_token_grad_punctuation_count": 75.0,
+        "output_token_grad_punctuation_mean": 0.36877334117889404,
+        "output_token_grad_rare_count": 5.0,
+        "output_token_grad_rare_mean": 0.04473887011408806,
+        "output_token_grad_whitespace_count": 69.0,
+        "output_token_grad_whitespace_mean": 0.46878141164779663,
+        "shared_input_grad_norm": 3.148251814371642,
+        "shared_input_output_grad_cosine": -0.009552177545605296,
+        "shared_output_grad_norm": 2.5934506898556777,
+        "shared_output_to_input_grad_ratio": 0.8237748575309892
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 811008,
+        "capacity_control_width": 1056,
+        "embedding_compute_parameters": 19298688,
+        "embedding_parameters": 19298688,
+        "embedding_type": "capacity_control",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 19298688,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 19298688,
+        "output_side_parameters": 19298688,
+        "shared_parameters": 19298688,
+        "total_parameters": 30834816,
+        "trainable_parameters": 30834816,
+        "transformer_parameters": 11536128
+      },
+      "run_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337/seed1337_capacity_control",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 8.0,
+        "input_correction_norm": 8.778143882751465,
+        "input_correction_relative_norm": 0.031190208790834634,
+        "input_correction_shared_cosine": 0.01307223043767268,
+        "input_correction_singular_values": [
+          6.454205513000488,
+          4.8205461502075195,
+          2.2756149768829346,
+          1.4338035583496094,
+          1.319383978843689,
+          1.1202884912490845,
+          1.0803544521331787,
+          0.8741855621337891
+        ],
+        "input_correction_top_singular_value": 6.454205513000488,
+        "input_output_correction_cosine": -0.0051012794622170825,
+        "input_output_left_subspace_overlap": 0.0005998546257615089,
+        "input_output_right_subspace_overlap": 0.10697388648986816,
+        "output_correction_effective_rank": 8.0,
+        "output_correction_norm": 176.09078979492188,
+        "output_correction_relative_norm": 0.6256799356682509,
+        "output_correction_shared_cosine": 0.3320686784502118,
+        "output_correction_singular_values": [
+          175.8021697998047,
+          7.220493316650391,
+          3.822216272354126,
+          3.576908588409424,
+          2.8745992183685303,
+          2.4214882850646973,
+          2.228487968444824,
+          1.7110404968261719
+        ],
+        "output_correction_top_singular_value": 175.8021697998047
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 4.3650906682014465,
+        "embedding_cumulative_update_norm": 17.135946475095466,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "tiny_shakespeare",
+        "sha256": {
+          "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+          "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+          "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+        },
+        "source": {
+          "commit": "6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e",
+          "sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+          "split_version": 1,
+          "url": "https://raw.githubusercontent.com/karpathy/char-rnn/6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e/data/tinyshakespeare/input.txt",
+          "variant": "tiny-shakespeare-char-rnn-v1"
+        },
+        "token_counts": {
+          "test": 17995,
+          "train": 301966,
+          "val": 18065
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "partial",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 2.305196208091687,
+        "input_output_grad_cosine": 0.0041153003893422396,
+        "input_side_loss": 1.8622429370880127,
+        "input_token_freq_grad_q0_count": 4.0,
+        "input_token_freq_grad_q0_mean": 0.15246456861495972,
+        "input_token_freq_grad_q1_count": 16.0,
+        "input_token_freq_grad_q1_mean": 0.1280604898929596,
+        "input_token_freq_grad_q2_count": 20.0,
+        "input_token_freq_grad_q2_mean": 0.14768636226654053,
+        "input_token_freq_grad_q3_count": 472.0,
+        "input_token_freq_grad_q3_mean": 0.2939402759075165,
+        "input_token_grad_common_count": 287.0,
+        "input_token_grad_common_mean": 0.14327071607112885,
+        "input_token_grad_other_count": 77.0,
+        "input_token_grad_other_mean": 0.12820225954055786,
+        "input_token_grad_punctuation_count": 74.0,
+        "input_token_grad_punctuation_mean": 0.43615877628326416,
+        "input_token_grad_rare_count": 5.0,
+        "input_token_grad_rare_mean": 0.14551427960395813,
+        "input_token_grad_whitespace_count": 69.0,
+        "input_token_grad_whitespace_mean": 0.8747648596763611,
+        "output_grad_norm": 1.0088908614045053,
+        "output_side_loss": 1.8622429370880127,
+        "output_to_input_grad_ratio": 0.4376594312723152,
+        "output_token_freq_grad_q0_count": 4.0,
+        "output_token_freq_grad_q0_mean": 0.057502105832099915,
+        "output_token_freq_grad_q1_count": 16.0,
+        "output_token_freq_grad_q1_mean": 0.04696037620306015,
+        "output_token_freq_grad_q2_count": 20.0,
+        "output_token_freq_grad_q2_mean": 0.05542335659265518,
+        "output_token_freq_grad_q3_count": 472.0,
+        "output_token_freq_grad_q3_mean": 0.10120753943920135,
+        "output_token_grad_common_count": 286.0,
+        "output_token_grad_common_mean": 0.07476531714200974,
+        "output_token_grad_other_count": 77.0,
+        "output_token_grad_other_mean": 0.053346458822488785,
+        "output_token_grad_punctuation_count": 75.0,
+        "output_token_grad_punctuation_mean": 0.12578214704990387,
+        "output_token_grad_rare_count": 5.0,
+        "output_token_grad_rare_mean": 0.05472682788968086,
+        "output_token_grad_whitespace_count": 69.0,
+        "output_token_grad_whitespace_mean": 0.21249201893806458,
+        "shared_input_grad_norm": 2.3051960012385013,
+        "shared_input_output_grad_cosine": 0.004115279186933911,
+        "shared_output_grad_norm": 1.0088909204838818,
+        "shared_output_to_input_grad_ratio": 0.43765949617379174
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 19706888,
+        "embedding_parameters": 20108944,
+        "embedding_type": "partial",
+        "input_correction_compute_parameters": 3072,
+        "input_correction_parameters": 405128,
+        "input_side_parameters": 19703816,
+        "output_correction_compute_parameters": 405128,
+        "output_correction_parameters": 405128,
+        "output_projection_parameters": 19298688,
+        "output_side_parameters": 19703816,
+        "shared_parameters": 19298688,
+        "total_parameters": 30834064,
+        "trainable_parameters": 30834064,
+        "transformer_parameters": 10725120
+      },
+      "run_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337/seed1337_partial",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 4.3384934425354,
+        "embedding_cumulative_update_norm": 17.012410829445297,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "tiny_shakespeare",
+        "sha256": {
+          "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+          "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+          "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+        },
+        "source": {
+          "commit": "6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e",
+          "sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+          "split_version": 1,
+          "url": "https://raw.githubusercontent.com/karpathy/char-rnn/6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e/data/tinyshakespeare/input.txt",
+          "variant": "tiny-shakespeare-char-rnn-v1"
+        },
+        "token_counts": {
+          "test": 17995,
+          "train": 301966,
+          "val": 18065
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "tied",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 1.979106969100357,
+        "input_output_grad_cosine": -0.0066172443622453505,
+        "input_side_loss": 1.8801006078720093,
+        "input_token_freq_grad_q0_count": 4.0,
+        "input_token_freq_grad_q0_mean": 0.16086488962173462,
+        "input_token_freq_grad_q1_count": 16.0,
+        "input_token_freq_grad_q1_mean": 0.1165275126695633,
+        "input_token_freq_grad_q2_count": 20.0,
+        "input_token_freq_grad_q2_mean": 0.12396591156721115,
+        "input_token_freq_grad_q3_count": 472.0,
+        "input_token_freq_grad_q3_mean": 0.238270565867424,
+        "input_token_grad_common_count": 287.0,
+        "input_token_grad_common_mean": 0.13195596635341644,
+        "input_token_grad_other_count": 77.0,
+        "input_token_grad_other_mean": 0.11427095532417297,
+        "input_token_grad_punctuation_count": 74.0,
+        "input_token_grad_punctuation_mean": 0.2991402745246887,
+        "input_token_grad_rare_count": 5.0,
+        "input_token_grad_rare_mean": 0.14352037012577057,
+        "input_token_grad_whitespace_count": 69.0,
+        "input_token_grad_whitespace_mean": 0.6945900321006775,
+        "output_grad_norm": 1.039912972843818,
+        "output_side_loss": 1.8801006078720093,
+        "output_to_input_grad_ratio": 0.5254455615991951,
+        "output_token_freq_grad_q0_count": 4.0,
+        "output_token_freq_grad_q0_mean": 0.057978857308626175,
+        "output_token_freq_grad_q1_count": 16.0,
+        "output_token_freq_grad_q1_mean": 0.048016585409641266,
+        "output_token_freq_grad_q2_count": 20.0,
+        "output_token_freq_grad_q2_mean": 0.05800602585077286,
+        "output_token_freq_grad_q3_count": 472.0,
+        "output_token_freq_grad_q3_mean": 0.09329266846179962,
+        "output_token_grad_common_count": 286.0,
+        "output_token_grad_common_mean": 0.07671517878770828,
+        "output_token_grad_other_count": 77.0,
+        "output_token_grad_other_mean": 0.0547507144510746,
+        "output_token_grad_punctuation_count": 75.0,
+        "output_token_grad_punctuation_mean": 0.12546312808990479,
+        "output_token_grad_rare_count": 5.0,
+        "output_token_grad_rare_mean": 0.055419910699129105,
+        "output_token_grad_whitespace_count": 69.0,
+        "output_token_grad_whitespace_mean": 0.15001827478408813,
+        "shared_input_grad_norm": 1.979106969100357,
+        "shared_input_output_grad_cosine": -0.0066172443622453505,
+        "shared_output_grad_norm": 1.039912972843818,
+        "shared_output_to_input_grad_ratio": 0.5254455615991951
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 19298688,
+        "embedding_parameters": 19298688,
+        "embedding_type": "tied",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 19298688,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 19298688,
+        "output_side_parameters": 19298688,
+        "shared_parameters": 19298688,
+        "total_parameters": 30023808,
+        "trainable_parameters": 30023808,
+        "transformer_parameters": 10725120
+      },
+      "run_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337/seed1337_tied",
+      "seed": 1337
+    },
+    {
+      "adapter_metrics": {
+        "input_correction_effective_rank": 0.0,
+        "input_correction_norm": 0.0,
+        "input_correction_relative_norm": 0.0,
+        "input_correction_shared_cosine": 0.0,
+        "input_correction_singular_values": [],
+        "input_correction_top_singular_value": 0.0,
+        "input_output_correction_cosine": 0.0,
+        "input_output_left_subspace_overlap": 0.0,
+        "input_output_right_subspace_overlap": 0.0,
+        "output_correction_effective_rank": 0.0,
+        "output_correction_norm": 0.0,
+        "output_correction_relative_norm": 0.0,
+        "output_correction_shared_cosine": 0.0,
+        "output_correction_singular_values": [],
+        "output_correction_top_singular_value": 0.0
+      },
+      "checkpoint": "last.pt",
+      "checkpoint_step": 9999,
+      "checkpoint_validation": {
+        "best_val_loss": 4.434472620487213,
+        "embedding_cumulative_update_norm": 21.613113428507855,
+        "final_train_step": 9950
+      },
+      "dataset": {
+        "dataset": "tiny_shakespeare",
+        "sha256": {
+          "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+          "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+          "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+        },
+        "source": {
+          "commit": "6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e",
+          "sha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+          "split_version": 1,
+          "url": "https://raw.githubusercontent.com/karpathy/char-rnn/6f9487a6fe5b420b7ca9afb0d7c078e37c1d1b4e/data/tinyshakespeare/input.txt",
+          "variant": "tiny-shakespeare-char-rnn-v1"
+        },
+        "token_counts": {
+          "test": 17995,
+          "train": 301966,
+          "val": 18065
+        },
+        "tokenizer": "gpt2",
+        "vocab_size": 50257
+      },
+      "device": "cuda",
+      "embedding_type": "untied",
+      "fixed_batch": {
+        "batch_index": 0,
+        "batch_size": 2,
+        "block_size": 256,
+        "split": "train"
+      },
+      "gradient_metrics": {
+        "input_grad_norm": 2.5445497347588106,
+        "input_output_grad_cosine": 0.007203167834630864,
+        "input_side_loss": 1.430619239807129,
+        "input_token_freq_grad_q0_count": 4.0,
+        "input_token_freq_grad_q0_mean": 0.12912528216838837,
+        "input_token_freq_grad_q1_count": 16.0,
+        "input_token_freq_grad_q1_mean": 0.11395667493343353,
+        "input_token_freq_grad_q2_count": 20.0,
+        "input_token_freq_grad_q2_mean": 0.12330055236816406,
+        "input_token_freq_grad_q3_count": 472.0,
+        "input_token_freq_grad_q3_mean": 0.3372306227684021,
+        "input_token_grad_common_count": 287.0,
+        "input_token_grad_common_mean": 0.1690581738948822,
+        "input_token_grad_other_count": 77.0,
+        "input_token_grad_other_mean": 0.12414395064115524,
+        "input_token_grad_punctuation_count": 74.0,
+        "input_token_grad_punctuation_mean": 0.47306180000305176,
+        "input_token_grad_rare_count": 5.0,
+        "input_token_grad_rare_mean": 0.12361406534910202,
+        "input_token_grad_whitespace_count": 69.0,
+        "input_token_grad_whitespace_mean": 1.018481969833374,
+        "output_grad_norm": 0.9321526613800388,
+        "output_side_loss": 1.430619239807129,
+        "output_to_input_grad_ratio": 0.3663330484944891,
+        "output_token_freq_grad_q0_count": 4.0,
+        "output_token_freq_grad_q0_mean": 0.03399738669395447,
+        "output_token_freq_grad_q1_count": 16.0,
+        "output_token_freq_grad_q1_mean": 0.02985270321369171,
+        "output_token_freq_grad_q2_count": 20.0,
+        "output_token_freq_grad_q2_mean": 0.04523048549890518,
+        "output_token_freq_grad_q3_count": 472.0,
+        "output_token_freq_grad_q3_mean": 0.10288982093334198,
+        "output_token_grad_common_count": 286.0,
+        "output_token_grad_common_mean": 0.06634684652090073,
+        "output_token_grad_other_count": 77.0,
+        "output_token_grad_other_mean": 0.04346306622028351,
+        "output_token_grad_punctuation_count": 75.0,
+        "output_token_grad_punctuation_mean": 0.13017801940441132,
+        "output_token_grad_rare_count": 5.0,
+        "output_token_grad_rare_mean": 0.028569240123033524,
+        "output_token_grad_whitespace_count": 69.0,
+        "output_token_grad_whitespace_mean": 0.2587563097476959,
+        "shared_input_grad_norm": 0.0,
+        "shared_input_output_grad_cosine": 0.0,
+        "shared_output_grad_norm": 0.0,
+        "shared_output_to_input_grad_ratio": 0.0
+      },
+      "parameter_counts": {
+        "capacity_control_parameters": 0,
+        "capacity_control_width": 0,
+        "embedding_compute_parameters": 19298688,
+        "embedding_parameters": 38597376,
+        "embedding_type": "untied",
+        "input_correction_compute_parameters": 0,
+        "input_correction_parameters": 0,
+        "input_side_parameters": 19298688,
+        "output_correction_compute_parameters": 0,
+        "output_correction_parameters": 0,
+        "output_projection_parameters": 19298688,
+        "output_side_parameters": 19298688,
+        "shared_parameters": 0,
+        "total_parameters": 49322496,
+        "trainable_parameters": 49322496,
+        "transformer_parameters": 10725120
+      },
+      "run_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337/seed1337_untied",
+      "seed": 1337
+    }
+  ],
+  "runs_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337",
+  "study_validation": {
+    "actual_batch_stream_hashes": {
+      "1337": {
+        "capacity_control": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "partial": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "tied": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "untied": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f"
+      }
+    },
+    "batch_stream_hashes": {
+      "1337": {
+        "capacity_control": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "partial": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "tied": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f",
+        "untied": "c6ba9549eb5c153fd5f51d2e314385849bcfa2a227ae893e4d2e9df336554d9f"
+      }
+    },
+    "dataset_hashes": {
+      "seed1337_capacity_control": {
+        "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+        "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+        "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+      },
+      "seed1337_partial": {
+        "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+        "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+        "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+      },
+      "seed1337_tied": {
+        "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+        "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+        "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+      },
+      "seed1337_untied": {
+        "test": "2762f01f8b72c92df265d3f3d1f16606421d6c7d11ae688a065f6a421915e43c",
+        "train": "a9e24e23a1ec77744dad26844bfd5a09b6e041954e1eef0000e7f24cba6db735",
+        "val": "2005a733cb87b490f256a123d9dc47073809546e912a45fd9a0eb504f7562f3e"
+      }
+    },
+    "errors": [],
+    "expected_run_count": 4,
+    "observed_run_count": 4,
+    "passed": true,
+    "runs_dir": "/kaggle/working/tiny_shakespeare_10k_seed1337",
+    "token_counts": {
+      "seed1337_capacity_control": 5120000,
+      "seed1337_partial": 5120000,
+      "seed1337_tied": 5120000,
+      "seed1337_untied": 5120000
+    },
+    "token_tolerance_by_seed": {
+      "1337": {
+        "allowed_delta": 0,
+        "delta": 0,
+        "maximum": 5120000,
+        "minimum": 5120000
+      }
+    },
+    "warnings": []
+  }
+}

@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this code or experiment design, please cite this repository."
 type: software
-title: "Partially tied language-model embeddings"
+title: "Tied, untied, and partially tied language-model embeddings"
 abstract: >-
   A reproducible study of tied, untied, and partially tied input/output
   embeddings in small decoder-only language models.
@@ -11,8 +11,8 @@ authors:
 repository-code: "https://github.com/arjunkshah12345-hash/llm-embeddings"
 repository-artifact: "https://github.com/arjunkshah12345-hash/llm-embeddings"
 license: MIT
-version: 0.1.0
-date-released: 2026-09-22
+version: 1.0.0
+date-released: 2026-09-24
 keywords:
   - language models
   - weight tying

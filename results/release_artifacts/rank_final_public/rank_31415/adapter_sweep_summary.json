@@ -1,0 +1,124 @@
+{
+  "conditions": [
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 1,
+      "additional_parameters_vs_tied": 101282,
+      "condition": "rank1_alpha8",
+      "embedding_parameters": 19399970,
+      "mean_best_val_loss": 5.402093720436096,
+      "mean_best_val_loss_ci95": {
+        "high": 5.402093720436096,
+        "low": 5.402093720436096
+      },
+      "mean_best_val_perplexity": 221.8704649671463,
+      "mean_estimated_flops_total": 923898869760000.0,
+      "mean_final_val_loss": 5.402093720436096,
+      "mean_training_wall_time_seconds": 561.266815874002,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank1_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 30125090
+    },
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 2,
+      "additional_parameters_vs_tied": 202564,
+      "condition": "rank2_alpha8",
+      "embedding_parameters": 19501252,
+      "mean_best_val_loss": 5.400143623352051,
+      "mean_best_val_loss_ci95": {
+        "high": 5.400143623352051,
+        "low": 5.400143623352051
+      },
+      "mean_best_val_perplexity": 221.43821761950616,
+      "mean_estimated_flops_total": 925466357760000.0,
+      "mean_final_val_loss": 5.400143623352051,
+      "mean_training_wall_time_seconds": 590.3412419839966,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank2_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 30226372
+    },
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 4,
+      "additional_parameters_vs_tied": 405128,
+      "condition": "rank4_alpha8",
+      "embedding_parameters": 19703816,
+      "mean_best_val_loss": 5.392862939834595,
+      "mean_best_val_loss_ci95": {
+        "high": 5.392862939834595,
+        "low": 5.392862939834595
+      },
+      "mean_best_val_perplexity": 219.83185085824823,
+      "mean_estimated_flops_total": 928601333760000.0,
+      "mean_final_val_loss": 5.392862939834595,
+      "mean_training_wall_time_seconds": 590.3557547709931,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank4_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 30428936
+    },
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 8,
+      "additional_parameters_vs_tied": 810256,
+      "condition": "rank8_alpha8",
+      "embedding_parameters": 20108944,
+      "mean_best_val_loss": 5.401223039627075,
+      "mean_best_val_loss_ci95": {
+        "high": 5.401223039627075,
+        "low": 5.401223039627075
+      },
+      "mean_best_val_perplexity": 221.67737068515206,
+      "mean_estimated_flops_total": 934871285760000.0,
+      "mean_final_val_loss": 5.401223039627075,
+      "mean_training_wall_time_seconds": 592.4915504399764,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank8_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 30834064
+    },
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 16,
+      "additional_parameters_vs_tied": 1620512,
+      "condition": "rank16_alpha8",
+      "embedding_parameters": 20919200,
+      "mean_best_val_loss": 5.419675207138061,
+      "mean_best_val_loss_ci95": {
+        "high": 5.419675207138061,
+        "low": 5.419675207138061
+      },
+      "mean_best_val_perplexity": 225.8057704881337,
+      "mean_estimated_flops_total": 947411189760000.0,
+      "mean_final_val_loss": 5.419675207138061,
+      "mean_training_wall_time_seconds": 601.813271770005,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank16_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 31644320
+    },
+    {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 32,
+      "additional_parameters_vs_tied": 3241024,
+      "condition": "rank32_alpha8",
+      "embedding_parameters": 22539712,
+      "mean_best_val_loss": 5.40316379070282,
+      "mean_best_val_loss_ci95": {
+        "high": 5.40316379070282,
+        "low": 5.40316379070282
+      },
+      "mean_best_val_perplexity": 222.10800902652258,
+      "mean_estimated_flops_total": 972490997760000.0,
+      "mean_final_val_loss": 5.40316379070282,
+      "mean_training_wall_time_seconds": 616.211145530031,
+      "run_count": 1,
+      "run_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank32_alpha8",
+      "std_best_val_loss": 0.0,
+      "total_parameters": 33264832
+    }
+  ]
+}

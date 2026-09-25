@@ -1,0 +1,509 @@
+{
+  "checkpoint": "best.pt",
+  "embedding_type": "tied",
+  "evaluated_sides": [
+    "input",
+    "output"
+  ],
+  "metrics": {
+    "input": {
+      "active_token_count": 36997,
+      "frequency_bucket_linear_probe": {
+        "accuracy": 0.6240895390510559,
+        "class_count": 4,
+        "macro_accuracy": 0.6245438829064369,
+        "majority_baseline": 0.2546533585109253,
+        "per_class_accuracy": {
+          "0": 0.7976694703102112,
+          "1": 0.43675675988197327,
+          "2": 0.3604525923728943,
+          "3": 0.903296709060669
+        },
+        "ridge": 0.001,
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "frequency_bucket_probe": {
+        "accuracy": 0.4604801833629608,
+        "class_count": 4,
+        "macro_accuracy": 0.4594990164041519,
+        "majority_baseline": 0.2546533585109253,
+        "per_class_accuracy": {
+          "0": 0.6387711763381958,
+          "1": 0.37891891598701477,
+          "2": 0.39008620381355286,
+          "3": 0.43021976947784424
+        },
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "nearest_neighbors": {
+        "mean_frequency_bucket_agreement": 0.51953125,
+        "mean_neighbor_cosine": 0.7672441005706787,
+        "neighbors": 5,
+        "token_count": 512
+      },
+      "pair_evaluation": {
+        "mean_cosine_by_relation": {
+          "animal_animal": 0.267935648560524,
+          "antonym_emotion": 0.5222485661506653,
+          "antonym_property": 0.43325620889663696,
+          "color_color": 0.3876078724861145,
+          "education": 0.41971850395202637,
+          "food_food": 0.6746849417686462,
+          "gendered_person": 0.4893960952758789,
+          "gendered_role": 0.49079543352127075,
+          "geography": 0.4435150623321533,
+          "morphological": 0.33357012271881104,
+          "place_place": 0.36445123702287674,
+          "synonym_size": 0.2588231563568115,
+          "vehicle_vehicle": 0.2567683756351471
+        },
+        "pair_count": 22,
+        "pairs": [
+          {
+            "cosine": 0.2866964340209961,
+            "index": 0,
+            "left_token_id": 3797,
+            "relation": "animal_animal",
+            "right_token_id": 3290
+          },
+          {
+            "cosine": 0.24917486310005188,
+            "index": 1,
+            "left_token_id": 3290,
+            "relation": "animal_animal",
+            "right_token_id": 5916
+          },
+          {
+            "cosine": 0.2567683756351471,
+            "index": 2,
+            "left_token_id": 1097,
+            "relation": "vehicle_vehicle",
+            "right_token_id": 7779
+          },
+          {
+            "cosine": 0.49079543352127075,
+            "index": 3,
+            "left_token_id": 5822,
+            "relation": "gendered_role",
+            "right_token_id": 16599
+          },
+          {
+            "cosine": 0.4786407947540283,
+            "index": 4,
+            "left_token_id": 582,
+            "relation": "gendered_person",
+            "right_token_id": 2415
+          },
+          {
+            "cosine": 0.5001513957977295,
+            "index": 5,
+            "left_token_id": 2933,
+            "relation": "gendered_person",
+            "right_token_id": 2576
+          },
+          {
+            "cosine": 0.5222485661506653,
+            "index": 6,
+            "left_token_id": 3772,
+            "relation": "antonym_emotion",
+            "right_token_id": 6507
+          },
+          {
+            "cosine": 0.43325620889663696,
+            "index": 7,
+            "left_token_id": 3024,
+            "relation": "antonym_property",
+            "right_token_id": 4692
+          },
+          {
+            "cosine": 0.13048014044761658,
+            "index": 8,
+            "left_token_id": 1263,
+            "relation": "synonym_size",
+            "right_token_id": 1588
+          },
+          {
+            "cosine": 0.38716617226600647,
+            "index": 9,
+            "left_token_id": 1402,
+            "relation": "synonym_size",
+            "right_token_id": 1310
+          },
+          {
+            "cosine": 0.3722209930419922,
+            "index": 10,
+            "left_token_id": 2513,
+            "relation": "morphological",
+            "right_token_id": 6155
+          },
+          {
+            "cosine": 0.38232821226119995,
+            "index": 11,
+            "left_token_id": 1561,
+            "relation": "morphological",
+            "right_token_id": 3375
+          },
+          {
+            "cosine": 0.1658945381641388,
+            "index": 12,
+            "left_token_id": 1057,
+            "relation": "morphological",
+            "right_token_id": 2491
+          },
+          {
+            "cosine": 0.2579111158847809,
+            "index": 13,
+            "left_token_id": 711,
+            "relation": "morphological",
+            "right_token_id": 2712
+          },
+          {
+            "cosine": 0.48949575424194336,
+            "index": 14,
+            "left_token_id": 4483,
+            "relation": "morphological",
+            "right_token_id": 6600
+          },
+          {
+            "cosine": 0.3131365180015564,
+            "index": 15,
+            "left_token_id": 2266,
+            "relation": "color_color",
+            "right_token_id": 4171
+          },
+          {
+            "cosine": 0.4620792269706726,
+            "index": 16,
+            "left_token_id": 4077,
+            "relation": "color_color",
+            "right_token_id": 7872
+          },
+          {
+            "cosine": 0.6746849417686462,
+            "index": 17,
+            "left_token_id": 17180,
+            "relation": "food_food",
+            "right_token_id": 10912
+          },
+          {
+            "cosine": 0.5109872817993164,
+            "index": 18,
+            "left_token_id": 1748,
+            "relation": "place_place",
+            "right_token_id": 3240
+          },
+          {
+            "cosine": 0.21791519224643707,
+            "index": 19,
+            "left_token_id": 2156,
+            "relation": "place_place",
+            "right_token_id": 1363
+          },
+          {
+            "cosine": 0.4435150623321533,
+            "index": 20,
+            "left_token_id": 7850,
+            "relation": "geography",
+            "right_token_id": 9151
+          },
+          {
+            "cosine": 0.41971850395202637,
+            "index": 21,
+            "left_token_id": 4701,
+            "relation": "education",
+            "right_token_id": 3710
+          }
+        ]
+      },
+      "token_shape_linear_probe": {
+        "accuracy": 0.9646614789962769,
+        "class_count": 4,
+        "macro_accuracy": 0.34799254561463994,
+        "majority_baseline": 0.963177771783113,
+        "per_class_accuracy": {
+          "1": 0.0,
+          "2": 0.04411764815449715,
+          "3": 0.9998599886894226
+        },
+        "ridge": 0.001,
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "token_shape_probe": {
+        "accuracy": 0.8877798914909363,
+        "class_count": 4,
+        "macro_accuracy": 0.5005649526913961,
+        "majority_baseline": 0.963177771783113,
+        "per_class_accuracy": {
+          "1": 0.0,
+          "2": 0.6029411554336548,
+          "3": 0.8987537026405334
+        },
+        "test_count": 7414,
+        "train_count": 29583
+      }
+    },
+    "output": {
+      "active_token_count": 36997,
+      "frequency_bucket_linear_probe": {
+        "accuracy": 0.6240895390510559,
+        "class_count": 4,
+        "macro_accuracy": 0.6245438829064369,
+        "majority_baseline": 0.2546533585109253,
+        "per_class_accuracy": {
+          "0": 0.7976694703102112,
+          "1": 0.43675675988197327,
+          "2": 0.3604525923728943,
+          "3": 0.903296709060669
+        },
+        "ridge": 0.001,
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "frequency_bucket_probe": {
+        "accuracy": 0.4604801833629608,
+        "class_count": 4,
+        "macro_accuracy": 0.4594990164041519,
+        "majority_baseline": 0.2546533585109253,
+        "per_class_accuracy": {
+          "0": 0.6387711763381958,
+          "1": 0.37891891598701477,
+          "2": 0.39008620381355286,
+          "3": 0.43021976947784424
+        },
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "nearest_neighbors": {
+        "mean_frequency_bucket_agreement": 0.51953125,
+        "mean_neighbor_cosine": 0.7672441005706787,
+        "neighbors": 5,
+        "token_count": 512
+      },
+      "pair_evaluation": {
+        "mean_cosine_by_relation": {
+          "animal_animal": 0.267935648560524,
+          "antonym_emotion": 0.5222485661506653,
+          "antonym_property": 0.43325620889663696,
+          "color_color": 0.3876078724861145,
+          "education": 0.41971850395202637,
+          "food_food": 0.6746849417686462,
+          "gendered_person": 0.4893960952758789,
+          "gendered_role": 0.49079543352127075,
+          "geography": 0.4435150623321533,
+          "morphological": 0.33357012271881104,
+          "place_place": 0.36445123702287674,
+          "synonym_size": 0.2588231563568115,
+          "vehicle_vehicle": 0.2567683756351471
+        },
+        "pair_count": 22,
+        "pairs": [
+          {
+            "cosine": 0.2866964340209961,
+            "index": 0,
+            "left_token_id": 3797,
+            "relation": "animal_animal",
+            "right_token_id": 3290
+          },
+          {
+            "cosine": 0.24917486310005188,
+            "index": 1,
+            "left_token_id": 3290,
+            "relation": "animal_animal",
+            "right_token_id": 5916
+          },
+          {
+            "cosine": 0.2567683756351471,
+            "index": 2,
+            "left_token_id": 1097,
+            "relation": "vehicle_vehicle",
+            "right_token_id": 7779
+          },
+          {
+            "cosine": 0.49079543352127075,
+            "index": 3,
+            "left_token_id": 5822,
+            "relation": "gendered_role",
+            "right_token_id": 16599
+          },
+          {
+            "cosine": 0.4786407947540283,
+            "index": 4,
+            "left_token_id": 582,
+            "relation": "gendered_person",
+            "right_token_id": 2415
+          },
+          {
+            "cosine": 0.5001513957977295,
+            "index": 5,
+            "left_token_id": 2933,
+            "relation": "gendered_person",
+            "right_token_id": 2576
+          },
+          {
+            "cosine": 0.5222485661506653,
+            "index": 6,
+            "left_token_id": 3772,
+            "relation": "antonym_emotion",
+            "right_token_id": 6507
+          },
+          {
+            "cosine": 0.43325620889663696,
+            "index": 7,
+            "left_token_id": 3024,
+            "relation": "antonym_property",
+            "right_token_id": 4692
+          },
+          {
+            "cosine": 0.13048014044761658,
+            "index": 8,
+            "left_token_id": 1263,
+            "relation": "synonym_size",
+            "right_token_id": 1588
+          },
+          {
+            "cosine": 0.38716617226600647,
+            "index": 9,
+            "left_token_id": 1402,
+            "relation": "synonym_size",
+            "right_token_id": 1310
+          },
+          {
+            "cosine": 0.3722209930419922,
+            "index": 10,
+            "left_token_id": 2513,
+            "relation": "morphological",
+            "right_token_id": 6155
+          },
+          {
+            "cosine": 0.38232821226119995,
+            "index": 11,
+            "left_token_id": 1561,
+            "relation": "morphological",
+            "right_token_id": 3375
+          },
+          {
+            "cosine": 0.1658945381641388,
+            "index": 12,
+            "left_token_id": 1057,
+            "relation": "morphological",
+            "right_token_id": 2491
+          },
+          {
+            "cosine": 0.2579111158847809,
+            "index": 13,
+            "left_token_id": 711,
+            "relation": "morphological",
+            "right_token_id": 2712
+          },
+          {
+            "cosine": 0.48949575424194336,
+            "index": 14,
+            "left_token_id": 4483,
+            "relation": "morphological",
+            "right_token_id": 6600
+          },
+          {
+            "cosine": 0.3131365180015564,
+            "index": 15,
+            "left_token_id": 2266,
+            "relation": "color_color",
+            "right_token_id": 4171
+          },
+          {
+            "cosine": 0.4620792269706726,
+            "index": 16,
+            "left_token_id": 4077,
+            "relation": "color_color",
+            "right_token_id": 7872
+          },
+          {
+            "cosine": 0.6746849417686462,
+            "index": 17,
+            "left_token_id": 17180,
+            "relation": "food_food",
+            "right_token_id": 10912
+          },
+          {
+            "cosine": 0.5109872817993164,
+            "index": 18,
+            "left_token_id": 1748,
+            "relation": "place_place",
+            "right_token_id": 3240
+          },
+          {
+            "cosine": 0.21791519224643707,
+            "index": 19,
+            "left_token_id": 2156,
+            "relation": "place_place",
+            "right_token_id": 1363
+          },
+          {
+            "cosine": 0.4435150623321533,
+            "index": 20,
+            "left_token_id": 7850,
+            "relation": "geography",
+            "right_token_id": 9151
+          },
+          {
+            "cosine": 0.41971850395202637,
+            "index": 21,
+            "left_token_id": 4701,
+            "relation": "education",
+            "right_token_id": 3710
+          }
+        ]
+      },
+      "token_shape_linear_probe": {
+        "accuracy": 0.9646614789962769,
+        "class_count": 4,
+        "macro_accuracy": 0.34799254561463994,
+        "majority_baseline": 0.963177771783113,
+        "per_class_accuracy": {
+          "1": 0.0,
+          "2": 0.04411764815449715,
+          "3": 0.9998599886894226
+        },
+        "ridge": 0.001,
+        "test_count": 7414,
+        "train_count": 29583
+      },
+      "token_shape_probe": {
+        "accuracy": 0.8877798914909363,
+        "class_count": 4,
+        "macro_accuracy": 0.5005649526913961,
+        "majority_baseline": 0.963177771783113,
+        "per_class_accuracy": {
+          "1": 0.0,
+          "2": 0.6029411554336548,
+          "3": 0.8987537026405334
+        },
+        "test_count": 7414,
+        "train_count": 29583
+      }
+    }
+  },
+  "parameter_counts": {
+    "capacity_control_parameters": 0,
+    "capacity_control_width": 0,
+    "embedding_compute_parameters": 19298688,
+    "embedding_parameters": 19298688,
+    "embedding_type": "tied",
+    "input_correction_compute_parameters": 0,
+    "input_correction_parameters": 0,
+    "input_side_parameters": 19298688,
+    "output_correction_compute_parameters": 0,
+    "output_correction_parameters": 0,
+    "output_projection_parameters": 19298688,
+    "output_side_parameters": 19298688,
+    "shared_parameters": 19298688,
+    "total_parameters": 30023808,
+    "trainable_parameters": 30023808,
+    "transformer_parameters": 10725120
+  },
+  "probe_split": "token_id modulo 5; remainder 4 held out",
+  "run_dir": "/kaggle/working/mechanism_stop_input_10k_seed31415/seed31415_tied",
+  "step": 9999
+}

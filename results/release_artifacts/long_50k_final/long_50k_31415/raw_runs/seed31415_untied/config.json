@@ -1,0 +1,71 @@
+{
+  "dataset": {
+    "dataset": "wikitext2",
+    "sha256": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    },
+    "source": {
+      "files": {
+        "test": {
+          "sha256": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.test.raw"
+        },
+        "train": {
+          "sha256": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.train.raw"
+        },
+        "val": {
+          "sha256": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7",
+          "url": "https://cosmo.zip/pub/datasets/wikitext-2-raw/wiki.valid.raw"
+        }
+      },
+      "manifest_version": 1,
+      "variant": "wikitext-2-raw-v1"
+    },
+    "token_counts": {
+      "test": 286221,
+      "train": 2417786,
+      "val": 249887
+    },
+    "tokenizer": "gpt2",
+    "vocab_size": 50257
+  },
+  "device": "cuda",
+  "model": {
+    "adapter_alpha": 8.0,
+    "adapter_rank": 8,
+    "block_size": 256,
+    "capacity_control_width": 0,
+    "dropout": 0.0,
+    "n_embd": 384,
+    "n_head": 6,
+    "n_layer": 6,
+    "vocab_size": 50257
+  },
+  "train": {
+    "ablation_end": 0,
+    "ablation_start": 0,
+    "batch_size": 2,
+    "data_dir": "/kaggle/working/llm-embeddings-data",
+    "dataset": "wikitext2",
+    "device": "cuda",
+    "embedding_type": "untied",
+    "eval_batches": 20,
+    "eval_interval": 500,
+    "grad_accum_steps": 1,
+    "grad_clip": 1.0,
+    "learning_rate": 0.0003,
+    "log_interval": 100,
+    "min_learning_rate": 3e-05,
+    "output_dir": "/kaggle/working/long_50k_seed31415",
+    "path_ablation": "none",
+    "run_name": "seed31415_untied",
+    "save_interval": 5000,
+    "seed": 31415,
+    "steps": 50000,
+    "warmup_steps": 100,
+    "weight_decay": 0.1
+  }
+}

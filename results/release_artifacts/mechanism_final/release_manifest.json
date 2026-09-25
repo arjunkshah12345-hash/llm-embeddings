@@ -1,0 +1,71 @@
+{
+  "checkpoints_exported": false,
+  "studies": [
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_input_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_input_1337",
+      "run_names": [
+        "seed1337_partial",
+        "seed1337_tied"
+      ],
+      "seed": 1337
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_input_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_input_2027",
+      "run_names": [
+        "seed2027_partial",
+        "seed2027_tied"
+      ],
+      "seed": 2027
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_input_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_input_31415",
+      "run_names": [
+        "seed31415_partial",
+        "seed31415_tied"
+      ],
+      "seed": 31415
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_output_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_output_1337",
+      "run_names": [
+        "seed1337_partial",
+        "seed1337_tied"
+      ],
+      "seed": 1337
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_output_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_output_2027",
+      "run_names": [
+        "seed2027_partial",
+        "seed2027_tied"
+      ],
+      "seed": 2027
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "mechanism_stop_output_10k",
+      "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+      "name": "mechanism_output_31415",
+      "run_names": [
+        "seed31415_partial",
+        "seed31415_tied"
+      ],
+      "seed": 31415
+    }
+  ]
+}

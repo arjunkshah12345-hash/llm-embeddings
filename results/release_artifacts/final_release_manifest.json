@@ -1,0 +1,75 @@
+{
+  "checkpoints_exported": false,
+  "description": "Compact, checkpoint-free artifacts for the final public release.",
+  "studies": [
+    {
+      "aggregate": "results/primary/primary_aggregate.json",
+      "artifacts": "results/release_artifacts/primary",
+      "name": "study1_primary_10k",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "440d42d3d005fa456b4ddb74a2c82fffa5a5c677"
+    },
+    {
+      "aggregate": "results/long_50k/primary_aggregate.json",
+      "artifacts": "results/release_artifacts/long_50k_final",
+      "name": "primary_50k",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "56f6360ad93eadff2c6ad1406a4805264549747f"
+    },
+    {
+      "aggregate": "results/rank_sweep/rank_aggregate.json",
+      "artifacts": "results/release_artifacts/rank_final_public",
+      "name": "rank_replication_10k",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "e8aa5e87b07810596940df5f66b5c92c7d825569"
+    },
+    {
+      "aggregate": "results/secondary/secondary_aggregate.json",
+      "artifacts": "results/release_artifacts/robustness_final",
+      "name": "robustness",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db"
+    },
+    {
+      "aggregate": "results/long_50k/mechanism/mechanism_aggregate.json",
+      "artifacts": "results/release_artifacts/long_50k_final",
+      "name": "mechanism_primary_50k",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "56f6360ad93eadff2c6ad1406a4805264549747f"
+    },
+    {
+      "aggregates": [
+        "results/mechanism_interventions_input.json",
+        "results/mechanism_interventions_output.json"
+      ],
+      "artifacts": "results/release_artifacts/mechanism_final",
+      "name": "mechanism_interventions",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "source_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db"
+    }
+  ]
+}

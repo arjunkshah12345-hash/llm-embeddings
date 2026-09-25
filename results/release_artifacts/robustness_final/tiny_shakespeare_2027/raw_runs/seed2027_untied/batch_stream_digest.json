@@ -1,0 +1,7 @@
+{
+  "algorithm": "sha256-jsonl-start-offsets-v1",
+  "digest": "b8158323e268efd11f48849a941872f952dff8e5ed1fe943f4882da751a84f80",
+  "offset_log": "batch_offsets.jsonl",
+  "record_count": 10000,
+  "token_count": 5120000
+}

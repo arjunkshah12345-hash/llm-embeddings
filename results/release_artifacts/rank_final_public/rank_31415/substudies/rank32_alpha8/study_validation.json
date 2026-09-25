@@ -1,0 +1,36 @@
+{
+  "actual_batch_stream_hashes": {
+    "31415": {
+      "partial": "3ad4de4c10c390ffa43588c8aeeb2cd509d4fcb8c9cda7dc429c698bcf5faf39"
+    }
+  },
+  "batch_stream_hashes": {
+    "31415": {
+      "partial": "3ad4de4c10c390ffa43588c8aeeb2cd509d4fcb8c9cda7dc429c698bcf5faf39"
+    }
+  },
+  "dataset_hashes": {
+    "seed31415_partial": {
+      "test": "173c87a53759e0201f33e0ccf978e510c2042d7f2cb78229d9a50d79b9e7dd08",
+      "train": "6707892fa3788b5ab9ed78ab5ff37d9fe825f6011a2ad4fcd6a6d467f0e7da57",
+      "val": "4cd0f6876d07a413aa911261ff6d363c72d757d47f0fdd6015702014c89cb9c7"
+    }
+  },
+  "errors": [],
+  "expected_run_count": 1,
+  "observed_run_count": 1,
+  "passed": true,
+  "runs_dir": "/kaggle/working/rank_sweep_10k_seed31415/rank32_alpha8",
+  "token_counts": {
+    "seed31415_partial": 5120000
+  },
+  "token_tolerance_by_seed": {
+    "31415": {
+      "allowed_delta": 0,
+      "delta": 0,
+      "maximum": 5120000,
+      "minimum": 5120000
+    }
+  },
+  "warnings": []
+}

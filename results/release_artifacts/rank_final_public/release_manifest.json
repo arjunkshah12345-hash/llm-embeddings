@@ -1,0 +1,29 @@
+{
+  "checkpoints_exported": false,
+  "studies": [
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "rank_sweep_10k",
+      "git_commit": "e8aa5e87b07810596940df5f66b5c92c7d825569",
+      "name": "rank_1337",
+      "run_names": [],
+      "seed": 1337
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "rank_sweep_10k",
+      "git_commit": "e8aa5e87b07810596940df5f66b5c92c7d825569",
+      "name": "rank_2027",
+      "run_names": [],
+      "seed": 2027
+    },
+    {
+      "checkpoints_exported": false,
+      "experiment_id": "rank_sweep_10k",
+      "git_commit": "e8aa5e87b07810596940df5f66b5c92c7d825569",
+      "name": "rank_31415",
+      "run_names": [],
+      "seed": 31415
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Phase 4 — mechanism checks
 
-These checks ask whether input and output roles push the shared matrix differently, and whether that push is just a token-frequency artifact. They are instrumentation. A six-step run is not evidence.
+These checks ask whether input and output roles push the shared matrix differently, and whether that push is just a token-frequency artifact. The completed 50k primary and three-seed 10k path-intervention artifacts are under `results/long_50k/mechanism/`, `results/mechanism_stop_input/`, `results/mechanism_stop_output/`, and the two intervention JSON files in `results/`. They support a mechanistic analysis but do not turn gradient differences into a performance claim.
 
 ## Token classes
 

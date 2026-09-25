@@ -49,14 +49,29 @@ def primary_macros(result: dict) -> str:
     partial = result["by_condition"]["partial"]
     untied = result["by_condition"]["untied"]
     recovery_status = final["recovery_status"].replace("_", "\\ ")
+    capacity = result["by_condition"].get("capacity_control")
+    paired = result.get("paired_comparisons", {})
+
+    def delta_macro(key: str) -> str:
+        value = paired.get(key, {}).get("mean_delta")
+        return tex_number(value, 5)
+
     return "\n".join(
         [
             f"\\newcommand{{\\PrimarySeedCount}}{{{tied['run_count']}}}",
             f"\\newcommand{{\\TiedFinalLoss}}{{{tex_number(final['tied'], 5)}}}",
             f"\\newcommand{{\\PartialFinalLoss}}{{{tex_number(final['partial'], 5)}}}",
             f"\\newcommand{{\\UntiedFinalLoss}}{{{tex_number(final['untied'], 5)}}}",
+            f"\\newcommand{{\\CapacityFinalLoss}}{{{tex_number(capacity.get('mean_final_val_loss') if capacity else None, 5)}}}",
+            f"\\newcommand{{\\TiedFinalPPL}}{{{tex_number(tied.get('mean_final_val_perplexity'), 2)}}}",
+            f"\\newcommand{{\\PartialFinalPPL}}{{{tex_number(partial.get('mean_final_val_perplexity'), 2)}}}",
+            f"\\newcommand{{\\UntiedFinalPPL}}{{{tex_number(untied.get('mean_final_val_perplexity'), 2)}}}",
             f"\\newcommand{{\\PartialExtraParams}}{{{tex_int(partial['additional_parameters_vs_tied'])}}}",
             f"\\newcommand{{\\UntiedExtraParams}}{{{tex_int(untied['additional_parameters_vs_tied'])}}}",
+            f"\\newcommand{{\\CapacityExtraParams}}{{{tex_int(capacity['additional_parameters_vs_tied'] if capacity else None)}}}",
+            f"\\newcommand{{\\PartialVsTiedDelta}}{{{delta_macro('partial_minus_tied_final_val_loss')}}}",
+            f"\\newcommand{{\\UntiedVsTiedDelta}}{{{delta_macro('untied_minus_tied_final_val_loss')}}}",
+            f"\\newcommand{{\\CapacityVsTiedDelta}}{{{delta_macro('capacity_control_minus_tied_final_val_loss')}}}",
             f"\\newcommand{{\\RecoveryStatus}}{{{recovery_status}}}",
             "",
         ]
@@ -65,17 +80,19 @@ def primary_macros(result: dict) -> str:
 
 def rank_table(result: dict) -> str:
     rows = [
-        r"\begin{tabular}{rrrrr}",
+        r"\begin{tabular}{rrrrrr}",
         r"\toprule",
-        r"Rank & Extra params. & Final loss & 95\% CI & Seeds \\",
+        r"Rank & Extra params. & Final loss & Paired $\Delta$ & 95\% CI & Seeds \\",
         r"\midrule",
     ]
     for rank, value in sorted(result["by_rank"].items(), key=lambda item: int(item[0])):
-        ci = value["ci95_final_val_loss"]
+        paired = value.get("paired_final_delta", {})
+        paired_ci = paired.get("ci95", {})
         rows.append(
             f"{rank} & {tex_int(value['additional_parameters_vs_tied'])} & "
             f"{tex_number(value['mean_final_val_loss'], 5)} & "
-            f"[{tex_number(ci['low'])}, {tex_number(ci['high'])}] & {value['run_count']} "
+            f"{tex_number(paired.get('mean'))} & "
+            f"[{tex_number(paired_ci.get('low'))}, {tex_number(paired_ci.get('high'))}] & {value['run_count']} "
             + r"\\"
         )
     rows += [r"\bottomrule", r"\end{tabular}"]
@@ -111,11 +128,54 @@ def mechanism_table(result: dict) -> str:
     return "\n".join(rows) + "\n"
 
 
+def secondary_table(result: dict) -> str:
+    rows = [
+        r"\begin{tabular}{llrrrr}",
+        r"\toprule",
+        r"Study & Condition & Params. & Extra & Final loss & Seeds \\\\",
+        r"\midrule",
+    ]
+    for row in result.get("comparison", []):
+        condition = str(row["condition"]).replace("_", "\\_")
+        study = str(row["study"]).replace("_", "\\_")
+        rows.append(
+            f"{study} & {condition} & {tex_int(row.get('total_parameters'))} & "
+            f"{tex_int(row.get('additional_parameters_vs_tied'))} & "
+            f"{tex_number(row.get('mean_final_val_loss'), 5)} & {row.get('seeds', '--')} "
+            + r"\\"
+        )
+    rows += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(rows) + "\n"
+
+
+def intervention_table(input_result: dict, output_result: dict) -> str:
+    rows = [
+        r"\begin{tabular}{lrrr}",
+        r"\toprule",
+        r"Stopped path & Paired final $\Delta$ & 95\% CI & Seeds \\",
+        r"\midrule",
+    ]
+    for label, result in (("Input", input_result), ("Output", output_result)):
+        study = next(iter(result["studies"].values()))
+        value = study["paired_comparisons"]["partial_minus_tied_final_val_loss"]
+        ci = value["ci95"]
+        rows.append(
+            f"{label} & {tex_number(value['mean_delta'], 5)} & "
+            f"[{tex_number(ci['low'])}, {tex_number(ci['high'])}] & {len(value['seeds'])} "
+            + r"\\"
+        )
+    rows += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(rows) + "\n"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--primary", required=True)
     parser.add_argument("--rank", default="")
     parser.add_argument("--mechanism", default="")
+    parser.add_argument("--secondary", default="")
+    parser.add_argument("--interventions-input", default="")
+    parser.add_argument("--interventions-output", default="")
     parser.add_argument("--output-dir", default="paper/generated")
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
@@ -127,6 +187,12 @@ def main() -> None:
         (output_dir / "rank_table.tex").write_text(rank_table(read_json(Path(args.rank))))
     if args.mechanism:
         (output_dir / "mechanism_table.tex").write_text(mechanism_table(read_json(Path(args.mechanism))))
+    if args.secondary:
+        (output_dir / "secondary_table.tex").write_text(secondary_table(read_json(Path(args.secondary))))
+    if args.interventions_input and args.interventions_output:
+        (output_dir / "intervention_table.tex").write_text(
+            intervention_table(read_json(Path(args.interventions_input)), read_json(Path(args.interventions_output)))
+        )
 
 
 if __name__ == "__main__":

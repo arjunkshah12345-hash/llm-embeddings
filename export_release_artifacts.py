@@ -14,6 +14,13 @@ ROOT_FILES = (
     "study_validation.json",
     "kaggle_hardware.json",
     "mechanism_metrics.json",
+    "adapter_sweep_summary.json",
+    "adapter_sweep_summary.md",
+    "adapter_tradeoff.png",
+    "rank_sweep_vs_estimated_flops.png",
+    "rank_sweep_vs_extra_parameters.png",
+    "rank_sweep_vs_total_parameters.png",
+    "rank_sweep_vs_wall_clock.png",
 )
 RUN_FILES = (
     "config.json",
@@ -53,6 +60,13 @@ def export_study(name: str, source: Path, destination: Path) -> dict:
                     json.dumps(batch_stream, indent=2, sort_keys=True) + "\n"
                 )
         run_names.append(run_dir.name)
+
+    # Adapter sweeps expose one validated study directory per rank rather than
+    # a flat run directory. Preserve those compact manifests for inspection.
+    for substudy in sorted(path for path in source.iterdir() if path.is_dir() and (path / "study_manifest.json").exists()):
+        target = destination / "substudies" / substudy.name
+        for filename in ("study_manifest.json", "study_validation.json"):
+            copy_if_present(substudy / filename, target / filename)
 
     artifact_manifest = {}
     manifest_path = source / "artifact_manifest.json"

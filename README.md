@@ -1,99 +1,142 @@
-# Partially tied language-model embeddings
+# Tied, untied, and partially tied language-model embeddings
 
-> **Research status:** Experimental. The implementation and measurement pipeline are complete, and the first three-seed 10k-step primary study is available as preliminary evidence. Fresh 50k training, rank replication, intervention, scale, and dataset studies are still required before making a final performance claim.
+> **Research status:** Final release for the declared studies. The implementation, fairness gates, cloud runs, mechanism diagnostics, analysis artifacts, and paper bundle are complete. Under the tested small-model protocols, the results do **not** support a performance advantage for low-rank partial tying. The conclusion is specific to these datasets, model sizes, and training budgets; it is not a claim about all language models.
 
-This project studies a parameter-sharing choice in decoder-only language models. A language model uses token vectors at the input and a vocabulary projection at the output, but those roles need not require exactly the same representation.
+This project tests whether a decoder-only language model can keep the parameter savings of weight tying while allowing its input and output token representations to specialize slightly. The comparison is:
 
-The central question is whether a model can retain most of the parameter savings of weight tying while giving the two roles a small amount of independent capacity:
+- **Tied:** one vocabulary matrix is used for token lookup and output prediction.
+- **Untied:** input and output use separate full matrices.
+- **Partial:** one shared matrix plus independent low-rank corrections:
 
-\[
-W_{\text{input}} = W_{\text{shared}} + \Delta_{\text{input}}, \qquad
-W_{\text{output}} = W_{\text{shared}} + \Delta_{\text{output}}.
-\]
+  ```text
+  W_input  = W_shared + A_input  B_input.T
+  W_output = W_shared + A_output B_output.T
+  ```
 
-Here each correction is a learned low-rank factorization, so the experiment compares:
+The partial model adds only `2 * rank * (vocab_size + width)` parameters. It is a direct test of whether role-specific flexibility is useful, rather than an assumption that untying or adapters must help.
 
-- **Tied:** one matrix is used for both token lookup and output logits.
-- **Untied:** input and output matrices are separate.
-- **Partial:** one shared matrix plus independent low-rank input and output corrections.
+## What the completed studies found
 
-Rather than choosing between fully tied and fully untied embeddings, this project studies whether a large shared base plus small role-specific low-rank residuals can recover much of the flexibility of untying at a fraction of the parameter cost. The result is open: the repository is designed to measure the tradeoff fairly, including cases where partial tying does not help.
+The primary confirmatory study used WikiText-2-raw-v1, GPT-2 BPE, a 6-layer/6-head/384-width decoder, block size 256, 50,000 fresh optimizer steps, and seeds 1337, 2027, and 31415. Every comparison passed the exact token-stream and final-step fairness gate. Lower validation loss is better.
 
-## Quick start
+| Condition | Final loss | Final perplexity | Total parameters | Extra vs tied |
+|---|---:|---:|---:|---:|
+| Tied | 5.06856 | 158.95 | 30,023,808 | 0 |
+| Partial, rank 8 | 5.10784 | 165.33 | 30,834,064 | 810,256 |
+| Untied | 5.42733 | 227.64 | 49,322,496 | 19,298,688 |
+| Parameter-matched tied control | 5.27932 | 196.25 | 30,834,816 | 811,008 |
+
+Across the three paired seeds, partial minus tied final loss was `+0.03928` with a bootstrap 95% interval `[+0.01715, +0.06728]`. Untied minus tied was `+0.35877` with interval `[+0.31560, +0.38145]`. Because untied was worse than tied, the requested “fraction of the untied improvement recovered” is undefined. The capacity control was also worse than tied and worse than rank-8 partial, so the result does not reduce to a simple benefit from adding approximately 0.8M parameters elsewhere.
+
+The three-seed 10k study is preserved as **Study 1**, a preliminary horizon. Its rank-1/2/4/8/16/32 sweep is now replicated across three seeds. No rank consistently improves on tied; rank 32 is closest in mean final loss, but its paired interval still includes no difference. A smaller WikiText-2 model and a Tiny Shakespeare replication likewise show no reliable partial-tying gain. On Tiny Shakespeare, the tied model remains best at the final checkpoint, while the capacity control shows late overfitting.
+
+The mechanism measurements provide a narrower result. At 50k steps, output-to-input effective gradient ratios are close to one rather than showing stable output dominance. Partial corrections become nonzero and the output correction is larger in norm than the input correction, but their effective matrix alignment is weak and this does not translate into lower language-modeling loss. In the three-seed 10k path interventions, stopping input-path gradients changed partial minus tied final loss by `+0.00037` (95% interval `[-0.00676, +0.00798]`), while stopping output-path gradients changed it by `-0.00618` (interval `[-0.01474, +0.01011]`); neither is a stable causal effect. Token-frequency buckets, correction spectra, and frozen input probes are included as separate artifacts; they should not be read as evidence that validation loss alone measures embedding quality.
+
+The strongest supported conclusion is therefore: **in this regime, tied embeddings are a strong baseline; full untying is harmful; low-rank role-specific corrections add flexibility and measurable role-specific movement but do not recover a quality advantage.**
+
+All headline values are generated from machine-readable aggregates under [`results/`](results/). The raw compact per-run metrics, manifests, hashes, and fairness outputs are under [`results/release_artifacts/`](results/release_artifacts/), indexed by [`final_release_manifest.json`](results/release_artifacts/final_release_manifest.json). Checkpoints and optimizer states are intentionally excluded.
+
+The final manuscript is [`paper/main.pdf`](paper/main.pdf); the independently compilable source bundle is [`arxiv/`](arxiv/).
+
+## Model and computation
+
+The normal training path keeps partial corrections factorized. For token lookup it computes:
+
+```text
+shared[token_ids] + scale * input_A[token_ids] @ input_B.T
+```
+
+For output logits it computes:
+
+```text
+hidden @ shared.T + scale * (hidden @ output_B) @ output_A.T
+```
+
+The full `V × D` correction matrices are reconstructed only for diagnostics. Tests compare the optimized operations with explicit matrix construction. Partial corrections start at zero effective value, and untied input/output matrices start from equivalent tied initialization.
+
+The training and validation code records losses, perplexity, parameter counts, estimated FLOPs, throughput, peak memory, exact data-stream digests, effective input/output gradient norms and cosines, token-frequency and token-class summaries, correction norms and spectra, and frozen input/output representation probes. `validate_study.py` rejects incomplete or mismatched studies before aggregation.
+
+## Reproduce the studies
+
+Install the portable environment in a clean checkout:
 
 ```bash
 python3 -m pip install -r requirements.txt
-python3 sweep.py \
-  --output_dir runs/smoke \
-  --dataset wikitext2 --device cpu --seeds 1337 \
-  --steps 8 --batch_size 1 --block_size 32 \
-  --n_layer 1 --n_head 1 --n_embd 16 \
-  --adapter_rank 2 --adapter_alpha 2 \
-  --warmup_steps 2 --eval_interval 4 --eval_batches 2 \
-  --log_interval 2 --save_interval 8 --no-save_optimizer
 ```
 
-The command trains all three variants with one shared configuration, validates the comparison, and writes compact checkpoints, JSONL metrics, and plots under `runs/smoke/`. It downloads the pinned WikiText-2-raw-v1 source and the GPT-2 BPE vocabulary on first use. The full reproduction workflow is in [REPRODUCIBILITY.md](REPRODUCIBILITY.md); the frozen primary study is specified in [EXPERIMENT_PROTOCOL.md](EXPERIMENT_PROTOCOL.md), with Kaggle launch and collection tooling under [`kaggle/`](kaggle/).
+The Kaggle reference environment is pinned in [`requirements-lock.txt`](requirements-lock.txt). All substantive model training for the released studies ran in Kaggle. Local commands are for validation, aggregation, figures, tests, and LaTeX packaging.
 
-## Model and experiment
-
-The default model is a small GPT-style causal Transformer: six layers, width 384, six attention heads, and a GPT-2 vocabulary, about 30M parameters when tied. Partial tying uses rank-8 corrections by default. For vocabulary size \(V\), hidden width \(D\), and adapter rank \(r\), its extra stored parameters over tied are \(2r(V+D)\).
-
-The partial implementation uses the factorized operations directly during training:
+The exact source commits used for the released studies are recorded in their manifests:
 
 ```text
-input:  shared[token_ids] + scale * input_A[token_ids] @ input_B.T
-output: hidden @ shared.T + scale * (hidden @ output_B) @ output_A.T
+50k primary:          56f6360ad93eadff2c6ad1406a4805264549747f
+rank replication:     e8aa5e87b07810596940df5f66b5c92c7d825569
+robustness/ablations: 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
 ```
 
-The full correction matrices are reconstructed only for analysis metrics and explicit evaluation. At zero effective correction, partial tying is functionally identical to tied. Untied input and output matrices start from the same initialized values, while the Transformer, optimizer, schedule, seed, tokenizer, data exposure, and validation windows remain shared across variants.
+Launch fresh cloud runs with the Kaggle tooling:
 
-The default dataset is the pinned WikiText-2-raw-v1 corpus tokenized with GPT-2 BPE. Tiny Shakespeare is also available with a pinned source commit and deterministic, disjoint 90/5/5 character splits. Every run records dataset source metadata and hashes, configuration, package versions, git commit, parameter counts, throughput, memory, approximate FLOPs, losses, and embedding-gradient measurements.
+```bash
+python3 kaggle/orchestrate.py --profiles long --seeds 1337 2027 31415 \
+  --commit 56f6360ad93eadff2c6ad1406a4805264549747f
+python3 kaggle/orchestrate.py --profiles rank --seeds 1337 2027 31415 \
+  --commit e8aa5e87b07810596940df5f66b5c92c7d825569
+python3 kaggle/orchestrate.py --profiles small_scale second_dataset \
+  --seeds 1337 2027 31415 --commit 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
+python3 kaggle/orchestrate.py \
+  --profiles mechanism_stop_input mechanism_stop_output \
+  --seeds 1337 2027 31415 --commit 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
+```
 
-## Measurements
+These commands submit Kaggle kernels and collect compact artifacts; they never train on the local machine. Validate every collected study before analysis:
 
-The training metrics include:
+```bash
+python3 validate_study.py --runs_dir cloud_artifacts/long_seed1337_exact56f
+python3 aggregate_results.py \
+  --studies cloud_artifacts/long_seed1337_exact56f \
+            cloud_artifacts/long_seed2027 \
+            cloud_artifacts/long_seed31415 \
+  --output_dir results/long_50k
+```
 
-- train and validation loss/perplexity;
-- total, Transformer, shared, correction, and embedding parameter counts;
-- training speed, wall time, peak allocated GPU memory, and approximate FLOPs;
-- input-side and output-side effective embedding-matrix gradient norms, cosine alignment, and their ratio;
-- token-class gradient means for whitespace, punctuation, common, rare, and other tokens;
-- partial-correction norms, relative norms, effective ranks, top singular values, and alignment with the shared matrix;
-- controlled ablations that stop input or output gradients for selected step intervals.
+Regenerate the release tables and arXiv bundle locally from checked-in aggregates:
 
-`validate_study.py` is a hard comparison gate. It requires the complete seed-by-variant matrix, matching configurations and pinned dataset metadata, finite metrics, an observed validation record at exactly the declared final step, and exactly equal token exposure. `analyze.py` produces loss, parameter-efficiency, FLOP, gradient, update, token-class, and correction plots plus paired seed-level summaries.
+```bash
+python3 paper/generate_figures.py --output-dir results/long_50k/figures
+python3 paper/generate_tables.py \
+  --primary results/long_50k/primary_aggregate.json \
+  --rank results/rank_sweep/rank_aggregate.json \
+  --mechanism results/long_50k/mechanism/mechanism_aggregate.json \
+  --secondary results/secondary/secondary_aggregate.json \
+  --output-dir paper/generated
+python3 paper/package_arxiv.py --output-dir arxiv
+cd arxiv && tectonic --keep-logs main.tex
+```
 
-The gradient decomposition evaluates two counterfactual losses: one detaches the output weights to measure pressure arriving through the input path, and the other detaches the hidden states to measure direct output-prediction pressure. The role-level norms and cosine are computed in effective vocabulary-by-width matrix space, so they do not depend on arbitrary low-rank factor rotations. The `shared_*` fields isolate the two pressures on the shared matrix. The normal training path remains factorized; full correction matrices are used only for analysis.
+For a small instrumentation-only check, use the command in [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md). It is intentionally too short to support a scientific claim. Detailed protocol, data pinning, fairness requirements, and artifact handling are documented in [`EXPERIMENT_PROTOCOL.md`](EXPERIMENT_PROTOCOL.md), [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md), and [`kaggle/README.md`](kaggle/README.md).
 
-## Current evidence
+## Repository map
 
-The first frozen primary study used WikiText-2-raw-v1, GPT-2 BPE, the 6-layer/384-width Transformer, six conditions, and seeds 1337, 2027, and 31415 for 10,000 steps. The fairness validator passed for every seed. Mean final validation loss was 5.3741 for tied, 5.3774 for rank-8 partial, and 5.4388 for untied; partial added 810,256 parameters over tied, while untied added 19,298,688. In this preliminary horizon, untied was worse than tied, so no recovery fraction is reported. The partial-versus-tied paired difference was uncertain across the three seeds. These values are a reproducible pilot endpoint, not a claim that partial tying works; fresh 50k runs and robustness studies are in progress. The machine-readable aggregate is [results/primary/primary_aggregate.json](results/primary/primary_aggregate.json).
-
-The tracked 30M-class pilot used one seed and five optimizer steps against the pre-cleanup dataset source. It verifies that the three variants train, produce finite metrics, expose equal token counts, and generate the analysis artifacts. It is explicitly an instrumentation check and is documented in [docs/initial-mechanism-smoke.md](docs/initial-mechanism-smoke.md); it is not evidence that partial tying improves language modeling or is comparable with the pinned raw-source study.
-
-A provisional manuscript draft is in [`paper/main.tex`](paper/main.tex), with generated tables and references under [`paper/`](paper/). It is intentionally labeled preliminary and will be regenerated from the final cloud aggregates.
-
-Substantive final validation still requires longer equal-token runs, multi-seed rank comparisons, intervention studies, and tests at additional sizes and datasets. See [RESEARCH_PLAN.md](RESEARCH_PLAN.md).
+- [`model.py`](model.py) — decoder-only Transformer and tied/untied/partial embedding implementations.
+- [`train.py`](train.py), [`sweep.py`](sweep.py) — single-run training and matched study orchestration.
+- [`validate_study.py`](validate_study.py), [`aggregate_results.py`](aggregate_results.py) — fairness gate and loss/parameter aggregation.
+- [`mechanism_eval.py`](mechanism_eval.py), [`aggregate_mechanism.py`](aggregate_mechanism.py), [`aggregate_interventions.py`](aggregate_interventions.py) — effective gradient, correction, token-class, and intervention diagnostics.
+- [`embedding_eval.py`](embedding_eval.py), [`aggregate_embedding_eval.py`](aggregate_embedding_eval.py) — frequency-matched neighbors, lexical probes, and frozen input/output evaluations.
+- [`analyze.py`](analyze.py), [`aggregate_rank.py`](aggregate_rank.py), [`aggregate_secondary.py`](aggregate_secondary.py) — paired statistics, rank fronts, robustness summaries, and plots.
+- [`paper/`](paper/) — manuscript source and machine-generated tables.
+- [`arxiv/`](arxiv/) — independently compilable source bundle.
+- [`docs/`](docs/) — protocol and historical exploratory records.
 
 ## Related work
 
-Weight tying was introduced as a practical and theoretical parameter-sharing method for language models by Press and Wolf and by Inan, Khosravi, and Socher. Press and Wolf also compared the input and output roles and reported that the tied matrix evolves more like the output embedding in their settings: [Press & Wolf, EACL 2017](https://aclanthology.org/E17-2025/) and [Inan et al., ICLR 2017](https://arxiv.org/abs/1611.01462).
+Weight tying was introduced and analyzed by [Press and Wolf (2017)](https://aclanthology.org/E17-2025/) and [Inan, Khosravi, and Socher (2017)](https://arxiv.org/abs/1611.01462). Studies of input/output representation differences and decoupling include [Gulordava, Aina, and Boleda (2018)](https://aclanthology.org/D18-1323/), [Derby, Miller, and Devereux (2020)](https://aclanthology.org/2020.conll-1.36/), and [Chung et al. (2021)](https://openreview.net/forum?id=xpFFI_NtgpW). [Bertolotti and Cazzola (2024)](https://proceedings.mlr.press/v235/bertolotti24a.html) analyze distributional assumptions behind tying. Low-rank updates follow the computational pattern of [LoRA](https://arxiv.org/abs/2106.09685), while adaptive input representations provide a related but different vocabulary-factorization approach ([Baevski and Auli, 2019](https://openreview.net/forum?id=ByxZX20qFQ)).
 
-Several papers study ways to relax or reinterpret the equality constraint. Gulordava, Aina, and Boleda decouple the hidden state from word-embedding prediction while retaining a compact architecture: [EMNLP 2018](https://aclanthology.org/D18-1323/). Pappas, Miculicich, and Henderson propose a structure-aware output layer that generalizes hard tying in neural machine translation: [WMT 2018](https://aclanthology.org/W18-6308/). Chung et al. study decoupled input and output embedding dimensions and show that extra output capacity can matter for pretrained representations: [ICLR 2021](https://openreview.net/forum?id=xpFFI_NtgpW). Derby, Miller, and Devereux analyze differences between input and output representations in neural language models: [CoNLL 2020](https://aclanthology.org/2020.conll-1.36/).
+Recent work has also examined output-space bias and alternatives to hard tying, including [Lopardo et al. (2026)](https://aclanthology.org/2026.findings-acl.2027/), [Batley and Saha (2026)](https://arxiv.org/abs/2601.22040), and [Gu et al. (2026)](https://arxiv.org/abs/2602.04556). This project makes a narrower distinction: rather than choosing between fully tied and fully untied embeddings, it tests whether a large shared base plus small role-specific low-rank residuals can recover flexibility at lower parameter cost. It does not claim architectural novelty beyond that controlled comparison.
 
-Adaptive input representations use variable-capacity factorization for vocabulary efficiency and can be paired with an adaptive softmax: [Baevski and Auli, ICLR 2019](https://openreview.net/forum?id=ByxZX20qFQ). That is related parameterization work, but it does not test role-specific residuals on a shared full-width base.
+## Limitations
 
-More recent work makes the role distinction especially relevant. Bertolotti and Cazzola connect tying to the distributional hypothesis and distinguish semantic input structure from contextual output structure: [ICML 2024](https://proceedings.mlr.press/v235/bertolotti24a.html). Lopardo et al. report evidence that tied embeddings can be biased toward the output space and link that bias to output-gradient dominance: [Findings of ACL 2026](https://aclanthology.org/2026.findings-acl.2027/). Other recent alternatives take different routes, including a compact learned input representation with an untied output head in [Leviathan (Batley & Saha, 2026)](https://arxiv.org/abs/2601.22040) and a pseudo-inverse-consistent shared interface in [Pseudo-Inverse Tying (Gu et al., 2026)](https://arxiv.org/abs/2602.04556).
-
-This project is related to those efforts but does not claim a new general solution from its current pilots. Its specific controlled comparison is a shared vocabulary-sized base with separate low-rank residuals for the input and output paths, evaluated against tied and fully untied models with the same Transformer and training exposure.
-
-## Limitations and roadmap
-
-The current evidence is still small: it uses GPT-2 BPE, WikiText-2, one 10k endpoint, one primary adapter family, and limited representation probes. The FLOP numbers are estimates based on dense-matmul conventions and factorized projection costs, not hardware-independent measurements. A positive result would require replication across training lengths, model sizes, datasets, and evaluation types. A null result is also useful because it would bound the value of role-specific corrections.
-
-The roadmap covers baseline scaling, adapter-budget comparisons, mechanism checks, input-representation evaluation, robustness, and reproducible release artifacts. It is maintained in [RESEARCH_PLAN.md](RESEARCH_PLAN.md), with detailed phase notes under [`docs/`](docs/).
+The main study uses one tokenizer, one WikiText-2 configuration, and three seeds. The rank sweep is a matched 10k study rather than a 50k sweep. The robustness checks use a smaller model and Tiny Shakespeare, not a large corpus or modern large-language-model scale. FLOP counts are estimates based on declared dense and factorized operations. Representation probes are frozen token-level diagnostics, not downstream task evaluations. The results support a narrow negative/mechanistic conclusion and should not be generalized beyond the tested regime.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE). Citation metadata is in [`CITATION.cff`](CITATION.cff).

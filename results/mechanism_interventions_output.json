@@ -1,0 +1,107 @@
+{
+  "studies": {
+    "stop_output": {
+      "metadata": {
+        "ablation_end": 5000,
+        "ablation_start": 0,
+        "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+        "path_ablation": "stop_output",
+        "seeds": [
+          1337,
+          2027,
+          31415
+        ]
+      },
+      "paired_comparisons": {
+        "partial_minus_tied_best_val_loss": {
+          "ci95": {
+            "high": 0.010113883018493475,
+            "low": -0.014744806289672674
+          },
+          "deltas": [
+            -0.013912844657897772,
+            0.010113883018493475,
+            -0.014744806289672674
+          ],
+          "mean_delta": -0.00618125597635899,
+          "metric": "best_val_loss",
+          "seeds": [
+            1337,
+            2027,
+            31415
+          ],
+          "std_delta": 0.014118133948413913
+        },
+        "partial_minus_tied_final_val_loss": {
+          "ci95": {
+            "high": 0.010113883018493475,
+            "low": -0.014744806289672674
+          },
+          "deltas": [
+            -0.013912844657897772,
+            0.010113883018493475,
+            -0.014744806289672674
+          ],
+          "mean_delta": -0.00618125597635899,
+          "metric": "final_val_loss",
+          "seeds": [
+            1337,
+            2027,
+            31415
+          ],
+          "std_delta": 0.014118133948413913
+        }
+      },
+      "runs": [
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.534007811546326,
+          "condition": "partial",
+          "final_step": 9999,
+          "final_val_loss": 5.534007811546326,
+          "seed": 1337
+        },
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.547920656204224,
+          "condition": "tied",
+          "final_step": 9999,
+          "final_val_loss": 5.547920656204224,
+          "seed": 1337
+        },
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.598547172546387,
+          "condition": "partial",
+          "final_step": 9999,
+          "final_val_loss": 5.598547172546387,
+          "seed": 2027
+        },
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.588433289527893,
+          "condition": "tied",
+          "final_step": 9999,
+          "final_val_loss": 5.588433289527893,
+          "seed": 2027
+        },
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.55749363899231,
+          "condition": "partial",
+          "final_step": 9999,
+          "final_val_loss": 5.55749363899231,
+          "seed": 31415
+        },
+        {
+          "best_step": 9999,
+          "best_val_loss": 5.572238445281982,
+          "condition": "tied",
+          "final_step": 9999,
+          "final_val_loss": 5.572238445281982,
+          "seed": 31415
+        }
+      ]
+    }
+  }
+}

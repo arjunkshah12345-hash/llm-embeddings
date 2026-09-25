@@ -1,0 +1,1112 @@
+{
+  "by_condition": {
+    "capacity_control": {
+      "additional_parameters_vs_tied": 808448,
+      "ci95_best_val_loss": {
+        "high": 5.508283376693726,
+        "low": 5.47983341217041
+      },
+      "ci95_best_val_perplexity": {
+        "high": 246.72722562637017,
+        "low": 239.80675515970822
+      },
+      "ci95_estimated_flops_non_embedding": {
+        "high": 123627110400000.0,
+        "low": 123627110400000.0
+      },
+      "ci95_estimated_flops_total": {
+        "high": 518864240640000.0,
+        "low": 518864240640000.0
+      },
+      "ci95_final_val_loss": {
+        "high": 5.508283376693726,
+        "low": 5.47983341217041
+      },
+      "ci95_final_val_perplexity": {
+        "high": 246.72722562637017,
+        "low": 239.80675515970822
+      },
+      "ci95_peak_gpu_memory_mb": {
+        "high": 1415.041015625,
+        "low": 1415.041015625
+      },
+      "ci95_tokens_per_second": {
+        "high": 18104.712892653766,
+        "low": 16561.072524886513
+      },
+      "ci95_training_tokens": {
+        "high": 5120000.0,
+        "low": 5120000.0
+      },
+      "ci95_training_wall_time_seconds": {
+        "high": 309.15872098900104,
+        "low": 282.7992926680163
+      },
+      "embedding_parameters": 12865792,
+      "mean_best_val_loss": 5.494046306610107,
+      "mean_best_val_perplexity": 243.25584668329756,
+      "mean_estimated_flops_non_embedding": 123627110400000.0,
+      "mean_estimated_flops_total": 518864240640000.0,
+      "mean_final_val_loss": 5.494046306610107,
+      "mean_final_val_perplexity": 243.25584668329756,
+      "mean_peak_gpu_memory_mb": 1415.041015625,
+      "mean_tokens_per_second": 17384.74985119244,
+      "mean_training_tokens": 5120000.0,
+      "mean_training_wall_time_seconds": 294.90747675201686,
+      "run_count": 3,
+      "seed_values": [
+        {
+          "best_val_loss": 5.47983341217041,
+          "best_val_perplexity": 239.80675515970822,
+          "best_val_step": 9999,
+          "embedding_parameters": 12865792,
+          "embedding_type": "capacity_control",
+          "estimated_flops_non_embedding": 123627110400000.0,
+          "estimated_flops_total": 518864240640000.0,
+          "final_val_loss": 5.47983341217041,
+          "final_val_perplexity": 239.80675515970822,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1415.041015625,
+          "run_name": "seed1337_capacity_control",
+          "seed": 1337,
+          "study_dir": "cloud_artifacts/small_scale_seed1337",
+          "tokens_per_second": 17488.46413603704,
+          "total_parameters": 16890112,
+          "trainable_parameters": 16890112,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 292.7644165990332,
+          "transformer_parameters": 4024320
+        },
+        {
+          "best_val_loss": 5.508283376693726,
+          "best_val_perplexity": 246.72722562637017,
+          "best_val_step": 9999,
+          "embedding_parameters": 12865792,
+          "embedding_type": "capacity_control",
+          "estimated_flops_non_embedding": 123627110400000.0,
+          "estimated_flops_total": 518864240640000.0,
+          "final_val_loss": 5.508283376693726,
+          "final_val_perplexity": 246.72722562637017,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1415.041015625,
+          "run_name": "seed2027_capacity_control",
+          "seed": 2027,
+          "study_dir": "cloud_artifacts/small_scale_seed2027",
+          "tokens_per_second": 16561.072524886513,
+          "total_parameters": 16890112,
+          "trainable_parameters": 16890112,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 309.15872098900104,
+          "transformer_parameters": 4024320
+        },
+        {
+          "best_val_loss": 5.4940221309661865,
+          "best_val_perplexity": 243.2335592638143,
+          "best_val_step": 9999,
+          "embedding_parameters": 12865792,
+          "embedding_type": "capacity_control",
+          "estimated_flops_non_embedding": 123627110400000.0,
+          "estimated_flops_total": 518864240640000.0,
+          "final_val_loss": 5.4940221309661865,
+          "final_val_perplexity": 243.2335592638143,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1415.041015625,
+          "run_name": "seed31415_capacity_control",
+          "seed": 31415,
+          "study_dir": "cloud_artifacts/small_scale_seed31415",
+          "tokens_per_second": 18104.712892653766,
+          "total_parameters": 16890112,
+          "trainable_parameters": 16890112,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 282.7992926680163,
+          "transformer_parameters": 4024320
+        }
+      ],
+      "std_best_val_loss": 0.01422499766927216,
+      "std_best_val_perplexity": 3.4602890654951786,
+      "std_estimated_flops_non_embedding": 0.0,
+      "std_estimated_flops_total": 0.0,
+      "std_final_val_loss": 0.01422499766927216,
+      "std_final_val_perplexity": 3.4602890654951786,
+      "std_peak_gpu_memory_mb": 0.0,
+      "std_tokens_per_second": 777.0288835756207,
+      "std_training_tokens": 0.0,
+      "std_training_wall_time_seconds": 13.309748136864313,
+      "total_parameters": 16890112
+    },
+    "partial": {
+      "additional_parameters_vs_tied": 808208,
+      "ci95_best_val_loss": {
+        "high": 5.52280900478363,
+        "low": 5.487345004081726
+      },
+      "ci95_best_val_perplexity": {
+        "high": 250.33724899975417,
+        "low": 241.61486804335996
+      },
+      "ci95_estimated_flops_non_embedding": {
+        "high": 98791587840000.0,
+        "low": 98791587840000.0
+      },
+      "ci95_estimated_flops_total": {
+        "high": 506505707520000.0,
+        "low": 506505707520000.0
+      },
+      "ci95_final_val_loss": {
+        "high": 5.5257833242416385,
+        "low": 5.487345004081726
+      },
+      "ci95_final_val_perplexity": {
+        "high": 251.08294036294953,
+        "low": 241.61486804335996
+      },
+      "ci95_peak_gpu_memory_mb": {
+        "high": 1496.0693359375,
+        "low": 1496.0693359375
+      },
+      "ci95_tokens_per_second": {
+        "high": 15422.5250796816,
+        "low": 14347.223631169465
+      },
+      "ci95_training_tokens": {
+        "high": 5120000.0,
+        "low": 5120000.0
+      },
+      "ci95_training_wall_time_seconds": {
+        "high": 356.86346931100707,
+        "low": 331.98195325001234
+      },
+      "embedding_parameters": 13674000,
+      "mean_best_val_loss": 5.500641910235087,
+      "mean_best_val_perplexity": 244.8796389108198,
+      "mean_estimated_flops_non_embedding": 98791587840000.0,
+      "mean_estimated_flops_total": 506505707520000.0,
+      "mean_final_val_loss": 5.501633350054424,
+      "mean_final_val_perplexity": 245.1282026985516,
+      "mean_peak_gpu_memory_mb": 1496.0693359375,
+      "mean_tokens_per_second": 14941.341739873938,
+      "mean_training_tokens": 5120000.0,
+      "mean_training_wall_time_seconds": 342.98270559000224,
+      "run_count": 3,
+      "seed_values": [
+        {
+          "best_val_loss": 5.487345004081726,
+          "best_val_perplexity": 241.61486804335996,
+          "best_val_step": 9999,
+          "embedding_parameters": 13674000,
+          "embedding_type": "partial",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 506505707520000.0,
+          "final_val_loss": 5.487345004081726,
+          "final_val_perplexity": 241.61486804335996,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1496.0693359375,
+          "run_name": "seed1337_partial",
+          "seed": 1337,
+          "study_dir": "cloud_artifacts/small_scale_seed1337",
+          "tokens_per_second": 15054.276508770748,
+          "total_parameters": 16889872,
+          "trainable_parameters": 16889872,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 340.1026942089874,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.52280900478363,
+          "best_val_perplexity": 250.33724899975417,
+          "best_val_step": 9600,
+          "embedding_parameters": 13674000,
+          "embedding_type": "partial",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 506505707520000.0,
+          "final_val_loss": 5.5257833242416385,
+          "final_val_perplexity": 251.08294036294953,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1496.0693359375,
+          "run_name": "seed2027_partial",
+          "seed": 2027,
+          "study_dir": "cloud_artifacts/small_scale_seed2027",
+          "tokens_per_second": 14347.223631169465,
+          "total_parameters": 16889872,
+          "trainable_parameters": 16889872,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 356.86346931100707,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.491771721839905,
+          "best_val_perplexity": 242.6867996893453,
+          "best_val_step": 9999,
+          "embedding_parameters": 13674000,
+          "embedding_type": "partial",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 506505707520000.0,
+          "final_val_loss": 5.491771721839905,
+          "final_val_perplexity": 242.6867996893453,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1496.0693359375,
+          "run_name": "seed31415_partial",
+          "seed": 31415,
+          "study_dir": "cloud_artifacts/small_scale_seed31415",
+          "tokens_per_second": 15422.5250796816,
+          "total_parameters": 16889872,
+          "trainable_parameters": 16889872,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 331.98195325001234,
+          "transformer_parameters": 3215872
+        }
+      ],
+      "std_best_val_loss": 0.019324440951051375,
+      "std_best_val_perplexity": 4.756720537885822,
+      "std_estimated_flops_non_embedding": 0.0,
+      "std_estimated_flops_total": 0.0,
+      "std_final_val_loss": 0.021031283780597248,
+      "std_final_val_perplexity": 5.184730933449269,
+      "std_peak_gpu_memory_mb": 0.0,
+      "std_tokens_per_second": 546.4741510926257,
+      "std_training_tokens": 0.0,
+      "std_training_wall_time_seconds": 12.688313896632053,
+      "total_parameters": 16889872
+    },
+    "tied": {
+      "additional_parameters_vs_tied": 0,
+      "ci95_best_val_loss": {
+        "high": 5.517492485046387,
+        "low": 5.48917281627655
+      },
+      "ci95_best_val_perplexity": {
+        "high": 249.00985775196406,
+        "low": 242.05689849688224
+      },
+      "ci95_estimated_flops_non_embedding": {
+        "high": 98791587840000.0,
+        "low": 98791587840000.0
+      },
+      "ci95_estimated_flops_total": {
+        "high": 494028718080000.0,
+        "low": 494028718080000.0
+      },
+      "ci95_final_val_loss": {
+        "high": 5.519682121276856,
+        "low": 5.48917281627655
+      },
+      "ci95_final_val_perplexity": {
+        "high": 249.5556961339047,
+        "low": 242.05689849688224
+      },
+      "ci95_peak_gpu_memory_mb": {
+        "high": 1384.6591796875,
+        "low": 1384.6591796875
+      },
+      "ci95_tokens_per_second": {
+        "high": 19025.969305060265,
+        "low": 18140.513830523425
+      },
+      "ci95_training_tokens": {
+        "high": 5120000.0,
+        "low": 5120000.0
+      },
+      "ci95_training_wall_time_seconds": {
+        "high": 282.24117838299776,
+        "low": 269.1058688210042
+      },
+      "embedding_parameters": 12865792,
+      "mean_best_val_loss": 5.500370208422343,
+      "mean_best_val_perplexity": 244.8010906768777,
+      "mean_estimated_flops_non_embedding": 98791587840000.0,
+      "mean_estimated_flops_total": 494028718080000.0,
+      "mean_final_val_loss": 5.501100087165833,
+      "mean_final_val_perplexity": 244.98303680419124,
+      "mean_peak_gpu_memory_mb": 1384.6591796875,
+      "mean_tokens_per_second": 18553.343164947677,
+      "mean_training_tokens": 5120000.0,
+      "mean_training_wall_time_seconds": 276.06679432866713,
+      "run_count": 3,
+      "seed_values": [
+        {
+          "best_val_loss": 5.494445323944092,
+          "best_val_perplexity": 243.3365157817868,
+          "best_val_step": 9999,
+          "embedding_parameters": 12865792,
+          "embedding_type": "tied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.494445323944092,
+          "final_val_perplexity": 243.3365157817868,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1384.6591796875,
+          "run_name": "seed1337_tied",
+          "seed": 1337,
+          "study_dir": "cloud_artifacts/small_scale_seed1337",
+          "tokens_per_second": 18493.546359259344,
+          "total_parameters": 16081664,
+          "trainable_parameters": 16081664,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 276.8533357819994,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.517492485046387,
+          "best_val_perplexity": 249.00985775196406,
+          "best_val_step": 9800,
+          "embedding_parameters": 12865792,
+          "embedding_type": "tied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.519682121276856,
+          "final_val_perplexity": 249.5556961339047,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1384.6591796875,
+          "run_name": "seed2027_tied",
+          "seed": 2027,
+          "study_dir": "cloud_artifacts/small_scale_seed2027",
+          "tokens_per_second": 18140.513830523425,
+          "total_parameters": 16081664,
+          "trainable_parameters": 16081664,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 282.24117838299776,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.48917281627655,
+          "best_val_perplexity": 242.05689849688224,
+          "best_val_step": 9999,
+          "embedding_parameters": 12865792,
+          "embedding_type": "tied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.48917281627655,
+          "final_val_perplexity": 242.05689849688224,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1384.6591796875,
+          "run_name": "seed31415_tied",
+          "seed": 31415,
+          "study_dir": "cloud_artifacts/small_scale_seed31415",
+          "tokens_per_second": 19025.969305060265,
+          "total_parameters": 16081664,
+          "trainable_parameters": 16081664,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 269.1058688210042,
+          "transformer_parameters": 3215872
+        }
+      ],
+      "std_best_val_loss": 0.015060846651791563,
+      "std_best_val_perplexity": 3.7006276924604133,
+      "std_estimated_flops_non_embedding": 0.0,
+      "std_estimated_flops_total": 0.0,
+      "std_final_val_loss": 0.016307017754742578,
+      "std_final_val_perplexity": 4.011391916550687,
+      "std_peak_gpu_memory_mb": 0.0,
+      "std_tokens_per_second": 445.7461080309189,
+      "std_training_tokens": 0.0,
+      "std_training_wall_time_seconds": 6.6028838332737125,
+      "total_parameters": 16081664
+    },
+    "untied": {
+      "additional_parameters_vs_tied": 12865792,
+      "ci95_best_val_loss": {
+        "high": 5.548730969429016,
+        "low": 5.4849624872207645
+      },
+      "ci95_best_val_perplexity": {
+        "high": 256.91132062837715,
+        "low": 241.03990175180718
+      },
+      "ci95_estimated_flops_non_embedding": {
+        "high": 98791587840000.0,
+        "low": 98791587840000.0
+      },
+      "ci95_estimated_flops_total": {
+        "high": 494028718080000.0,
+        "low": 494028718080000.0
+      },
+      "ci95_final_val_loss": {
+        "high": 5.548730969429016,
+        "low": 5.4849624872207645
+      },
+      "ci95_final_val_perplexity": {
+        "high": 256.91132062837715,
+        "low": 241.03990175180718
+      },
+      "ci95_peak_gpu_memory_mb": {
+        "high": 1584.5009765625,
+        "low": 1584.5009765625
+      },
+      "ci95_tokens_per_second": {
+        "high": 16409.038915159934,
+        "low": 15763.025041512297
+      },
+      "ci95_training_tokens": {
+        "high": 5120000.0,
+        "low": 5120000.0
+      },
+      "ci95_training_wall_time_seconds": {
+        "high": 324.81075088800276,
+        "low": 312.02314934299716
+      },
+      "embedding_parameters": 25731584,
+      "mean_best_val_loss": 5.521980865796407,
+      "mean_best_val_perplexity": 250.22095959215702,
+      "mean_estimated_flops_non_embedding": 98791587840000.0,
+      "mean_estimated_flops_total": 494028718080000.0,
+      "mean_final_val_loss": 5.521980865796407,
+      "mean_final_val_perplexity": 250.22095959215702,
+      "mean_peak_gpu_memory_mb": 1584.5009765625,
+      "mean_tokens_per_second": 16172.345224096927,
+      "mean_training_tokens": 5120000.0,
+      "mean_training_wall_time_seconds": 316.6933610533337,
+      "run_count": 3,
+      "seed_values": [
+        {
+          "best_val_loss": 5.4849624872207645,
+          "best_val_perplexity": 241.03990175180718,
+          "best_val_step": 9999,
+          "embedding_parameters": 25731584,
+          "embedding_type": "untied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.4849624872207645,
+          "final_val_perplexity": 241.03990175180718,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1584.5009765625,
+          "run_name": "seed1337_untied",
+          "seed": 1337,
+          "study_dir": "cloud_artifacts/small_scale_seed1337",
+          "tokens_per_second": 16344.971715618549,
+          "total_parameters": 28947456,
+          "trainable_parameters": 28947456,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 313.2461829290013,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.532249140739441,
+          "best_val_perplexity": 252.71165639628674,
+          "best_val_step": 9999,
+          "embedding_parameters": 25731584,
+          "embedding_type": "untied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.532249140739441,
+          "final_val_perplexity": 252.71165639628674,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1584.5009765625,
+          "run_name": "seed2027_untied",
+          "seed": 2027,
+          "study_dir": "cloud_artifacts/small_scale_seed2027",
+          "tokens_per_second": 15763.025041512297,
+          "total_parameters": 28947456,
+          "trainable_parameters": 28947456,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 324.81075088800276,
+          "transformer_parameters": 3215872
+        },
+        {
+          "best_val_loss": 5.548730969429016,
+          "best_val_perplexity": 256.91132062837715,
+          "best_val_step": 9999,
+          "embedding_parameters": 25731584,
+          "embedding_type": "untied",
+          "estimated_flops_non_embedding": 98791587840000.0,
+          "estimated_flops_total": 494028718080000.0,
+          "final_val_loss": 5.548730969429016,
+          "final_val_perplexity": 256.91132062837715,
+          "final_val_step": 9999,
+          "peak_gpu_memory_mb": 1584.5009765625,
+          "run_name": "seed31415_untied",
+          "seed": 31415,
+          "study_dir": "cloud_artifacts/small_scale_seed31415",
+          "tokens_per_second": 16409.038915159934,
+          "total_parameters": 28947456,
+          "trainable_parameters": 28947456,
+          "training_tokens": 5120000,
+          "training_wall_time_seconds": 312.02314934299716,
+          "transformer_parameters": 3215872
+        }
+      ],
+      "std_best_val_loss": 0.03310110169639863,
+      "std_best_val_perplexity": 8.223634367872998,
+      "std_estimated_flops_non_embedding": 0.0,
+      "std_estimated_flops_total": 0.0,
+      "std_final_val_loss": 0.03310110169639863,
+      "std_final_val_perplexity": 8.223634367872998,
+      "std_peak_gpu_memory_mb": 0.0,
+      "std_tokens_per_second": 355.92613056307715,
+      "std_training_tokens": 0.0,
+      "std_training_wall_time_seconds": 7.056413117449581,
+      "total_parameters": 28947456
+    }
+  },
+  "metadata": {
+    "common": {
+      "ablation_end": 0,
+      "ablation_start": 0,
+      "adapter_alpha": 8.0,
+      "adapter_rank": 8,
+      "batch_size": 2,
+      "block_size": 256,
+      "capacity_control_width": 0,
+      "data_dir": "/kaggle/working/llm-embeddings-data",
+      "dataset": "wikitext2",
+      "device": "cuda",
+      "dropout": 0.0,
+      "eval_batches": 20,
+      "eval_interval": 200,
+      "grad_accum_steps": 1,
+      "grad_clip": 1.0,
+      "learning_rate": 0.0003,
+      "log_interval": 50,
+      "min_learning_rate": 3e-05,
+      "n_embd": 256,
+      "n_head": 4,
+      "n_layer": 4,
+      "path_ablation": "none",
+      "save_interval": 1000,
+      "steps": 10000,
+      "warmup_steps": 100,
+      "weight_decay": 0.1
+    },
+    "conditions": [
+      "tied",
+      "untied",
+      "partial",
+      "capacity_control"
+    ],
+    "git_commit": "77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db",
+    "seeds": [
+      1337,
+      2027,
+      31415
+    ]
+  },
+  "paired_comparisons": {
+    "capacity_control_minus_tied_best_val_loss": {
+      "ci95": {
+        "high": 0.0048493146896362305,
+        "low": -0.014611911773681818
+      },
+      "condition": "capacity_control",
+      "deltas": [
+        -0.014611911773681818,
+        -0.00920910835266131,
+        0.0048493146896362305
+      ],
+      "mean_delta": -0.006323901812235633,
+      "metric": "best_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.010046300137355245
+    },
+    "capacity_control_minus_tied_best_val_perplexity": {
+      "ci95": {
+        "high": 1.1766607669320592,
+        "low": -3.5297606220785838
+      },
+      "condition": "capacity_control",
+      "deltas": [
+        -3.5297606220785838,
+        -2.282632125593892,
+        1.1766607669320592
+      ],
+      "mean_delta": -1.545243993580139,
+      "metric": "best_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 2.438320429242282
+    },
+    "capacity_control_minus_tied_final_val_loss": {
+      "ci95": {
+        "high": 0.0048493146896362305,
+        "low": -0.014611911773681818
+      },
+      "condition": "capacity_control",
+      "deltas": [
+        -0.014611911773681818,
+        -0.01139874458313006,
+        0.0048493146896362305
+      ],
+      "mean_delta": -0.007053780555725216,
+      "metric": "final_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.01043282647050737
+    },
+    "capacity_control_minus_tied_final_val_perplexity": {
+      "ci95": {
+        "high": 1.1766607669320592,
+        "low": -3.5297606220785838
+      },
+      "condition": "capacity_control",
+      "deltas": [
+        -3.5297606220785838,
+        -2.8284705075345187,
+        1.1766607669320592
+      ],
+      "mean_delta": -1.727190120893681,
+      "metric": "final_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 2.539136554073857
+    },
+    "partial_minus_tied_best_val_loss": {
+      "ci95": {
+        "high": 0.0053165197372431194,
+        "low": -0.007100319862365367
+      },
+      "condition": "partial",
+      "deltas": [
+        -0.007100319862365367,
+        0.0053165197372431194,
+        0.0025989055633548475
+      ],
+      "mean_delta": 0.00027170181274419985,
+      "metric": "best_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.006527356615295625
+    },
+    "partial_minus_tied_best_val_perplexity": {
+      "ci95": {
+        "high": 1.3273912477901035,
+        "low": -1.7216477384268387
+      },
+      "condition": "partial",
+      "deltas": [
+        -1.7216477384268387,
+        1.3273912477901035,
+        0.629901192463052
+      ],
+      "mean_delta": 0.0785482339421056,
+      "metric": "best_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 1.5975456952838814
+    },
+    "partial_minus_tied_final_val_loss": {
+      "ci95": {
+        "high": 0.0061012029647828925,
+        "low": -0.007100319862365367
+      },
+      "condition": "partial",
+      "deltas": [
+        -0.007100319862365367,
+        0.0061012029647828925,
+        0.0025989055633548475
+      ],
+      "mean_delta": 0.0005332628885907909,
+      "metric": "final_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.006838874979394195
+    },
+    "partial_minus_tied_final_val_perplexity": {
+      "ci95": {
+        "high": 1.5272442290448396,
+        "low": -1.7216477384268387
+      },
+      "condition": "partial",
+      "deltas": [
+        -1.7216477384268387,
+        1.5272442290448396,
+        0.629901192463052
+      ],
+      "mean_delta": 0.14516589436035096,
+      "metric": "final_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 1.6778113678228355
+    },
+    "untied_minus_tied_best_val_loss": {
+      "ci95": {
+        "high": 0.05955815315246582,
+        "low": -0.009482836723327281
+      },
+      "condition": "untied",
+      "deltas": [
+        -0.009482836723327281,
+        0.014756655693053844,
+        0.05955815315246582
+      ],
+      "mean_delta": 0.02161065737406413,
+      "metric": "best_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.03502709772504439
+    },
+    "untied_minus_tied_best_val_perplexity": {
+      "ci95": {
+        "high": 14.854422131494914,
+        "low": -2.2966140299796223
+      },
+      "condition": "untied",
+      "deltas": [
+        -2.2966140299796223,
+        3.701798644322679,
+        14.854422131494914
+      ],
+      "mean_delta": 5.419868915279324,
+      "metric": "best_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 8.70363914951732
+    },
+    "untied_minus_tied_final_val_loss": {
+      "ci95": {
+        "high": 0.05955815315246582,
+        "low": -0.009482836723327281
+      },
+      "condition": "untied",
+      "deltas": [
+        -0.009482836723327281,
+        0.012567019462585094,
+        0.05955815315246582
+      ],
+      "mean_delta": 0.020880778630574543,
+      "metric": "final_val_loss",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 0.03526334519561124
+    },
+    "untied_minus_tied_final_val_perplexity": {
+      "ci95": {
+        "high": 14.854422131494914,
+        "low": -2.2966140299796223
+      },
+      "condition": "untied",
+      "deltas": [
+        -2.2966140299796223,
+        3.1559602623820524,
+        14.854422131494914
+      ],
+      "mean_delta": 5.237922787965782,
+      "metric": "final_val_perplexity",
+      "seeds": [
+        1337,
+        2027,
+        31415
+      ],
+      "std_delta": 8.763015252839804
+    }
+  },
+  "research_question": {
+    "best_val_loss": {
+      "partial": 5.500641910235087,
+      "partial_improvement_over_tied": -0.0002717018127444959,
+      "partial_to_untied_gap": -0.021338955561319928,
+      "recovered_fraction": null,
+      "recovery_status": "statistically_uncertain_or_zero_denominator",
+      "tied": 5.500370208422343,
+      "untied": 5.521980865796407,
+      "untied_improvement_over_tied": -0.021610657374064424
+    },
+    "final_val_loss": {
+      "partial": 5.501633350054424,
+      "partial_improvement_over_tied": -0.0005332628885907909,
+      "partial_to_untied_gap": -0.020347515741983457,
+      "recovered_fraction": null,
+      "recovery_status": "statistically_uncertain_or_zero_denominator",
+      "tied": 5.501100087165833,
+      "untied": 5.521980865796407,
+      "untied_improvement_over_tied": -0.020880778630574248
+    }
+  },
+  "runs": [
+    {
+      "best_val_loss": 5.47983341217041,
+      "best_val_perplexity": 239.80675515970822,
+      "best_val_step": 9999,
+      "embedding_parameters": 12865792,
+      "embedding_type": "capacity_control",
+      "estimated_flops_non_embedding": 123627110400000.0,
+      "estimated_flops_total": 518864240640000.0,
+      "final_val_loss": 5.47983341217041,
+      "final_val_perplexity": 239.80675515970822,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1415.041015625,
+      "run_name": "seed1337_capacity_control",
+      "seed": 1337,
+      "study_dir": "cloud_artifacts/small_scale_seed1337",
+      "tokens_per_second": 17488.46413603704,
+      "total_parameters": 16890112,
+      "trainable_parameters": 16890112,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 292.7644165990332,
+      "transformer_parameters": 4024320
+    },
+    {
+      "best_val_loss": 5.487345004081726,
+      "best_val_perplexity": 241.61486804335996,
+      "best_val_step": 9999,
+      "embedding_parameters": 13674000,
+      "embedding_type": "partial",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 506505707520000.0,
+      "final_val_loss": 5.487345004081726,
+      "final_val_perplexity": 241.61486804335996,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1496.0693359375,
+      "run_name": "seed1337_partial",
+      "seed": 1337,
+      "study_dir": "cloud_artifacts/small_scale_seed1337",
+      "tokens_per_second": 15054.276508770748,
+      "total_parameters": 16889872,
+      "trainable_parameters": 16889872,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 340.1026942089874,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.494445323944092,
+      "best_val_perplexity": 243.3365157817868,
+      "best_val_step": 9999,
+      "embedding_parameters": 12865792,
+      "embedding_type": "tied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.494445323944092,
+      "final_val_perplexity": 243.3365157817868,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1384.6591796875,
+      "run_name": "seed1337_tied",
+      "seed": 1337,
+      "study_dir": "cloud_artifacts/small_scale_seed1337",
+      "tokens_per_second": 18493.546359259344,
+      "total_parameters": 16081664,
+      "trainable_parameters": 16081664,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 276.8533357819994,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.4849624872207645,
+      "best_val_perplexity": 241.03990175180718,
+      "best_val_step": 9999,
+      "embedding_parameters": 25731584,
+      "embedding_type": "untied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.4849624872207645,
+      "final_val_perplexity": 241.03990175180718,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1584.5009765625,
+      "run_name": "seed1337_untied",
+      "seed": 1337,
+      "study_dir": "cloud_artifacts/small_scale_seed1337",
+      "tokens_per_second": 16344.971715618549,
+      "total_parameters": 28947456,
+      "trainable_parameters": 28947456,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 313.2461829290013,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.508283376693726,
+      "best_val_perplexity": 246.72722562637017,
+      "best_val_step": 9999,
+      "embedding_parameters": 12865792,
+      "embedding_type": "capacity_control",
+      "estimated_flops_non_embedding": 123627110400000.0,
+      "estimated_flops_total": 518864240640000.0,
+      "final_val_loss": 5.508283376693726,
+      "final_val_perplexity": 246.72722562637017,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1415.041015625,
+      "run_name": "seed2027_capacity_control",
+      "seed": 2027,
+      "study_dir": "cloud_artifacts/small_scale_seed2027",
+      "tokens_per_second": 16561.072524886513,
+      "total_parameters": 16890112,
+      "trainable_parameters": 16890112,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 309.15872098900104,
+      "transformer_parameters": 4024320
+    },
+    {
+      "best_val_loss": 5.52280900478363,
+      "best_val_perplexity": 250.33724899975417,
+      "best_val_step": 9600,
+      "embedding_parameters": 13674000,
+      "embedding_type": "partial",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 506505707520000.0,
+      "final_val_loss": 5.5257833242416385,
+      "final_val_perplexity": 251.08294036294953,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1496.0693359375,
+      "run_name": "seed2027_partial",
+      "seed": 2027,
+      "study_dir": "cloud_artifacts/small_scale_seed2027",
+      "tokens_per_second": 14347.223631169465,
+      "total_parameters": 16889872,
+      "trainable_parameters": 16889872,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 356.86346931100707,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.517492485046387,
+      "best_val_perplexity": 249.00985775196406,
+      "best_val_step": 9800,
+      "embedding_parameters": 12865792,
+      "embedding_type": "tied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.519682121276856,
+      "final_val_perplexity": 249.5556961339047,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1384.6591796875,
+      "run_name": "seed2027_tied",
+      "seed": 2027,
+      "study_dir": "cloud_artifacts/small_scale_seed2027",
+      "tokens_per_second": 18140.513830523425,
+      "total_parameters": 16081664,
+      "trainable_parameters": 16081664,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 282.24117838299776,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.532249140739441,
+      "best_val_perplexity": 252.71165639628674,
+      "best_val_step": 9999,
+      "embedding_parameters": 25731584,
+      "embedding_type": "untied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.532249140739441,
+      "final_val_perplexity": 252.71165639628674,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1584.5009765625,
+      "run_name": "seed2027_untied",
+      "seed": 2027,
+      "study_dir": "cloud_artifacts/small_scale_seed2027",
+      "tokens_per_second": 15763.025041512297,
+      "total_parameters": 28947456,
+      "trainable_parameters": 28947456,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 324.81075088800276,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.4940221309661865,
+      "best_val_perplexity": 243.2335592638143,
+      "best_val_step": 9999,
+      "embedding_parameters": 12865792,
+      "embedding_type": "capacity_control",
+      "estimated_flops_non_embedding": 123627110400000.0,
+      "estimated_flops_total": 518864240640000.0,
+      "final_val_loss": 5.4940221309661865,
+      "final_val_perplexity": 243.2335592638143,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1415.041015625,
+      "run_name": "seed31415_capacity_control",
+      "seed": 31415,
+      "study_dir": "cloud_artifacts/small_scale_seed31415",
+      "tokens_per_second": 18104.712892653766,
+      "total_parameters": 16890112,
+      "trainable_parameters": 16890112,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 282.7992926680163,
+      "transformer_parameters": 4024320
+    },
+    {
+      "best_val_loss": 5.491771721839905,
+      "best_val_perplexity": 242.6867996893453,
+      "best_val_step": 9999,
+      "embedding_parameters": 13674000,
+      "embedding_type": "partial",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 506505707520000.0,
+      "final_val_loss": 5.491771721839905,
+      "final_val_perplexity": 242.6867996893453,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1496.0693359375,
+      "run_name": "seed31415_partial",
+      "seed": 31415,
+      "study_dir": "cloud_artifacts/small_scale_seed31415",
+      "tokens_per_second": 15422.5250796816,
+      "total_parameters": 16889872,
+      "trainable_parameters": 16889872,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 331.98195325001234,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.48917281627655,
+      "best_val_perplexity": 242.05689849688224,
+      "best_val_step": 9999,
+      "embedding_parameters": 12865792,
+      "embedding_type": "tied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.48917281627655,
+      "final_val_perplexity": 242.05689849688224,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1384.6591796875,
+      "run_name": "seed31415_tied",
+      "seed": 31415,
+      "study_dir": "cloud_artifacts/small_scale_seed31415",
+      "tokens_per_second": 19025.969305060265,
+      "total_parameters": 16081664,
+      "trainable_parameters": 16081664,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 269.1058688210042,
+      "transformer_parameters": 3215872
+    },
+    {
+      "best_val_loss": 5.548730969429016,
+      "best_val_perplexity": 256.91132062837715,
+      "best_val_step": 9999,
+      "embedding_parameters": 25731584,
+      "embedding_type": "untied",
+      "estimated_flops_non_embedding": 98791587840000.0,
+      "estimated_flops_total": 494028718080000.0,
+      "final_val_loss": 5.548730969429016,
+      "final_val_perplexity": 256.91132062837715,
+      "final_val_step": 9999,
+      "peak_gpu_memory_mb": 1584.5009765625,
+      "run_name": "seed31415_untied",
+      "seed": 31415,
+      "study_dir": "cloud_artifacts/small_scale_seed31415",
+      "tokens_per_second": 16409.038915159934,
+      "total_parameters": 28947456,
+      "trainable_parameters": 28947456,
+      "training_tokens": 5120000,
+      "training_wall_time_seconds": 312.02314934299716,
+      "transformer_parameters": 3215872
+    }
+  ]
+}

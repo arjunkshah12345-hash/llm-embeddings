@@ -1,109 +1,135 @@
 # Reproducibility
 
-This document describes the smallest reproducible run and the checks required before comparing embedding variants. Generated data, checkpoints, metrics, and plots belong in ignored directories such as `data/` and `runs/`; they are not part of the source repository.
+This repository contains a completed, cloud-trained study of tied, untied, and low-rank partially tied input/output embeddings. Training is performed in Kaggle kernels; local commands collect artifacts, validate comparisons, regenerate analyses, run tests, and compile the paper.
 
 ## Environment
-
-Install the Python dependencies from a clean checkout:
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-The substantive Phase 2 runs use the exact versions recorded in [requirements-lock.txt](requirements-lock.txt). The lock records the core Python packages and the Python version used for the reference environment; `requirements.txt` remains the portable installation entry point for other CPU/CUDA platforms.
+The Kaggle reference versions are pinned in [requirements-lock.txt](requirements-lock.txt). The lock records the Python 3.12.13 reference environment and core package versions. `requirements.txt` remains the portable installation entry point for compatible CPU/CUDA platforms.
 
-The code requires Python 3.9 or newer and PyTorch 2.1 or newer. CUDA, Apple MPS, and CPU are supported; `--device auto` selects CUDA, then MPS, then CPU.
+## Data and protocol
 
-## Smallest end-to-end experiment
+The main corpus is WikiText-2-raw-v1 with GPT-2 BPE tokenization. Split URLs and SHA-256 values are pinned in [data.py](data.py). Tiny Shakespeare uses a pinned source commit and hash with deterministic disjoint splits. Every run records source metadata, split hashes, tokenizer metadata, configuration, package versions, git commit, sampled-offset digest, parameter counts, metrics, throughput, memory, and estimated FLOPs.
 
-From the repository root:
+The main 50k comparison is:
 
-```bash
-python3 sweep.py \
-  --output_dir runs/smoke \
-  --dataset wikitext2 --device cpu --seeds 1337 \
-  --steps 8 --batch_size 1 --block_size 32 \
-  --n_layer 1 --n_head 1 --n_embd 16 \
-  --adapter_rank 2 --adapter_alpha 2 \
-  --warmup_steps 2 --eval_interval 4 --eval_batches 2 \
-  --log_interval 2 --save_interval 8 --no-save_optimizer
-```
+- six layers, six heads, width 384, block size 256;
+- tied, untied, rank-8 partial, and parameter-matched capacity control;
+- seeds 1337, 2027, and 31415;
+- 50,000 fresh optimizer steps, batch size 2, warmup 100, cosine decay from `3e-4` to `3e-5`;
+- identical tokenizer, optimizer, validation windows, data order, token budget, and initialization protocol within each seed.
 
-This trains tied, untied, and partial models with the same seed and token budget. The sweep validates the matrix before running analysis. The run is intentionally too short and too small to support a scientific claim.
+The preserved 10k Study 1 adds input-only and output-only conditions. The confirmatory rank study uses ranks 1, 2, 4, 8, 16, and 32 for three seeds. Robustness uses a smaller WikiText-2 model and Tiny Shakespeare. Mechanism profiles run matched tied/partial path interventions with input or output gradients stopped for steps `[0, 5000)`.
 
-To inspect the comparison manually:
+## Kaggle training commands
+
+Use the source commits recorded in the final artifacts. These commands submit cloud kernels and collect compact outputs; they do not train locally:
 
 ```bash
-python3 validate_study.py --runs_dir runs/smoke
-python3 analyze.py --runs_dir runs/smoke --output_dir runs/smoke/analysis
+python3 kaggle/orchestrate.py --profiles long --seeds 1337 2027 31415 \
+  --commit 56f6360ad93eadff2c6ad1406a4805264549747f
+python3 kaggle/orchestrate.py --profiles rank --seeds 1337 2027 31415 \
+  --commit e8aa5e87b07810596940df5f66b5c92c7d825569
+python3 kaggle/orchestrate.py --profiles small_scale second_dataset \
+  --seeds 1337 2027 31415 --commit 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
+python3 kaggle/orchestrate.py \
+  --profiles mechanism_stop_input mechanism_stop_output \
+  --seeds 1337 2027 31415 --commit 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
 ```
 
-## Baseline study
+The 50k study must be launched in a fresh output directory. Do not resume a 10k run with a changed schedule horizon. The launcher rejects unsafe step-horizon changes when resuming.
 
-The first substantive study should use the shared configuration in [docs/phase2-baseline.md](docs/phase2-baseline.md), beginning with 10,000 steps and at least three seeds. Keep the same dataset, model flags, optimizer flags, and step count for every embedding type. Use `--resume_existing` only when the study was created with optimizer checkpoints enabled and the requested step horizon is unchanged. To run a longer 50,000-step study, launch a fresh output directory so the cosine learning-rate schedule starts from step zero with its intended horizon.
+## Validation and aggregation
 
-Every run records:
+Validate each collected seed artifact before combining it:
 
-- exact model and training configuration;
-- dataset split hashes and token counts;
-- tokenizer and package metadata;
-- git commit and command line;
-- the SHA-256 digest of the actual sampled training start offsets, alongside the expected deterministic stream;
-- parameter counts, training tokens, speed, memory, and approximate FLOPs;
-- train/validation metrics and embedding diagnostics.
+```bash
+python3 validate_study.py --runs_dir cloud_artifacts/long_seed1337_exact56f
+python3 validate_study.py --runs_dir cloud_artifacts/long_seed2027
+python3 validate_study.py --runs_dir cloud_artifacts/long_seed31415
+```
 
-`validate_study.py` refuses incomplete or unfair comparisons. It checks the full seed-by-embedding matrix, shared configuration, pinned source metadata and dataset hashes, finite loss/perplexity, a validation record at exactly the configured final step, and exactly equal token exposure. Treat a failed validation as a failed experiment rather than analyzing around it.
+The validator requires the complete seed-by-condition matrix, matching configs and pinned data hashes, finite metrics, a validation record at the exact declared final step, and exact equality of actual token exposure and sampled-offset digests. A failed gate is a failed study and must not be analyzed around.
 
-## Data
+Regenerate the primary, rank, robustness, and mechanism artifacts with:
 
-The default corpus is WikiText-2-raw-v1, with each split downloaded from the pinned URLs and verified against the SHA-256 values declared in [`data.py`](data.py). The source is the raw variant described by the [Salesforce WikiText dataset card](https://huggingface.co/datasets/Salesforce/wikitext), rather than the preprocessed word-level files used by the old PyTorch example. Tiny Shakespeare is downloaded from a pinned `char-rnn` commit, verified by SHA-256, and split deterministically into disjoint contiguous train, validation, and test portions. Dataset source metadata and final file hashes are written into each run manifest.
+```bash
+python3 aggregate_results.py \
+  --studies cloud_artifacts/long_seed1337_exact56f \
+            cloud_artifacts/long_seed2027 \
+            cloud_artifacts/long_seed31415 \
+  --output_dir results/long_50k
+python3 aggregate_rank.py \
+  --studies cloud_artifacts/rank_seed1337_e8 \
+            cloud_artifacts/rank_seed2027 \
+            cloud_artifacts/rank_seed31415_e8 \
+  --tied-results results/primary/primary_aggregate.json \
+  --output-dir results/rank_sweep
+python3 aggregate_secondary.py \
+  --studies small_scale=results/small_scale/primary_aggregate.json \
+            tiny_shakespeare=results/tiny_shakespeare/primary_aggregate.json \
+  --output-dir results/secondary
+python3 aggregate_mechanism.py \
+  --studies cloud_artifacts/mechanism_stop_input_seed1337 \
+            cloud_artifacts/mechanism_stop_input_seed2027 \
+            cloud_artifacts/mechanism_stop_input_seed31415 \
+  --output_dir results/mechanism_stop_input
+python3 aggregate_mechanism.py \
+  --studies cloud_artifacts/mechanism_stop_output_seed1337 \
+            cloud_artifacts/mechanism_stop_output_seed2027 \
+            cloud_artifacts/mechanism_stop_output_seed31415 \
+  --output_dir results/mechanism_stop_output
+python3 aggregate_interventions.py \
+  --studies stop_input=cloud_artifacts/mechanism_stop_input_seed1337 \
+            stop_input=cloud_artifacts/mechanism_stop_input_seed2027 \
+            stop_input=cloud_artifacts/mechanism_stop_input_seed31415 \
+  --output results/mechanism_interventions_input.json
+python3 aggregate_interventions.py \
+  --studies stop_output=cloud_artifacts/mechanism_stop_output_seed1337 \
+            stop_output=cloud_artifacts/mechanism_stop_output_seed2027 \
+            stop_output=cloud_artifacts/mechanism_stop_output_seed31415 \
+  --output results/mechanism_interventions_output.json
+```
 
-The repository also provides a deterministic `fixture` dataset for CI integration tests. It is synthetic and must never be used as research evidence.
+Export compact provenance and raw JSONL metrics without checkpoints:
 
-Do not commit downloaded data, model checkpoints, optimizer states, generated plots, or run directories. The repository `.gitignore` covers these artifacts.
+```bash
+python3 export_release_artifacts.py \
+  --studies long_seed1337=cloud_artifacts/long_seed1337_exact56f \
+            long_seed2027=cloud_artifacts/long_seed2027 \
+            long_seed31415=cloud_artifacts/long_seed31415 \
+  --output-dir results/release_artifacts/long_50k_final
+```
+
+## Rebuild the paper
+
+```bash
+python3 paper/generate_figures.py --output-dir results/long_50k/figures
+python3 paper/generate_tables.py \
+  --primary results/long_50k/primary_aggregate.json \
+  --rank results/rank_sweep/rank_aggregate.json \
+  --mechanism results/long_50k/mechanism/mechanism_aggregate.json \
+  --secondary results/secondary/secondary_aggregate.json \
+  --output-dir paper/generated
+python3 paper/package_arxiv.py --output-dir arxiv
+(cd paper && tectonic --keep-logs main.tex)
+(cd arxiv && tectonic --keep-logs main.tex)
+```
+
+All tables and figures are generated from JSON/JSONL artifacts. The release index is [`results/release_artifacts/final_release_manifest.json`](results/release_artifacts/final_release_manifest.json). The arXiv directory is a self-contained source bundle; it contains no datasets, checkpoints, credentials, or absolute local paths.
 
 ## Verification
-
-Run the source checks before sharing changes:
 
 ```bash
 python3 -m py_compile $(git ls-files '*.py')
 python3 -m pytest -q
+python3 -m compileall -q .
+git diff --check
 ```
 
-The GitHub Actions workflow repeats compilation and the test suite on pushes and pull requests. Results from short smoke tests belong in the exploratory record; they must not be described as evidence for the main hypothesis.
+The full GitHub Actions workflow repeats compilation, the complete pytest suite, and the synthetic sweep → validation → analysis pipeline. The synthetic fixture is explicitly non-training and must never be used as research evidence.
 
-After a validated study, the checkpoint-level mechanism report can be regenerated with:
-
-```bash
-python3 mechanism_eval.py --runs_dir runs/phase2-pilot-10k --checkpoint last.pt
-```
-
-This command refuses to analyze a study whose fairness validator did not pass. The fixed-batch report complements the stepwise JSONL measurements and is written to `mechanism_metrics.json`.
-
-Input and output representation probes can be run together from a validated checkpoint:
-
-```bash
-python3 embedding_eval.py \
-  --run_dir runs/phase2-pilot-10k/seed1337_partial \
-  --checkpoint last.pt --side both \
-  --pairs eval/semantic_pairs.jsonl \
-  --output runs/phase2-pilot-10k/seed1337_partial/embedding_eval.json
-```
-
-The pair file is a small, predeclared single-token probe. It is an exploratory representation diagnostic, not a substitute for a downstream task.
-
-Rank sweeps default to compact checkpoints without optimizer state to keep exploratory artifacts small. Pass `--save_optimizer` only when an interrupted rank condition must be resumed.
-
-For a public release, export compact per-run provenance and raw metrics without
-committing checkpoints or large sampled-offset logs:
-
-```bash
-python3 export_release_artifacts.py \
-  --studies primary1337=cloud_artifacts/primary_seed1337 \
-  --output-dir results/release_artifacts
-```
-
-Add every completed seed study to `--studies` before publishing the resulting
-`release_manifest.json`; the per-run files are written under `raw_runs/` so
-they remain distinct from ignored local training directories.
+The smallest smoke command remains documented in the repository history and is also available in `docs/initial-sanity-check.md`; it exists only to check wiring. It is too short to support a scientific claim.

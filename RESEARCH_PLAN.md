@@ -1,130 +1,54 @@
-# Research plan
+# Research plan and final interpretation
 
 ## Question
 
-Does a decoder-only language model retain most of the validation-loss benefit of separate input and output embeddings when those matrices share a large base and receive small, role-specific corrections?
+Does a decoder-only language model retain a useful quality benefit from separate input and output embeddings when those matrices share a large base and receive small, role-specific low-rank corrections?
 
-The primary comparison is:
+The fixed comparison is:
 
-1. `tied`: one matrix used for token lookup and output logits;
-2. `untied`: separate input and output matrices;
-3. `partial`: one shared matrix plus low-rank input and output corrections.
+1. `tied`: one matrix for token lookup and output logits;
+2. `untied`: independent input and output matrices initialized from the same values;
+3. `partial`: one shared matrix plus independent low-rank input and output corrections.
 
-The central result should be reported both at a matched transformer size and as a parameter-efficiency curve. No outcome is assumed in advance.
+No outcome was assumed in advance. The release reports both matched Transformer size and parameter-efficiency views.
 
-## Phase 0 — Reproducible baseline
+## Completed studies
 
-Status: implemented.
+### Study 1: 10k primary endpoint
 
-- GPT-style decoder-only transformer with configurable depth, width, heads, context length, and adapter rank.
-- GPT-2 BPE tokenizer over WikiText-2 raw train/validation/test splits.
-- Common seed, initialization, optimizer, schedule, context length, batch size, and token budget.
-- JSONL metrics, CPU checkpoints, evaluation, plots, and a concise result summary.
-- Input/output gradient decomposition using an input-path loss and an output-path loss.
-- Low-rank partial adapters initialized to zero effective correction.
+The preserved three-seed WikiText-2 study used the full six-condition matrix: tied, untied, rank-8 partial, parameter-matched capacity control, input-only partial, and output-only partial. All fairness checks passed. This remains a preliminary horizon and is retained as historical context rather than combined with the 50k primary result.
 
-Exit condition: all three variants train, save checkpoints, report finite losses/perplexities, and produce non-empty gradient and correction metrics. This is satisfied by the historical instrumentation sanity run; it is not treated as research evidence.
+### 50k primary comparison
 
-## Phase 1 — Experimental hardening
+Fresh-from-step-zero 50k runs used seeds 1337, 2027, and 31415 with tied, untied, rank-8 partial, and capacity control. The exact cosine schedule was fixed at the 50k horizon. All variants saw exactly the same sampled token streams within each seed, and the final validation record was present at the declared final step.
 
-Goal: eliminate measurement ambiguity before spending compute.
+The result is negative for the original performance hypothesis: tied is best, partial is worse than tied by a paired mean final-loss difference of 0.03928, and untied is worse by 0.35877. A recovery fraction is undefined because the untied denominator is not a positive quality benefit.
 
-Status: implemented.
+### Rank and budget studies
 
-- Add a manifest containing the exact dataset hashes, tokenizer version, package versions, model config, and git commit. (Implemented.)
-- Add deterministic fixed validation windows alongside sampled validation batches. (Implemented; evaluation uses fixed windows.)
-- Verify that the input/output gradient decomposition matches finite-difference checks on tiny models. (Implemented.)
-- Add tests for tied parameter identity, untied initialization, partial zero initialization, checkpoint round trips, and token accounting. (Implemented.)
-- Separate optimizer-state checkpoints (`optimizer_last.pt`) from compact evaluation checkpoints (`last.pt` / `best.pt`). Resume with `--resume path/to/optimizer_last.pt`.
-- Make multi-run studies resumable: completed runs are preserved, incomplete runs resume from `optimizer_last.pt`, and the fairness gate still blocks analysis until the full matrix is complete.
-- Record wall-clock time, peak allocated memory, FLOPs estimates (`estimated_flops_*` via the 6ND rule), and tokens per second in a common metrics schema.
-- Add a sweep runner that records the exact shared configuration and run matrix. (Implemented.)
-- Enforce the comparison gate before analysis: complete seed × embedding matrix, identical dataset hashes and shared settings, and exactly equal token exposure. (Implemented in `validate_study.py` and called by `sweep.py`.)
-- Reject missing or non-finite train/validation losses and perplexities before any study summary is generated.
+Ranks 1, 2, 4, 8, 16, and 32 were replicated across the same three seeds under a frozen 10k protocol. No rank consistently improves tied. Rank 32 is closest in mean final loss, but its uncertainty interval includes no reliable difference. The parameter-matched tied control in the 50k study also underperforms tied, while remaining worse than partial, so the result is not explained by a simple parameter-count advantage.
 
-Gate: no comparison is published unless all three runs use the same data manifest and exactly the same token budget.
+### Robustness
 
-## Phase 2 — Baseline training study
+The central comparison was repeated for a smaller WikiText-2 Transformer and for Tiny Shakespeare, each with three seeds. Neither replication gives a reliable partial-tying improvement over tied. The Tiny Shakespeare capacity control shows late overfitting, so final-checkpoint results are reported alongside best-checkpoint values where relevant.
 
-Goal: determine whether the loss signal survives beyond the six-step smoke test.
+## Mechanism and representation measurements
 
-Status: three-seed 10k primary study complete and fairness-validated; fresh 50k and robustness evidence are still pending.
+The code measures input and output pressure in effective vocabulary-by-width matrix space, avoiding arbitrary low-rank factor-basis effects. It records gradient norms and ratios, effective gradient cosines, cumulative embedding displacement, correction norms, effective rank, singular values, shared-matrix alignment, token classes, matched-frequency buckets, and one-sided path interventions. Input and output frozen representation probes remain separate from language-modeling loss.
 
-- Run 10k–100k steps on WikiText-2 with at least three seeds.
-- Keep the transformer configuration fixed across variants and repeat the analysis at two model sizes in the 20M–50M range.
-- Report mean, standard deviation, best validation loss, final validation loss, perplexity, throughput, memory, FLOPs, and parameter count.
-- Use confidence intervals or bootstrap intervals for differences between variants.
-- Compare equal training tokens first; add compute-matched results as a separate analysis because partial tying adds factorized adapter matmul work and untying changes embedding storage, gradient, and optimizer-state cost.
+The 50k primary mechanism result does not show persistent output-gradient dominance: the output/input ratio is near one and effective input/output gradient cosine is near zero at the final measurement. Partial corrections become distinct, especially on the output side, but their weak alignment and nonzero movement do not yield a validation-loss gain. In the three-seed 10k path interventions, stopping input-path gradients changed partial minus tied final loss by `+0.00037` (95% interval `[-0.00676, +0.00798]`), while stopping output-path gradients changed it by `-0.00618` (interval `[-0.01474, +0.01011]`); neither intervention has a stable paired effect. The path-intervention artifacts are reported as mechanism evidence and are not used to retrofit the performance claim.
 
-Gate: continue only if the partial model is consistently closer to untied than tied, or if the gradient/representation measurements show a clear independent signal.
+## Final conclusion
 
-## Phase 3 — Adapter design and budget sweep
+Under the tested small-model, WikiText-2/Tiny Shakespeare, 10k/50k, three-seed protocols:
 
-Goal: map the quality/parameter tradeoff rather than overfit to rank 8.
+- full untying is not beneficial and is strongly worse in the 50k primary study;
+- low-rank partial tying is much cheaper than untying but does not recover a quality advantage over tied;
+- rank choice does not reveal a stable improvement;
+- role-specific corrections and role-level gradient measurements show measurable specialization without a corresponding language-modeling benefit.
 
-Status: two-seed six-rank exploratory sweep complete; the third predeclared seed is queued for the next available Kaggle GPU session.
+The resulting paper is a negative/mechanistic study of when tied embeddings are sufficient, not a claim that partial tying is a generally superior architecture.
 
-- Sweep ranks 1, 2, 4, 8, 16, and 32.
-- Sweep adapter scaling separately from rank.
-- Compare low-rank additive corrections with a small number of alternatives: per-token diagonal gates, shared low-rank corrections with separate scalars, and a bottleneck residual adapter.
-- Plot validation loss against extra parameters and against additional training FLOPs.
-- Keep each adapter family initialized to the same effective function where possible.
+## Reproducibility gate
 
-Gate: select the simplest adapter family on the Pareto frontier and freeze it before downstream representation tests.
-
-## Phase 4 — Understand the mechanism
-
-Goal: test whether the shared matrix is actually receiving unequal role pressure and whether the correction directions explain the difference.
-
-- Track input-side, output-side, and combined gradient norms for the shared matrix.
-- Track update norms, cumulative parameter displacement, cosine similarity of input/output effective embedding-matrix gradients, and the output-to-input ratio over training. (Effective gradient cosine and embedding update-path logging/plotting are implemented.)
-- Measure correction norm, rank utilization, singular values, and alignment between corrections and the shared matrix. Effective rank, top singular value, and shared-matrix cosine are now logged and plotted.
-- Compare token-frequency buckets and token types such as punctuation, whitespace, common words, and rare words. (Logged as mean row-gradient by class; see [docs/phase4-mechanism.md](docs/phase4-mechanism.md).)
-- Run ablations that stop gradients through the input or output path for controlled intervals. (`--path_ablation stop_input|stop_output` with `--ablation_start` / `--ablation_end`.)
-
-Gate: call the mechanism supported only if the pattern replicates across seeds and is not explained by token frequency, optimizer state, or a logging artifact. The checks above are implemented; the gate is not yet met.
-
-## Phase 5 — Input-representation evaluation
-
-Goal: test whether partial tying improves the usefulness of input embeddings independently of language-model loss.
-
-Status: deterministic input/output probes and predeclared single-token pair scoring are complete for the primary study; semantic and downstream evidence is still pending.
-
-- Evaluate nearest-neighbor structure with frequency-matched token probes.
-- Measure similarity on morphological, lexical, and semantic token-pair sets where appropriate.
-- Train frozen-input linear probes for token metadata and contextual tasks.
-- Compare input embedding quality at equal validation loss and equal parameter budget.
-- Keep output-side evaluations separate so the two roles are not conflated.
-
-Gate: require a predeclared evaluation set and report all metrics, including negative or null results.
-
-## Phase 6 — Scale and robustness
-
-Goal: establish whether the effect is real beyond one dataset and small model.
-
-- Repeat on WikiText-103, TinyStories, and one larger public corpus with documented licensing and preprocessing.
-- Test model sizes below 20M, 20M–50M, and above 100M where hardware allows.
-- Use at least five seeds for the final comparison and report failed or interrupted runs.
-- Check sensitivity to tokenizer vocabulary size, context length, normalization, dropout, optimizer, and learning-rate schedule.
-- Add compute-matched and memory-matched comparisons.
-
-Gate: make a positive claim only when the direction and practical effect size are stable across datasets, sizes, and seeds.
-
-## Phase 7 — Reproducible release
-
-Goal: make the result independently checkable.
-
-- Freeze code and configs by git commit.
-- Publish dataset download instructions, hashes, environment lock information, run manifests, raw JSONL metrics, plots, and analysis scripts.
-- Add a one-command reproduction path for the smallest result and documented commands for the larger study.
-- Write a methods report that separates exploratory analyses from preregistered comparisons.
-- Preserve negative results and explain all deviations from the plan.
-
-## Reporting rules
-
-- Report validation loss and perplexity, not only the best checkpoint.
-- Report total parameters, embedding parameters, extra parameters over tied, and transformer parameters separately.
-- Report matched-transformer and parameter-efficiency views together.
-- Treat a six-step sanity run as an instrumentation check, never as evidence of a general effect.
-- Do not tune one variant using validation results and then compare it with untuned variants.
-- Record seeds, data hashes, package versions, and exact commands for every result.
+The code, pinned data sources, frozen environment, Kaggle launch/collection scripts, exact seed manifests, fairness outputs, raw compact metrics, aggregate JSON, plots, generated tables, and independently compilable arXiv bundle are part of the release. Large checkpoints and datasets remain excluded. Headline numbers are regenerated from machine-readable artifacts and checked against per-seed outputs before release.
