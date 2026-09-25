@@ -78,6 +78,75 @@ def primary_macros(result: dict) -> str:
     )
 
 
+def _by_study_condition(result: dict, study: str, condition: str) -> dict:
+    for row in result.get("comparison", []):
+        if row.get("study") == study and row.get("condition") == condition:
+            return row
+    return {}
+
+
+def supplementary_macros(
+    secondary: dict | None = None,
+    mechanism: dict | None = None,
+    embedding: dict | None = None,
+    intervention_input: dict | None = None,
+    intervention_output: dict | None = None,
+) -> str:
+    """Generate prose macros for every numeric claim outside the main table."""
+    lines: list[str] = []
+
+    if secondary:
+        for prefix, study in (("Small", "small_scale"), ("Tiny", "tiny_shakespeare")):
+            for condition, label in (("tied", "Tied"), ("partial", "Partial"), ("untied", "Untied")):
+                row = _by_study_condition(secondary, study, condition)
+                lines.append(f"\\newcommand{{\\{prefix}{label}Final}}{{{tex_number(row.get('mean_final_val_loss'), 5)}}}")
+            pair = secondary.get("paired_comparisons", {}).get(study, {}).get("partial_minus_tied_final_val_loss", {})
+            lines.extend(
+                [
+                    f"\\newcommand{{\\{prefix}PartialDelta}}{{{tex_number(pair.get('mean_delta'), 5)}}}",
+                    f"\\newcommand{{\\{prefix}PartialDeltaLow}}{{{tex_number(pair.get('ci95', {}).get('low'), 5)}}}",
+                    f"\\newcommand{{\\{prefix}PartialDeltaHigh}}{{{tex_number(pair.get('ci95', {}).get('high'), 5)}}}",
+                ]
+            )
+
+    if mechanism:
+        partial = mechanism.get("final", {}).get("partial", {}).get("metrics", {})
+        tied = mechanism.get("final", {}).get("tied", {}).get("metrics", {})
+        for name, metrics, key in (
+            ("MechanismTiedRatio", tied, "output_to_input_grad_ratio"),
+            ("MechanismPartialRatio", partial, "output_to_input_grad_ratio"),
+            ("MechanismPartialGradCosine", partial, "input_output_grad_cosine"),
+            ("MechanismPartialInputNorm", partial, "input_correction_norm"),
+            ("MechanismPartialOutputNorm", partial, "output_correction_norm"),
+            ("MechanismPartialCorrectionCosine", partial, "input_output_correction_cosine"),
+        ):
+            lines.append(f"\\newcommand{{\\{name}}}{{{tex_number(metrics.get(key, {}).get('mean'), 4)}}}")
+
+    if embedding:
+        for condition, label in (("tied", "Tied"), ("partial", "Partial")):
+            metrics = embedding.get("final", {}).get(condition, {}).get("input", {}).get("metrics", {})
+            for key, macro in (
+                ("neighbor_cosine", f"Embedding{label}NeighborCosine"),
+                ("frequency_neighbor_agreement", f"Embedding{label}NeighborAgreement"),
+                ("frequency_probe_macro_accuracy", f"Embedding{label}ProbeAccuracy"),
+            ):
+                lines.append(f"\\newcommand{{\\{macro}}}{{{tex_number(metrics.get(key, {}).get('mean'), 3)}}}")
+
+    for label, result in (("InputStop", intervention_input), ("OutputStop", intervention_output)):
+        if result:
+            study = next(iter(result.get("studies", {}).values()))
+            pair = study.get("paired_comparisons", {}).get("partial_minus_tied_final_val_loss", {})
+            lines.extend(
+                [
+                    f"\\newcommand{{\\{label}Delta}}{{{tex_number(pair.get('mean_delta'), 5)}}}",
+                    f"\\newcommand{{\\{label}DeltaLow}}{{{tex_number(pair.get('ci95', {}).get('low'), 5)}}}",
+                    f"\\newcommand{{\\{label}DeltaHigh}}{{{tex_number(pair.get('ci95', {}).get('high'), 5)}}}",
+                ]
+            )
+
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
 def rank_table(result: dict) -> str:
     rows = [
         r"\begin{tabular}{rrrrrr}",
@@ -176,22 +245,31 @@ def main() -> None:
     parser.add_argument("--secondary", default="")
     parser.add_argument("--interventions-input", default="")
     parser.add_argument("--interventions-output", default="")
+    parser.add_argument("--embedding", default="")
     parser.add_argument("--output-dir", default="paper/generated")
     args = parser.parse_args()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     primary = read_json(Path(args.primary))
     (output_dir / "primary_table.tex").write_text(primary_table(primary))
-    (output_dir / "result_macros.tex").write_text(primary_macros(primary))
+    secondary = read_json(Path(args.secondary)) if args.secondary else None
+    mechanism = read_json(Path(args.mechanism)) if args.mechanism else None
+    embedding = read_json(Path(args.embedding)) if args.embedding else None
+    intervention_input = read_json(Path(args.interventions_input)) if args.interventions_input else None
+    intervention_output = read_json(Path(args.interventions_output)) if args.interventions_output else None
+    (output_dir / "result_macros.tex").write_text(
+        primary_macros(primary)
+        + supplementary_macros(secondary, mechanism, embedding, intervention_input, intervention_output)
+    )
     if args.rank:
         (output_dir / "rank_table.tex").write_text(rank_table(read_json(Path(args.rank))))
     if args.mechanism:
-        (output_dir / "mechanism_table.tex").write_text(mechanism_table(read_json(Path(args.mechanism))))
+        (output_dir / "mechanism_table.tex").write_text(mechanism_table(mechanism))
     if args.secondary:
-        (output_dir / "secondary_table.tex").write_text(secondary_table(read_json(Path(args.secondary))))
+        (output_dir / "secondary_table.tex").write_text(secondary_table(secondary))
     if args.interventions_input and args.interventions_output:
         (output_dir / "intervention_table.tex").write_text(
-            intervention_table(read_json(Path(args.interventions_input)), read_json(Path(args.interventions_output)))
+            intervention_table(intervention_input, intervention_output)
         )
 
 

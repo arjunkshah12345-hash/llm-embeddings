@@ -15,6 +15,8 @@ This project tests whether a decoder-only language model can keep the parameter 
 
 The partial model adds only `2 * rank * (vocab_size + width)` parameters. It is a direct test of whether role-specific flexibility is useful, rather than an assumption that untying or adapters must help.
 
+![Tied, untied, and partially tied embedding parameterizations](results/long_50k/figures/architecture.png)
+
 ## What the completed studies found
 
 The primary confirmatory study used WikiText-2-raw-v1, GPT-2 BPE, a 6-layer/6-head/384-width decoder, block size 256, 50,000 fresh optimizer steps, and seeds 1337, 2027, and 31415. Every comparison passed the exact token-stream and final-step fairness gate. Lower validation loss is better.
@@ -108,6 +110,9 @@ python3 paper/generate_tables.py \
   --rank results/rank_sweep/rank_aggregate.json \
   --mechanism results/long_50k/mechanism/mechanism_aggregate.json \
   --secondary results/secondary/secondary_aggregate.json \
+  --embedding results/long_50k/embedding_eval/embedding_eval_aggregate.json \
+  --interventions-input results/mechanism_interventions_input.json \
+  --interventions-output results/mechanism_interventions_output.json \
   --output-dir paper/generated
 python3 paper/package_arxiv.py --output-dir arxiv
 cd arxiv && tectonic --keep-logs main.tex

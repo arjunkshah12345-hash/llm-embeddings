@@ -113,6 +113,9 @@ python3 paper/generate_tables.py \
   --rank results/rank_sweep/rank_aggregate.json \
   --mechanism results/long_50k/mechanism/mechanism_aggregate.json \
   --secondary results/secondary/secondary_aggregate.json \
+  --embedding results/long_50k/embedding_eval/embedding_eval_aggregate.json \
+  --interventions-input results/mechanism_interventions_input.json \
+  --interventions-output results/mechanism_interventions_output.json \
   --output-dir paper/generated
 python3 paper/package_arxiv.py --output-dir arxiv
 (cd paper && tectonic --keep-logs main.tex)

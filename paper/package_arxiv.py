@@ -14,6 +14,11 @@ FIGURES = (
     ROOT / "results" / "long_50k" / "figures" / "parameter_efficiency.png",
     ROOT / "results" / "rank_sweep" / "figures" / "rank_vs_extra_parameters.png",
     ROOT / "results" / "secondary" / "figures" / "robustness_final_loss.png",
+    ROOT / "results" / "long_50k" / "mechanism" / "output_to_input_grad_ratio.png",
+    ROOT / "results" / "long_50k" / "mechanism" / "input_output_grad_cosine.png",
+    ROOT / "results" / "long_50k" / "mechanism" / "input_output_correction_cosine.png",
+    ROOT / "results" / "long_50k" / "embedding_eval" / "figures" / "neighbor_cosine.png",
+    ROOT / "results" / "long_50k" / "embedding_eval" / "figures" / "neighbor_agreement.png",
 )
 
 
@@ -26,7 +31,7 @@ def build_package(output_dir: Path) -> None:
 
     main = (ROOT / "paper" / "main.tex").read_text()
     main = main.replace(
-        r"\graphicspath{{../results/long_50k/figures/}{../results/rank_sweep/figures/}{../results/secondary/figures/}}",
+        r"\graphicspath{{../results/long_50k/figures/}{../results/rank_sweep/figures/}{../results/secondary/figures/}{../results/long_50k/mechanism/}{../results/long_50k/embedding_eval/figures/}}",
         r"\graphicspath{{figures/}}",
     )
     (output_dir / "main.tex").write_text(main)

@@ -10,7 +10,7 @@
 
 \emergencystretch=2em
 
-\graphicspath{{../results/long_50k/figures/}{../results/rank_sweep/figures/}{../results/secondary/figures/}}
+\graphicspath{{../results/long_50k/figures/}{../results/rank_sweep/figures/}{../results/secondary/figures/}{../results/long_50k/mechanism/}{../results/long_50k/embedding_eval/figures/}}
 
 \title{Testing Role-Specific Corrections for Tied Input and Output Embeddings}
 \author{Arjun Shah}
@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-Weight tying uses one vocabulary matrix both to embed input tokens and to score output tokens. We test whether a shared base plus small role-specific low-rank corrections can retain the parameter savings of tying while recovering flexibility from untying. The main study uses a six-layer decoder-only Transformer on WikiText-2-raw-v1, three seeds, and 50,000 fresh optimizer steps. The tied model reaches final validation loss \TiedFinalLoss, compared with \PartialFinalLoss for rank-8 partial tying and \UntiedFinalLoss for full untying. The paired partial-minus-tied difference is +\PartialVsTiedDelta, while untied-minus-tied is +\UntiedVsTiedDelta; lower is better. Because full untying is worse than tying, an untied-benefit recovery fraction is undefined. A three-seed rank replication, a parameter-matched control, a smaller model, Tiny Shakespeare, path interventions, and representation probes do not reveal a stable partial-tying quality advantage. The evidence supports a narrow negative and mechanistic conclusion: in these small-model regimes, tied embeddings are a strong baseline, role-specific corrections move measurably, and that movement does not improve language-modeling loss.
+Weight tying uses one vocabulary matrix both to embed input tokens and to score output tokens. We test whether a shared base plus small role-specific low-rank corrections can retain the parameter savings of tying while recovering flexibility from untying. The main study uses a six-layer decoder-only Transformer on WikiText-2-raw-v1, three seeds, and 50,000 fresh optimizer steps. The tied model reaches final validation loss \TiedFinalLoss{}, compared with \PartialFinalLoss{} for rank-8 partial tying and \UntiedFinalLoss{} for full untying. The paired partial-minus-tied difference is +\PartialVsTiedDelta{}, while untied-minus-tied is +\UntiedVsTiedDelta{}; lower is better. Because full untying is worse than tying, an untied-benefit recovery fraction is undefined. A three-seed rank replication, a parameter-matched control, a smaller model, Tiny Shakespeare, path interventions, and representation probes do not reveal a stable partial-tying quality advantage. The evidence supports a narrow negative and mechanistic conclusion: in these small-model regimes, tied embeddings are a strong baseline, role-specific corrections move measurably, and that movement does not improve language-modeling loss.
 \end{abstract}
 
 \section{Introduction}
@@ -111,7 +111,7 @@ The 10k rank replication uses ranks 1, 2, 4, 8, 16, and 32 with the same three s
 \label{fig:robustness}
 \end{figure}
 
-The robustness studies repeat the central comparison with three seeds at a smaller WikiText-2 model and on Tiny Shakespeare. The smaller model gives tied 5.50110, partial 5.50163, and untied 5.52198 final loss; the partial-minus-tied paired difference is uncertain. Tiny Shakespeare gives tied 4.97787, partial 5.04152, and untied 5.13499. The final-checkpoint result does not show a partial gain, and the Tiny Shakespeare capacity control exhibits late overfitting. These studies do not establish a universal ordering, but they do not rescue the original partial-tying hypothesis.
+The robustness studies repeat the central comparison with three seeds at a smaller WikiText-2 model and on Tiny Shakespeare. The smaller model gives tied \SmallTiedFinal{}, partial \SmallPartialFinal{}, and untied \SmallUntiedFinal{} final loss; the partial-minus-tied paired difference is \SmallPartialDelta{} with interval [\SmallPartialDeltaLow{},\SmallPartialDeltaHigh{}]. Tiny Shakespeare gives tied \TinyTiedFinal{}, partial \TinyPartialFinal{}, and untied \TinyUntiedFinal{}. The final-checkpoint result does not show a partial gain, and the Tiny Shakespeare capacity control exhibits late overfitting. These studies do not establish a universal ordering, but they do not rescue the original partial-tying hypothesis.
 
 \begin{table}[t]
 \centering
@@ -124,9 +124,21 @@ The robustness studies repeat the central comparison with three seeds at a small
 
 The training code decomposes input-path and output-path pressure in effective $V\times D$ embedding-matrix space. This avoids treating gradients of the low-rank factors as if their arbitrary bases were scientifically meaningful. We record the total and shared-matrix gradient norms, output/input ratios, effective gradient cosines, cumulative update path, correction norms, effective ranks, singular spectra, correction alignment, token classes, and matched-frequency buckets.
 
-At the final 50k measurement, the tied output/input ratio is approximately 1.00 and the rank-8 partial ratio is approximately 0.97. The effective gradient cosine is close to zero for both. The partial output correction is larger in norm than its input correction, and both corrections use their available rank, but input/output correction alignment remains weak. These observations show role-specific movement without showing that the movement is useful for language modeling.
+At the final 50k measurement, the tied output/input ratio is approximately \MechanismTiedRatio{} and the rank-8 partial ratio is approximately \MechanismPartialRatio{}. The partial effective gradient cosine is \MechanismPartialGradCosine{}. The partial output correction has norm \MechanismPartialOutputNorm{} versus \MechanismPartialInputNorm{} for the input correction, while their effective matrix cosine is \MechanismPartialCorrectionCosine{}. These observations show role-specific movement without showing that the movement is useful for language modeling.
 
-The matched three-seed path interventions stop input or output gradients for steps $[0,5000)$. Stopping input gradients changes partial minus tied final loss by +0.00037 with a 95\% interval $[-0.00676,+0.00798]$. Stopping output gradients changes it by -0.00618 with interval $[-0.01474,+0.01011]$. Neither is a stable paired causal effect at this sample size.
+\begin{sloppypar}
+\raggedright
+The matched three-seed path interventions stop input or output gradients for steps $[0,5000)$. Stopping input gradients changes partial minus tied final loss by \InputStopDelta{} with a 95\% interval $[\InputStopDeltaLow{},\InputStopDeltaHigh{}]$. Stopping output gradients changes it by \OutputStopDelta{} with interval $[\OutputStopDeltaLow{},\OutputStopDeltaHigh{}]$. Neither is a stable paired causal effect at this sample size, so these interventions do not support a mechanism claim.
+\end{sloppypar}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.32\linewidth]{output_to_input_grad_ratio.png}
+\includegraphics[width=0.32\linewidth]{input_output_grad_cosine.png}
+\includegraphics[width=0.32\linewidth]{input_output_correction_cosine.png}
+\caption{Mechanism diagnostics from the fresh 50k study. The output/input gradient ratio is near one for tied and partial models; effective gradient and correction-matrix cosines remain close to zero.}
+\label{fig:mechanism}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -144,7 +156,15 @@ The matched three-seed path interventions stop input or output gradients for ste
 
 \section{Representation evaluation}
 
-Language-modeling loss is not treated as a direct measure of input embedding quality. The completed runs include frequency-matched nearest-neighbor cosine and agreement, lexical pair scores, and frozen linear probes for token metadata. In the 50k WikiText-2 evaluation, tied has mean input nearest-neighbor cosine 0.659 and frequency-matched agreement 0.481; partial has 0.647 and 0.482. The two models are close on these diagnostics, while untied is lower on both. The probe results do not provide evidence that partial corrections improve input representations in this setting. Output-side evaluation remains separate from input-side evaluation.
+Language-modeling loss is not treated as a direct measure of input embedding quality. The completed runs include frequency-matched nearest-neighbor cosine and agreement, lexical pair scores, and frozen linear probes for token metadata. In the 50k WikiText-2 evaluation, tied has mean input nearest-neighbor cosine \EmbeddingTiedNeighborCosine{} and frequency-matched agreement \EmbeddingTiedNeighborAgreement{}; partial has \EmbeddingPartialNeighborCosine{} and \EmbeddingPartialNeighborAgreement{}. The two models are close on these diagnostics, while untied is lower on both. The probe results do not provide evidence that partial corrections improve input representations in this setting. Output-side evaluation remains separate from input-side evaluation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\linewidth]{neighbor_cosine.png}
+\includegraphics[width=0.48\linewidth]{neighbor_agreement.png}
+\caption{Frozen input-embedding diagnostics at the end of the 50k study. Partial tying does not improve frequency-matched neighbor quality over tied embeddings.}
+\label{fig:representation}
+\end{figure}
 
 \section{Limitations}
 
@@ -157,6 +177,32 @@ The release includes the source commits used for each study, pinned dataset hash
 \section{Conclusion}
 
 This study asked whether a shared vocabulary matrix with small role-specific low-rank corrections could recover a useful benefit from untied input/output embeddings at much lower parameter cost. In the tested regime, the answer is no. Tied embeddings are the strongest primary model, full untying is substantially worse, and rank-8 partial tying is cheaper but also worse than tied. Rank replication and robustness checks do not reveal a stable partial advantage. Mechanism diagnostics show that role-specific gradients and corrections exist, but the measured specialization is not sufficient to improve validation loss. This narrows the useful claim: asymmetric optimization pressure can be present without creating a quality/parameter Pareto improvement from low-rank role corrections.
+
+\appendix
+
+\section{Exact configuration and accounting}
+
+The final WikiText-2 study uses GPT-2 BPE tokenization, a six-layer decoder with six attention heads and width 384, context length 256, batch size 2, AdamW, learning rate $3\times10^{-4}$ with a 100-step warmup and cosine decay to $3\times10^{-5}$, weight decay 0.1, and gradient clipping at 1.0. Each seed receives 25,600,000 training tokens over 50,000 optimizer steps. Validation uses the same 20 deterministic batches every 200 steps and records the required final step 49,999. The rank replication uses the same configuration for 10,000 steps and ranks 1, 2, 4, 8, 16, and 32.
+
+For the main width, tied has 30,023,808 trainable parameters. Rank-8 partial adds \PartialExtraParams{} parameters, while untied adds \UntiedExtraParams{}. The capacity control adds \CapacityExtraParams{}. Partial training keeps the corrections factorized; the full $V\times D$ matrices are reconstructed only for diagnostics. The FLOP estimates in the released aggregates include the factorized correction operations and are reported separately from measured wall-clock throughput.
+
+\section{Study provenance and statistical definitions}
+
+Study 1 is the preserved six-condition 10k matrix. The source commits for the released studies are:
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+Study 1, 10k & \texttt{440d42d3d005fa456b4ddb74a2c82fffa5a5c677} \\
+Fresh primary, 50k & \texttt{56f6360ad93eadff2c6ad1406a4805264549747f} \\
+Rank replication & \texttt{e8aa5e87b07810596940df5f66b5c92c7d825569} \\
+Robustness and interventions & \texttt{77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db}
+\end{tabular}
+\end{center}
+
+All substantive optimizer steps ran in Kaggle. The checked-in release manifest maps each aggregate to compact per-run JSONL metrics, configs, hashes, fairness results, hardware metadata, and seed values.
+
+All primary comparisons are paired by seed. The reported intervals are deterministic percentile bootstrap intervals over the three paired seed differences; they describe the observed matched runs and are not a substitute for a larger-sample inferential analysis. A recovered fraction is omitted when the tied-versus-untied denominator is not meaningfully positive. The fairness validator rejects missing cells, config or dataset mismatches, unequal sampled-token digests, non-finite metrics, and final validation records at the wrong step.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

@@ -1,6 +1,6 @@
 import json
 
-from paper.generate_tables import mechanism_table, primary_table, rank_table
+from paper.generate_tables import mechanism_table, primary_table, rank_table, supplementary_macros
 
 
 def test_primary_table_is_generated_from_aggregate():
@@ -90,3 +90,37 @@ def test_mechanism_table_escapes_condition_names_once():
     table = mechanism_table(result)
     assert "capacity\\_control" in table
     assert "capacity\\\\_control" not in table
+
+
+def test_supplementary_macros_are_derived_from_secondary_and_intervention_data():
+    secondary = {
+        "comparison": [
+            {"study": "small_scale", "condition": "tied", "mean_final_val_loss": 1.0},
+            {"study": "small_scale", "condition": "partial", "mean_final_val_loss": 1.1},
+            {"study": "small_scale", "condition": "untied", "mean_final_val_loss": 1.2},
+        ],
+        "paired_comparisons": {
+            "small_scale": {
+                "partial_minus_tied_final_val_loss": {
+                    "mean_delta": 0.1,
+                    "ci95": {"low": -0.1, "high": 0.2},
+                }
+            }
+        },
+    }
+    intervention = {
+        "studies": {
+            "stop_input": {
+                "paired_comparisons": {
+                    "partial_minus_tied_final_val_loss": {
+                        "mean_delta": 0.3,
+                        "ci95": {"low": 0.0, "high": 0.6},
+                    }
+                }
+            }
+        }
+    }
+    macros = supplementary_macros(secondary=secondary, intervention_input=intervention)
+    assert r"\newcommand{\SmallPartialFinal}{1.10000}" in macros
+    assert r"\newcommand{\SmallPartialDeltaLow}{-0.10000}" in macros
+    assert r"\newcommand{\InputStopDeltaHigh}{0.60000}" in macros

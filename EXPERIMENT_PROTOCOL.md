@@ -1,4 +1,4 @@
-# Frozen primary experiment protocol
+# Frozen Study 1 protocol (10k)
 
 **Protocol status:** frozen before substantive results. The primary endpoint and
 condition list must not be changed in response to intermediate validation loss.
@@ -69,6 +69,16 @@ No run is excluded for an unfavorable result. A run is invalid only when the
 fairness validator fails, metrics are incomplete/non-finite, or the cloud job
 does not produce the required artifact manifest; invalid runs are reported and
 repaired or rerun rather than silently removed.
+
+## Final confirmatory horizon
+
+The fresh 50,000-step study is the final primary endpoint reported in the
+release manuscript. It was launched from step zero with the same tokenizer,
+data order, validation windows, optimizer, and seed set, using the tied,
+untied, rank-8 partial, and parameter-matched capacity-control conditions.
+Its source commit is
+`56f6360ad93eadff2c6ad1406a4805264549747f`. The 10,000-step Study 1 runs
+were preserved and were never resumed into this longer cosine schedule.
 
 ## Secondary and exploratory work
 
