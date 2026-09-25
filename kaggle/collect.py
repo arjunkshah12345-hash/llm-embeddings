@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -36,6 +37,42 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def is_transient_download_error(output: str) -> bool:
+    lowered = output.lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "connection broken",
+            "incompleteread",
+            "connection reset",
+            "connection aborted",
+            "maxretryerror",
+            "name resolution",
+            "temporary failure",
+            "timed out",
+            "502 bad gateway",
+            "503 service unavailable",
+        )
+    )
+
+
+def download_kernel_output(kaggle: str, kernel: str, output: Path) -> None:
+    command = [kaggle, "kernels", "output", kernel, "-p", str(output), "--force"]
+    for attempt in range(5):
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+        if result.stdout.strip():
+            print(result.stdout, end="")
+        if result.returncode == 0:
+            if result.stderr.strip():
+                print(result.stderr, end="")
+            return
+        error = (result.stdout + "\n" + result.stderr).strip()
+        if attempt == 4 or not is_transient_download_error(error):
+            raise subprocess.CalledProcessError(result.returncode, command, result.stdout, result.stderr)
+        print(f"transient Kaggle output download failure; retrying ({attempt + 1}/5)", flush=True)
+        time.sleep(30)
+
+
 def main() -> None:
     args = parse_args()
     kaggle = kaggle_executable()
@@ -47,7 +84,7 @@ def main() -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="llm-embeddings-kaggle-") as temp:
         output = Path(temp) / "output"
-        subprocess.run([kaggle, "kernels", "output", args.kernel, "-p", str(output), "--force"], check=True)
+        download_kernel_output(kaggle, args.kernel, output)
         manifests = list(output.rglob("artifact_manifest.json"))
         if len(manifests) != 1:
             raise SystemExit(f"expected one artifact_manifest.json, found {len(manifests)}")

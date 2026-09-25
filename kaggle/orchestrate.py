@@ -64,13 +64,34 @@ def classify_status(returncode: int, output: str) -> str:
 
 
 def kernel_status(kaggle: str, kernel: str) -> str:
-    result = subprocess.run(
-        [kaggle, "kernels", "status", kernel],
-        capture_output=True,
-        text=True,
-        check=False,
+    """Read a kernel status, retrying transient Kaggle API/network failures."""
+    transient_markers = (
+        "connectionerror",
+        "maxretryerror",
+        "name resolution",
+        "nameresolutionerror",
+        "temporary failure",
+        "timed out",
+        "service unavailable",
+        "502 bad gateway",
+        "503 service unavailable",
     )
-    return classify_status(result.returncode, result.stdout + "\n" + result.stderr)
+    for attempt in range(5):
+        result = subprocess.run(
+            [kaggle, "kernels", "status", kernel],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        output = result.stdout + "\n" + result.stderr
+        try:
+            return classify_status(result.returncode, output)
+        except RuntimeError:
+            lowered = output.lower()
+            if attempt == 4 or not any(marker in lowered for marker in transient_markers):
+                raise
+            time.sleep(15)
+    raise RuntimeError(f"unable to read Kaggle status for {kernel}")
 
 
 def run(command: list[str]) -> None:

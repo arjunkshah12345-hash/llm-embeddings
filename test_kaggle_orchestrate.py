@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+import kaggle.orchestrate as orchestrate
+from kaggle.collect import is_transient_download_error
 from kaggle.orchestrate import (
     PROFILE_EXPERIMENTS,
     classify_status,
@@ -36,6 +38,23 @@ def test_status_classification_covers_terminal_and_live_states():
 def test_unknown_kaggle_error_is_not_silently_restarted():
     with pytest.raises(RuntimeError):
         classify_status(1, "temporary API outage")
+
+
+def test_kernel_status_retries_transient_network_failure(monkeypatch):
+    responses = iter(
+        [
+            type("Result", (), {"returncode": 1, "stdout": "", "stderr": "NameResolutionError"})(),
+            type("Result", (), {"returncode": 0, "stdout": 'status "KernelWorkerStatus.RUNNING"', "stderr": ""})(),
+        ]
+    )
+    monkeypatch.setattr(orchestrate.subprocess, "run", lambda *args, **kwargs: next(responses))
+    monkeypatch.setattr(orchestrate.time, "sleep", lambda _: None)
+    assert orchestrate.kernel_status("kaggle", "owner/kernel") == "RUNNING"
+
+
+def test_collection_classifies_interrupted_http_downloads_as_transient():
+    assert is_transient_download_error("Connection broken: IncompleteRead(10 bytes read)")
+    assert not is_transient_download_error("artifact commit mismatch")
 
 
 def test_profile_manifest_is_complete():
