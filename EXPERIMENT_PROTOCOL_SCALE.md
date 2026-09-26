@@ -107,9 +107,19 @@ language model with no fine-tuning, instruction tuning, chat template, or
 benchmark-specific training. The benchmark task list is frozen before result
 inspection.
 
+### Protocol revision 1 (harness task-name correction)
+
+The first completed kernels exposed an implementation compatibility error: the
+frozen prose name `lambada_open` is not a registered task in the pinned
+lm-evaluation-harness commit. The harness's canonical task is
+`lambada_openai`, which evaluates the intended OpenAI LAMBADA dataset. The
+primary benchmark endpoint is unchanged; affected jobs must be rerun with the
+canonical task name, and the failed task outputs from the initial attempt are
+retained as historical audit artifacts rather than treated as results.
+
 The core suite is:
 
-`lambada_open`, `hellaswag`, `piqa`, `winogrande`, `arc_easy`,
+`lambada_openai`, `hellaswag`, `piqa`, `winogrande`, `arc_easy`,
 `arc_challenge`, `sciq`, `openbookqa`, `boolq`, `commonsense_qa`.
 
 The extended suite is:
@@ -143,4 +153,3 @@ The scale comparison is a replication across the existing approximately 30M
 study and this approximately 124M tied-model study. It is not presented as a
 scaling law. The paper will follow the observed result, including a null,
 negative, or mixed outcome.
-

@@ -55,6 +55,7 @@ def test_benchmark_suite_is_frozen_and_does_not_include_chat_tasks():
     assert HARNESS_COMMIT == "ddd67220430a2470529f25fd5c05a576ca1057a0"
     assert len(CORE_TASKS) == 10
     assert len(EXTENDED_TASKS) == 4
+    assert CORE_TASKS[0] == "lambada_openai"
     assert not any("mtbench" in task or "alpaca" in task or "ifeval" in task for task in CORE_TASKS + EXTENDED_TASKS)
 
 

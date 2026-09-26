@@ -21,7 +21,7 @@ from model import GPTModel
 HARNESS_COMMIT = "ddd67220430a2470529f25fd5c05a576ca1057a0"
 PREFIX_TOKEN_ID = 50256
 CORE_TASKS = (
-    "lambada_open",
+    "lambada_openai",
     "hellaswag",
     "piqa",
     "winogrande",

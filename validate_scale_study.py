@@ -25,7 +25,7 @@ TRAINING_SOURCE_FILES = (
 )
 EXPECTED_BENCHMARK_TASKS = {
     "core": (
-        "lambada_open",
+        "lambada_openai",
         "hellaswag",
         "piqa",
         "winogrande",
