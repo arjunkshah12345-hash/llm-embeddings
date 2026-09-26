@@ -68,4 +68,5 @@ def test_scale_launcher_uses_mount_probe_and_canonical_kernel_slug():
     assert slug("capacity_control", 1337, "-r3") == "llm-embeddings-scale3-capacity-control-seed1337-r3"
     assert "streaming" in RUN_TEMPLATE and "FineWeb" in RUN_TEMPLATE
     assert "dataset_download" in RUN_TEMPLATE
+    assert "shutil.copy2(source, target)" in RUN_TEMPLATE
     assert "MODE == \"mount_probe\"" in RUN_TEMPLATE

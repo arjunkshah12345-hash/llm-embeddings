@@ -164,9 +164,14 @@ def prepare_cached_data() -> Path:
         for name in ("metadata.json", "source_manifest.json", "train.pt", "val.pt", "test.pt"):
             source = data_source_root / name
             if source.exists():
-                link = cached_root / name
-                if not link.exists():
-                    link.symlink_to(source)
+                target = cached_root / name
+                if target.exists() or target.is_symlink():
+                    target.unlink()
+                if name == "metadata.json":
+                    # train.py appends its runtime metadata in place.
+                    shutil.copy2(source, target)
+                else:
+                    target.symlink_to(source)
         return DATA
     raise RuntimeError(
         f"Kaggle dataset has unexpected files: {sorted(p.name for p in data_source_root.iterdir())}"
