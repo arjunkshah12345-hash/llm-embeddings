@@ -136,7 +136,8 @@ class TokenDataset:
         manifest_path = self.root / "source_manifest.json"
         if all((self.root / f"{split}.pt").exists() for split in ("train", "val", "test")) and manifest_path.exists():
             try:
-                if json.loads(manifest_path.read_text()) == expected:
+                cached = json.loads(manifest_path.read_text())
+                if all(cached.get(key) == value for key, value in expected.items()):
                     return
             except (OSError, ValueError):
                 pass

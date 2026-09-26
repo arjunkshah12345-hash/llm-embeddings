@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OWNER = "aks1321"
 EXPERIMENT_ID = "scale3_fineweb_20m"
+DATASET_SOURCE = "aks1321/llm-embeddings-scale3-data"
+DATASET_SLUG = "llm-embeddings-scale3-data"
 MODEL = {
     "block_size": 512,
     "n_layer": 12,
@@ -83,7 +85,8 @@ SOURCE_URL = "https://github.com/arjunkshah12345-hash/llm-embeddings.git"
 WORK = Path("/kaggle/working")
 SOURCE = WORK / "llm-embeddings-source"
 STUDY = WORK / f"{CONFIG['experiment_id']}-seed{SEED}-{CONDITION}"
-DATA = WORK / "llm-embeddings-scale-data"
+DATA = WORK / "scale_data"
+DATA_INPUT = Path("/kaggle/input/__DATASET_SLUG__")
 
 def run(command: list[str], cwd: Path | None = None) -> None:
     print("$", " ".join(command), flush=True)
@@ -112,13 +115,13 @@ def main() -> None:
     if actual_commit != COMMIT:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-scale-lock.txt", "--quiet"], cwd=SOURCE)
-    if MODE == "probe":
+    if MODE in {"probe", "data_bundle"}:
         run([sys.executable, "scale_probe.py"], cwd=SOURCE)
-        output_root = WORK / "scale_probe"
+        output_root = WORK / ("scale_probe" if MODE == "probe" else "scale_data_bundle")
         output_root.mkdir(parents=True, exist_ok=True)
-        if (output_root / "probe.json").exists():
-            pass
-        manifest = {"kind": "scale_probe", "experiment_id": "scale3_probe", "git_commit": actual_commit, "kernel": f"{OWNER}/{KERNEL_SLUG}"}
+        if MODE == "data_bundle":
+            shutil.copytree(DATA, output_root / "fineweb_edu")
+        manifest = {"kind": "scale_probe" if MODE == "probe" else "scale_data_bundle", "experiment_id": "scale3_probe" if MODE == "probe" else "scale3_data_bundle", "git_commit": actual_commit, "kernel": f"{OWNER}/{KERNEL_SLUG}"}
         (output_root / "artifact_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
         if (WORK / "scale_data").exists():
             shutil.rmtree(WORK / "scale_data")
@@ -127,11 +130,12 @@ def main() -> None:
         return
 
     output_dir = STUDY / "training"
+    data_dir = DATA_INPUT if DATA_INPUT.exists() else DATA
     run([
         sys.executable, "train.py",
         "--embedding_type", CONDITION,
         "--dataset", CONFIG["train"]["dataset"],
-        "--data_dir", str(DATA),
+        "--data_dir", str(data_dir),
         "--output_dir", str(output_dir),
         "--run_name", CONDITION,
         "--device", "cuda",
@@ -202,7 +206,7 @@ if __name__ == "__main__":
 '''
 
 
-def metadata(kernel_id: str, title: str) -> dict:
+def metadata(kernel_id: str, title: str, dataset_sources: list[str] | None = None) -> dict:
     return {
         "id": kernel_id,
         "title": title,
@@ -212,7 +216,7 @@ def metadata(kernel_id: str, title: str) -> dict:
         "is_private": True,
         "enable_gpu": True,
         "enable_internet": True,
-        "dataset_sources": [],
+        "dataset_sources": dataset_sources or [],
         "competition_sources": [],
         "kernel_sources": [],
     }
@@ -221,7 +225,7 @@ def metadata(kernel_id: str, title: str) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--commit", required=True)
-    parser.add_argument("--mode", choices=["probe", "train"], required=True)
+    parser.add_argument("--mode", choices=["probe", "data_bundle", "train"], required=True)
     parser.add_argument("--condition", choices=CONDITIONS, default="tied")
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--owner", default=OWNER)
@@ -236,6 +240,8 @@ def main() -> None:
         raise SystemExit(f"cannot resolve --commit {args.commit!r} in the local checkout") from exc
     if args.mode == "probe":
         kernel_slug = f"llm-embeddings-scale3-probe{args.slug_suffix}"
+    elif args.mode == "data_bundle":
+        kernel_slug = f"llm-embeddings-scale3-data-bundle{args.slug_suffix}"
     else:
         if args.seed not in SEEDS:
             raise SystemExit(f"seed must be one of {SEEDS}")
@@ -251,10 +257,12 @@ def main() -> None:
     rendered = rendered.replace("__SEED__", str(args.seed))
     rendered = rendered.replace("__OWNER__", args.owner)
     rendered = rendered.replace("__KERNEL_SLUG__", kernel_slug)
+    rendered = rendered.replace("__DATASET_SLUG__", DATASET_SLUG)
     rendered = rendered.replace("__CONFIG_JSON__", json.dumps(config, sort_keys=True))
     (generated / "run.py").write_text(rendered)
     kernel_id = f"{args.owner}/{kernel_slug}"
-    (generated / "kernel-metadata.json").write_text(json.dumps(metadata(kernel_id, kernel_slug), indent=2) + "\n")
+    dataset_sources = [DATASET_SOURCE] if args.mode == "train" else []
+    (generated / "kernel-metadata.json").write_text(json.dumps(metadata(kernel_id, kernel_slug, dataset_sources), indent=2) + "\n")
     print(kernel_id)
     if args.dry_run:
         return
