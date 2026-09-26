@@ -34,7 +34,7 @@ We study a middle ground rather than assuming that either exact equality or comp
  \qquad
  W_{\mathrm{output}} = W_{\mathrm{shared}} + s A_{\mathrm{output}}B_{\mathrm{output}}^\top,
 \end{equation}
-where $A\in\mathbb{R}^{V\times r}$, $B\in\mathbb{R}^{D\times r}$, and $s=\alpha/r$. The extra parameter cost is $2r(V+D)$, much smaller than adding a second full vocabulary matrix when $r\ll D$.
+where $A\in\mathbb{R}^{V\times r}$, $B\in\mathbb{R}^{D\times r}$, and $s=\alpha/r$. The main rank-8 experiment uses $\alpha=8$, so $s=1$. The extra parameter cost is $2r(V+D)$, much smaller than adding a second full vocabulary matrix when $r\ll D$.
 
 The central empirical question is how much of an untied quality benefit can such corrections recover per added parameter. We compare tied, fully untied, rank-8 partial, and a parameter-matched tied control under identical Transformer, optimizer, data, seed, validation, and token-exposure conditions. The paper follows the evidence even when the untied baseline is not better than tied.
 
@@ -47,7 +47,7 @@ The central empirical question is how much of an untied quality benefit can such
 
 \section{Related work}
 
-Weight tying was introduced as a practical and theoretically motivated parameter-sharing method by Press and Wolf and by Inan, Khosravi, and Socher \citep{press2017using,inan2017tying}. Press and Wolf also reported that the tied representation evolves more like the output embedding than the untied input embedding, motivating pathway-specific diagnostics. Work on the geometry and role distinction of input and output representations includes Gulordava, Aina, and Boleda and Derby, Miller, and Devereux \citep{gulordava2018represent,derby2020analysing}.
+Weight tying was introduced as a practical and theoretically motivated parameter-sharing method by Press and Wolf and by Inan, Khosravi, and Socher \citep{press2017using,inan2017tying}. Press and Wolf also reported that the tied representation evolves more like the output embedding than the untied input embedding, motivating pathway-specific diagnostics. Work on the geometry and role distinction of input and output representations includes Gulordava et al. and Derby, Miller, and Devereux \citep{gulordava2018represent,derby2020analysing}.
 
 Several methods relax the hard equality constraint. Chung et al. study decoupled input and output embedding dimensions in pretrained language models \citep{chung2021rethinking}. Adaptive input representations allocate variable capacity across vocabulary regions \citep{baevski2019adaptive}; that goal differs from our role-specific residuals on a shared full-width base. Low-rank adaptation supplies the factorized parameterization used here \citep{hu2022lora}.
 
@@ -57,7 +57,7 @@ More recent work connects tying to distributional assumptions and possible outpu
 
 All conditions use the same decoder-only Transformer. The primary configuration has six layers, six attention heads, width 384, context length 256, GPT-2 BPE tokenization, and WikiText-2-raw-v1. The main 50k study uses seeds 1337, 2027, and 31415, batch size 2, 50,000 fresh optimizer steps, warmup 100, and cosine decay from $3\times10^{-4}$ to $3\times10^{-5}$. Every condition within a seed receives the same sampled training windows, optimizer schedule, fixed validation windows, initialization protocol, and token budget.
 
-The tied model uses one parameter for lookup and projection. The untied model copies the tied initialization into independent input and output parameters. The partial model starts with zero effective corrections and therefore the same initial function as tied. The capacity control adds approximately the partial model's parameter budget elsewhere in the Transformer without separating input and output roles. Study 1 additionally includes input-only and output-only corrections.
+The tied model uses one parameter for lookup and projection. The untied model copies the tied initialization into independent input and output parameters. The partial model starts with zero effective corrections and therefore the same initial function as tied. The capacity control is a tied model with a zero-initialized, bias-free residual bottleneck MLP applied to the final hidden states. Its bottleneck width is 1,056, giving 811,008 additional parameters, approximately matching the rank-8 partial model's 810,256 parameters without separating input and output roles. Study 1 additionally includes input-only and output-only corrections.
 
 The optimized partial computation never constructs a full correction matrix during normal training. Input lookup is
 \[
@@ -69,7 +69,7 @@ hW_{\mathrm{shared}}^\top + s(hB_{\mathrm{output}})A_{\mathrm{output}}^\top.
 \]
 Tests compare these operations with explicit small-matrix reconstruction. Full matrices are used only for analysis diagnostics.
 
-The validator requires a complete seed-by-condition matrix, matching configurations and pinned dataset hashes, finite metrics, a validation record exactly at the declared final step, and exact equality of actual token exposure and sampled-offset digests. All confidence intervals below are deterministic bootstrap intervals over paired seeds and are descriptive at $n=3$.
+The validator requires a complete seed-by-condition matrix, matching configurations and pinned dataset hashes, finite metrics, a validation record exactly at the declared final step, and exact equality of actual token exposure and sampled-offset digests. All intervals below are descriptive bootstrap intervals over paired seeds; with $n=3$, they describe the observed matched runs rather than providing large-sample inferential evidence.
 
 \section{Main result}
 
@@ -77,7 +77,7 @@ Table~\ref{tab:primary} reports the fresh 50k study. Tied has the lowest final a
 
 \begin{table}[t]
 \centering
-\caption{Fresh 50k primary study. Values are means across three seeds; intervals in the table are bootstrap intervals for final loss.}
+\caption{Fresh 50k primary study. Values are means across three seeds; intervals are descriptive bootstrap intervals for final loss.}
 \label{tab:primary}
 \resizebox{\linewidth}{!}{\input{generated/primary_table.tex}}
 \end{table}
@@ -98,7 +98,7 @@ The 10k rank replication uses ranks 1, 2, 4, 8, 16, and 32 with the same three s
 
 \begin{table}[t]
 \centering
-\caption{Three-seed 10k rank replication. Paired differences are partial rank minus tied; lower loss is better.}
+\caption{Three-seed 10k rank replication. Paired differences are partial rank minus tied; intervals are descriptive bootstrap intervals and lower loss is better.}
 \label{tab:rank}
 \resizebox{\linewidth}{!}{\input{generated/rank_table.tex}}
 \end{table}
@@ -111,7 +111,7 @@ The 10k rank replication uses ranks 1, 2, 4, 8, 16, and 32 with the same three s
 \label{fig:robustness}
 \end{figure}
 
-The robustness studies repeat the central comparison with three seeds at a smaller WikiText-2 model and on Tiny Shakespeare. The smaller model gives tied \SmallTiedFinal{}, partial \SmallPartialFinal{}, and untied \SmallUntiedFinal{} final loss; the partial-minus-tied paired difference is \SmallPartialDelta{} with interval [\SmallPartialDeltaLow{},\SmallPartialDeltaHigh{}]. Tiny Shakespeare gives tied \TinyTiedFinal{}, partial \TinyPartialFinal{}, and untied \TinyUntiedFinal{}. The final-checkpoint result does not show a partial gain, and the Tiny Shakespeare capacity control exhibits late overfitting. These studies do not establish a universal ordering, but they do not rescue the original partial-tying hypothesis.
+The robustness studies repeat the central comparison with three seeds at a smaller WikiText-2 model and on Tiny Shakespeare. The smaller model gives tied \SmallTiedFinal{}, partial \SmallPartialFinal{}, and untied \SmallUntiedFinal{} final loss; the partial-minus-tied paired difference is \SmallPartialDelta{} with a descriptive bootstrap interval [\SmallPartialDeltaLow{},\SmallPartialDeltaHigh{}]. Tiny Shakespeare gives tied \TinyTiedFinal{}, partial \TinyPartialFinal{}, and untied \TinyUntiedFinal{}. The final-checkpoint result does not show a partial gain, and the Tiny Shakespeare capacity control exhibits late overfitting. These studies do not establish a universal ordering, but they do not rescue the original partial-tying hypothesis.
 
 \begin{table}[t]
 \centering
@@ -128,7 +128,7 @@ At the final 50k measurement, the tied output/input ratio is approximately \Mech
 
 \begin{sloppypar}
 \raggedright
-The matched three-seed path interventions stop input or output gradients for steps $[0,5000)$. Stopping input gradients changes partial minus tied final loss by \InputStopDelta{} with a 95\% interval $[\InputStopDeltaLow{},\InputStopDeltaHigh{}]$. Stopping output gradients changes it by \OutputStopDelta{} with interval $[\OutputStopDeltaLow{},\OutputStopDeltaHigh{}]$. Neither is a stable paired causal effect at this sample size, so these interventions do not support a mechanism claim.
+The matched three-seed path interventions stop input or output gradients for steps $[0,5000)$. Stopping input gradients changes partial minus tied final loss by \InputStopDelta{} with a descriptive bootstrap interval $[\InputStopDeltaLow{},\InputStopDeltaHigh{}]$. Stopping output gradients changes it by \OutputStopDelta{} with a descriptive bootstrap interval $[\OutputStopDeltaLow{},\OutputStopDeltaHigh{}]$. Neither is a stable paired causal effect at this sample size, so these interventions do not support a mechanism claim.
 \end{sloppypar}
 
 \begin{figure}[t]
@@ -149,9 +149,9 @@ The matched three-seed path interventions stop input or output gradients for ste
 
 \begin{table}[t]
 \centering
-\caption{Three-seed path-intervention effects at 10k. Each value is partial minus tied final validation loss.}
+\caption{Three-seed path-intervention effects at 10k. Each value is partial minus tied final validation loss; intervals are descriptive bootstrap intervals.}
 \label{tab:interventions}
-\input{generated/intervention_table.tex}
+\resizebox{\linewidth}{!}{\input{generated/intervention_table.tex}}
 \end{table}
 
 \section{Representation evaluation}
@@ -165,6 +165,10 @@ Language-modeling loss is not treated as a direct measure of input embedding qua
 \caption{Frozen input-embedding diagnostics at the end of the 50k study. Partial tying does not improve frequency-matched neighbor quality over tied embeddings.}
 \label{fig:representation}
 \end{figure}
+
+\section{Discussion}
+
+Recent work by Lopardo et al. reports that tied embeddings become biased toward the output space and attributes part of that effect to output-gradient dominance early in training \citep{lopardo2026weight}. Our final-step effective gradient measurements are closer to parity in this smaller-model regime: the 50k output-to-input ratios are near one for tied and rank-8 partial models. These observations are not directly contradictory because the studies differ in model scale, gradient measurement, and training phase. They instead suggest that measurable role asymmetry need not imply that decoupling improves language-modeling loss. Early-training trajectories, larger models, and other diagnostics could still reveal dynamics that are averaged away by our final-step measurements.
 
 \section{Limitations}
 
@@ -182,7 +186,7 @@ This study asked whether a shared vocabulary matrix with small role-specific low
 
 \section{Exact configuration and accounting}
 
-The final WikiText-2 study uses GPT-2 BPE tokenization, a six-layer decoder with six attention heads and width 384, context length 256, batch size 2, AdamW, learning rate $3\times10^{-4}$ with a 100-step warmup and cosine decay to $3\times10^{-5}$, weight decay 0.1, and gradient clipping at 1.0. Each seed receives 25,600,000 training tokens over 50,000 optimizer steps. Validation uses the same 20 deterministic batches every 200 steps and records the required final step 49,999. The rank replication uses the same configuration for 10,000 steps and ranks 1, 2, 4, 8, 16, and 32.
+The final WikiText-2 study uses GPT-2 BPE tokenization, a six-layer decoder with six attention heads and width 384, context length 256, batch size 2, AdamW, learning rate $3\times10^{-4}$ with a 100-step warmup and cosine decay to $3\times10^{-5}$, weight decay 0.1, and gradient clipping at 1.0. Each seed receives 25,600,000 training tokens over 50,000 optimizer steps. Validation uses the same 20 deterministic batches every 200 steps and records the required final step 49,999. The rank replication uses the same configuration for 10,000 steps and ranks 1, 2, 4, 8, 16, and 32. The rank-8 main experiment uses adapter $\alpha=8$, so the correction scale $s=\alpha/r$ equals 1.
 
 For the main width, tied has 30,023,808 trainable parameters. Rank-8 partial adds \PartialExtraParams{} parameters, while untied adds \UntiedExtraParams{}. The capacity control adds \CapacityExtraParams{}. Partial training keeps the corrections factorized; the full $V\times D$ matrices are reconstructed only for diagnostics. The FLOP estimates in the released aggregates include the factorized correction operations and are reported separately from measured wall-clock throughput.
 
@@ -202,7 +206,7 @@ Robustness and interventions & \texttt{77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db}
 
 All substantive optimizer steps ran in Kaggle. The checked-in release manifest maps each aggregate to compact per-run JSONL metrics, configs, hashes, fairness results, hardware metadata, and seed values.
 
-All primary comparisons are paired by seed. The reported intervals are deterministic percentile bootstrap intervals over the three paired seed differences; they describe the observed matched runs and are not a substitute for a larger-sample inferential analysis. A recovered fraction is omitted when the tied-versus-untied denominator is not meaningfully positive. The fairness validator rejects missing cells, config or dataset mismatches, unequal sampled-token digests, non-finite metrics, and final validation records at the wrong step.
+All primary comparisons are paired by seed. The reported intervals are descriptive percentile-bootstrap intervals over the three paired seed differences; they describe the observed matched runs and are not a substitute for a larger-sample inferential analysis. A recovered fraction is omitted when the tied-versus-untied denominator is not meaningfully positive. The fairness validator rejects missing cells, config or dataset mismatches, unequal sampled-token digests, non-finite metrics, and final validation records at the wrong step.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

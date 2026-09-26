@@ -26,13 +26,14 @@ The primary study contains six conditions, all run by the same sweep:
 | `tied` | One shared input/output matrix |
 | `untied` | Separate input and output matrices initialized identically |
 | `partial` | Shared matrix plus independent rank-8 input/output corrections |
-| `capacity_control` | Tied embeddings plus a parameter-matched residual capacity adapter |
+| `capacity_control` | Tied embeddings plus a zero-initialized, bias-free residual bottleneck MLP on final hidden states; width 1,056 matches the partial parameter budget |
 | `partial_input` | Shared matrix plus input correction only |
 | `partial_output` | Shared matrix plus output correction only |
 
 `capacity_control` is included in the primary matrix. It tests whether a partial
 model wins because capacity is placed on the two embedding roles rather than
-because it simply has more trainable parameters.
+because it simply has more trainable parameters. At the main configuration the
+control adds 811,008 parameters versus 810,256 for rank-8 partial tying.
 
 ## Fixed configuration
 
@@ -60,7 +61,7 @@ parameter counts, and estimated FLOPs are secondary reported metrics.
 
 For every condition and seed, retain the individual value, mean, sample standard
 deviation, paired difference against `tied`, and deterministic percentile
-bootstrap 95% interval over paired seeds. Report the untied improvement over
+descriptive bootstrap interval over paired seeds. Report the untied improvement over
 tied, partial improvement over tied, and partial-to-untied gap. Report a
 recovered fraction only when the paired tied-vs-untied difference is
 distinguishable from zero and its denominator is meaningfully nonzero.

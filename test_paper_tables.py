@@ -23,7 +23,7 @@ def test_primary_table_is_generated_from_aggregate():
     assert "100" in table and "1.20000" in table and "3" in table
 
 
-def test_primary_table_uses_single_latex_escape_for_condition_names():
+def test_primary_table_uses_public_condition_labels():
     result = {
         "by_condition": {
             "capacity_control": {
@@ -37,8 +37,8 @@ def test_primary_table_uses_single_latex_escape_for_condition_names():
         }
     }
     table = primary_table(result)
-    assert "capacity\\_control" in table
-    assert "capacity\\\\_control" not in table
+    assert "Capacity control" in table
+    assert "capacity_control" not in table
 
 
 def test_rank_table_contains_each_rank():
@@ -70,10 +70,10 @@ def test_mechanism_table_reads_aggregate_metrics():
         }
     }
     table = mechanism_table(result)
-    assert "partial" in table and "1.5000" in table and "-0.2000" in table
+    assert "Partial" in table and "1.5000" in table and "-0.2000" in table
 
 
-def test_mechanism_table_escapes_condition_names_once():
+def test_mechanism_table_uses_public_condition_labels():
     result = {
         "final": {
             "capacity_control": {
@@ -88,8 +88,22 @@ def test_mechanism_table_escapes_condition_names_once():
         }
     }
     table = mechanism_table(result)
-    assert "capacity\\_control" in table
-    assert "capacity\\\\_control" not in table
+    assert "Capacity control" in table
+    assert "capacity_control" not in table
+
+
+def test_primary_table_uses_public_order_and_labels():
+    result = {
+        "by_condition": {
+            "capacity_control": {"total_parameters": 4, "additional_parameters_vs_tied": 3, "mean_final_val_loss": 4.0, "ci95_final_val_loss": {"low": 4.0, "high": 4.0}, "mean_best_val_loss": 4.0, "run_count": 1},
+            "untied": {"total_parameters": 3, "additional_parameters_vs_tied": 2, "mean_final_val_loss": 3.0, "ci95_final_val_loss": {"low": 3.0, "high": 3.0}, "mean_best_val_loss": 3.0, "run_count": 1},
+            "partial": {"total_parameters": 2, "additional_parameters_vs_tied": 1, "mean_final_val_loss": 2.0, "ci95_final_val_loss": {"low": 2.0, "high": 2.0}, "mean_best_val_loss": 2.0, "run_count": 1},
+            "tied": {"total_parameters": 1, "additional_parameters_vs_tied": 0, "mean_final_val_loss": 1.0, "ci95_final_val_loss": {"low": 1.0, "high": 1.0}, "mean_best_val_loss": 1.0, "run_count": 1},
+        }
+    }
+    table = primary_table(result)
+    assert table.index("Tied") < table.index("Partial") < table.index("Untied") < table.index("Capacity control")
+    assert "capacity_control" not in table
 
 
 def test_supplementary_macros_are_derived_from_secondary_and_intervention_data():

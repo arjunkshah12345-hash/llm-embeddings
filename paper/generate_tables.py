@@ -21,19 +21,39 @@ def tex_int(value: int | None) -> str:
     return "--" if value is None else f"{int(value):,}".replace(",", "{,}")
 
 
+def condition_label(condition: str) -> str:
+    return {
+        "tied": "Tied",
+        "partial": "Partial",
+        "untied": "Untied",
+        "capacity_control": "Capacity control",
+        "partial_input": "Partial (input)",
+        "partial_output": "Partial (output)",
+    }.get(condition, condition.replace("_", " ").title())
+
+
+def study_label(study: str) -> str:
+    return {
+        "small_scale": "Small WikiText-2",
+        "tiny_shakespeare": "Tiny Shakespeare",
+    }.get(study, study.replace("_", " ").title())
+
+
 def primary_table(result: dict) -> str:
     rows = [
         r"\begin{tabular}{lrrrrrr}",
         r"\toprule",
-        r"Condition & Params. & $\Delta$ params. & Final loss & 95\% CI & Best loss & Seeds \\",
+        r"Condition & Params. & $\Delta$ params. & Final loss & Descriptive bootstrap interval & Best loss & Seeds \\",
         r"\midrule",
     ]
-    for condition, value in result["by_condition"].items():
+    for condition in ("tied", "partial", "untied", "capacity_control"):
+        value = result["by_condition"].get(condition)
+        if value is None:
+            continue
         ci = value["ci95_final_val_loss"]
         ci_text = f"[{tex_number(ci['low'])}, {tex_number(ci['high'])}]"
-        escaped_condition = condition.replace("_", "\\_")
         rows.append(
-            f"{escaped_condition} & {tex_int(value['total_parameters'])} & "
+            f"{condition_label(condition)} & {tex_int(value['total_parameters'])} & "
             f"{tex_int(value['additional_parameters_vs_tied'])} & {tex_number(value['mean_final_val_loss'], 5)} & "
             f"{ci_text} & {tex_number(value['mean_best_val_loss'], 5)} & {value['run_count']} "
             + r"\\"
@@ -151,7 +171,7 @@ def rank_table(result: dict) -> str:
     rows = [
         r"\begin{tabular}{rrrrrr}",
         r"\toprule",
-        r"Rank & Extra params. & Final loss & Paired $\Delta$ & 95\% CI & Seeds \\",
+        r"Rank & Extra params. & Final loss & Paired $\Delta$ & Descriptive bootstrap interval & Seeds \\",
         r"\midrule",
     ]
     for rank, value in sorted(result["by_rank"].items(), key=lambda item: int(item[0])):
@@ -187,9 +207,8 @@ def mechanism_table(result: dict) -> str:
             metrics.get("output_correction_norm", {}).get("mean"),
             metrics.get("input_output_correction_cosine", {}).get("mean"),
         ]
-        escaped_condition = condition.replace("_", "\\_")
         rows.append(
-            f"{escaped_condition} & "
+            f"{condition_label(condition)} & "
             + " & ".join(tex_number(value, 4) for value in values)
             + r" \\"
         )
@@ -205,8 +224,8 @@ def secondary_table(result: dict) -> str:
         r"\midrule",
     ]
     for row in result.get("comparison", []):
-        condition = str(row["condition"]).replace("_", "\\_")
-        study = str(row["study"]).replace("_", "\\_")
+        condition = condition_label(str(row["condition"]))
+        study = study_label(str(row["study"]))
         rows.append(
             f"{study} & {condition} & {tex_int(row.get('total_parameters'))} & "
             f"{tex_int(row.get('additional_parameters_vs_tied'))} & "
@@ -221,7 +240,7 @@ def intervention_table(input_result: dict, output_result: dict) -> str:
     rows = [
         r"\begin{tabular}{lrrr}",
         r"\toprule",
-        r"Stopped path & Paired final $\Delta$ & 95\% CI & Seeds \\",
+        r"Stopped path & Paired final $\Delta$ & Descriptive bootstrap interval & Seeds \\",
         r"\midrule",
     ]
     for label, result in (("Input", input_result), ("Output", output_result)):
