@@ -60,7 +60,11 @@ def kaggle_executable() -> str:
 
 
 def slug(condition: str, seed: int, suffix: str = "") -> str:
-    return f"llm-embeddings-scale3-{condition}-seed{seed}{suffix}"
+    # Kaggle normalizes kernel IDs by replacing underscores in titles with
+    # hyphens.  Use the canonical URL slug here so status/collection can find
+    # capacity_control jobs after submission.
+    kernel_condition = condition.replace("_", "-")
+    return f"llm-embeddings-scale3-{kernel_condition}-seed{seed}{suffix}"
 
 
 RUN_TEMPLATE = r'''"""Generated Kaggle kernel for Study 3."""
