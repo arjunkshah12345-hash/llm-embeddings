@@ -64,32 +64,54 @@ def main() -> None:
             print(f"{condition}\t{seed}\t{kernel}")
         return
 
-    pending = []
+    remaining = []
+    active = []
+    completed = []
     for condition, seed, kernel in jobs:
-        if status(kaggle, kernel) == "MISSING":
-            command = [
-                os.environ.get("PYTHON", "python3"),
-                "kaggle/scale_launch.py",
-                "--commit", args.commit,
-                "--mode", args.stage,
-                "--owner", args.owner,
-                "--seed", str(seed),
-            ]
-            if args.stage == "train":
-                command.extend(["--condition", condition])
-            if args.slug_suffix:
-                command.append(f"--slug-suffix={args.slug_suffix}")
-            subprocess.run(command, cwd=ROOT, check=True)
-        pending.append((condition, seed, kernel))
+        state = status(kaggle, kernel)
+        if state == "COMPLETE":
+            completed.append((condition, seed, kernel))
+        elif state == "MISSING":
+            remaining.append((condition, seed, kernel))
+        else:
+            active.append((condition, seed, kernel))
 
-    while pending:
-        states = {f"{condition}:{seed}": status(kaggle, kernel) for condition, seed, kernel in pending}
+    def submit(job: tuple[str, int, str]) -> None:
+        condition, seed, _kernel = job
+        command = [
+            os.environ.get("PYTHON", "python3"),
+            "kaggle/scale_launch.py",
+            "--commit", args.commit,
+            "--mode", args.stage,
+            "--owner", args.owner,
+            "--seed", str(seed),
+        ]
+        if args.stage == "train":
+            command.extend(["--condition", condition])
+        if args.slug_suffix:
+            command.append(f"--slug-suffix={args.slug_suffix}")
+        subprocess.run(command, cwd=ROOT, check=True)
+
+    # Kaggle currently allows two active GPU sessions for this account. Keep
+    # the queue explicit so a quota rejection cannot be mistaken for a job.
+    max_active = 2
+    while active or remaining:
+        while remaining and len(active) < max_active:
+            job = remaining.pop(0)
+            submit(job)
+            state = status(kaggle, job[2])
+            if state == "MISSING":
+                raise SystemExit(f"Kaggle submission did not create a job: {job[2]}")
+            active.append(job)
+        states = {f"{condition}:{seed}": status(kaggle, kernel) for condition, seed, kernel in active}
         print(states, flush=True)
         failed = [name for name, state in states.items() if state == "FAILED"]
         if failed:
             raise SystemExit(f"Kaggle jobs failed: {', '.join(failed)}")
-        pending = [job for job in pending if states[f"{job[0]}:{job[1]}"] != "COMPLETE"]
-        if pending:
+        finished = [job for job in active if states[f"{job[0]}:{job[1]}"] == "COMPLETE"]
+        completed.extend(finished)
+        active = [job for job in active if states[f"{job[0]}:{job[1]}"] != "COMPLETE"]
+        if active or remaining:
             time.sleep(args.poll_seconds)
 
     if args.stage == "probe":
@@ -99,12 +121,12 @@ def main() -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run([
             os.environ.get("PYTHON", "python3"), "kaggle/collect.py",
-            "--kernel", jobs[0][2], "--destination", str(destination),
+            "--kernel", completed[0][2], "--destination", str(destination),
             "--expected-commit", args.commit, "--expected-experiment", "scale3_probe",
         ], cwd=ROOT, check=True)
         return
 
-    for condition, seed, kernel in jobs:
+    for condition, seed, kernel in completed:
         destination = ROOT / args.output_root / f"{EXPERIMENT_ID}_seed{seed}_{condition}"
         if destination.exists():
             continue
