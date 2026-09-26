@@ -130,7 +130,23 @@ def main() -> None:
         return
 
     output_dir = STUDY / "training"
-    data_dir = DATA_INPUT if DATA_INPUT.exists() else DATA
+    if DATA_INPUT.exists() and (DATA_INPUT / "fineweb_edu").is_dir():
+        data_dir = DATA_INPUT
+    elif DATA_INPUT.exists() and all((DATA_INPUT / f"{split}.pt").exists() for split in ("train", "val", "test")):
+        # Kaggle may flatten a directory uploaded as a dataset zip.  Present
+        # that read-only mount through the layout expected by TokenDataset;
+        # symlinks avoid copying the 160 MB token window for every job.
+        cached_root = DATA / "fineweb_edu"
+        cached_root.mkdir(parents=True, exist_ok=True)
+        for name in ("metadata.json", "source_manifest.json", "train.pt", "val.pt", "test.pt"):
+            source = DATA_INPUT / name
+            if source.exists():
+                link = cached_root / name
+                if not link.exists():
+                    link.symlink_to(source)
+        data_dir = DATA
+    else:
+        data_dir = DATA
     run([
         sys.executable, "train.py",
         "--embedding_type", CONDITION,
