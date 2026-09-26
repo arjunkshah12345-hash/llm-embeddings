@@ -184,6 +184,7 @@ def main() -> None:
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-scale-lock.txt", "--quiet"], cwd=SOURCE)
     if MODE == "mount_probe":
         data_dir = prepare_cached_data()
+        sys.path.insert(0, str(SOURCE))
         from data import TokenDataset
         dataset = TokenDataset(str(data_dir), "fineweb_edu", seed=1337)
         output_root = WORK / "scale_mount_probe"
