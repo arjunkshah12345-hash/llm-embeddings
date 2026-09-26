@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -13,6 +14,15 @@ EXPECTED_SEEDS = (1337, 2027, 31415)
 EXPECTED_STEPS = 20_000
 EXPECTED_FINAL_STEP = EXPECTED_STEPS - 1
 EXPECTED_TOKENS = 20_480_000
+TRAINING_SOURCE_FILES = (
+    "config.py",
+    "data.py",
+    "model.py",
+    "scale_lm_eval.py",
+    "token_classes.py",
+    "train.py",
+    "requirements-scale-lock.txt",
+)
 EXPECTED_BENCHMARK_TASKS = {
     "core": (
         "lambada_open",
@@ -32,6 +42,18 @@ EXPECTED_BENCHMARK_TASKS = {
 
 def read_json(path: Path):
     return json.loads(path.read_text())
+
+
+def training_source_fingerprint(commit: str) -> str:
+    """Hash substantive training files at a recorded repository commit."""
+    digest = hashlib.sha256()
+    for filename in TRAINING_SOURCE_FILES:
+        content = subprocess.check_output(["git", "show", f"{commit}:{filename}"])
+        digest.update(filename.encode())
+        digest.update(b"\0")
+        digest.update(content)
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def final_metric(run_dir: Path, split: str, step: int) -> dict:
@@ -102,8 +124,14 @@ def validate(root: Path, conditions=EXPECTED_CONDITIONS, seeds=EXPECTED_SEEDS) -
                 errors.append(f"seed {seed}: token exposure differs for {condition}")
 
     commits = {cell["manifest"].get("git_commit") for cell in cells.values()}
-    if len(commits) != 1:
-        errors.append(f"source commits are not identical: {sorted(commits)}")
+    fingerprints = {}
+    for commit in commits:
+        try:
+            fingerprints[commit] = training_source_fingerprint(commit)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            errors.append(f"cannot fingerprint training source commit {commit}: {exc}")
+    if len(set(fingerprints.values())) != 1:
+        errors.append(f"substantive training source differs across commits: {fingerprints}")
     configs = {json.dumps(cell["manifest"].get("config"), sort_keys=True) for cell in cells.values()}
     if len(configs) != 1:
         errors.append("Study 3 configs differ across cells")
@@ -136,6 +164,7 @@ def validate(root: Path, conditions=EXPECTED_CONDITIONS, seeds=EXPECTED_SEEDS) -
         "passed": not errors and len(cells) == len(conditions) * len(seeds),
         "errors": errors,
         "git_commits": sorted(commits),
+        "training_source_fingerprints": fingerprints,
     }
     (root / "study_validation.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return payload

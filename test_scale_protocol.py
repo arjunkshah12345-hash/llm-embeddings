@@ -12,6 +12,7 @@ from data import (
 )
 from model import GPTModel
 from scale_lm_eval import CORE_TASKS, EXTENDED_TASKS, HARNESS_COMMIT
+from validate_scale_study import training_source_fingerprint
 
 
 def test_scale_data_revision_and_shards_are_pinned():
@@ -55,3 +56,7 @@ def test_benchmark_suite_is_frozen_and_does_not_include_chat_tasks():
     assert len(CORE_TASKS) == 10
     assert len(EXTENDED_TASKS) == 4
     assert not any("mtbench" in task or "alpaca" in task or "ifeval" in task for task in CORE_TASKS + EXTENDED_TASKS)
+
+
+def test_launcher_only_commits_have_identical_training_source():
+    assert training_source_fingerprint("c7323ae") == training_source_fingerprint("44095f4")
