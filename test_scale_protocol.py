@@ -66,5 +66,6 @@ def test_launcher_only_commits_have_identical_training_source():
 
 def test_scale_launcher_uses_mount_probe_and_canonical_kernel_slug():
     assert slug("capacity_control", 1337, "-r3") == "llm-embeddings-scale3-capacity-control-seed1337-r3"
-    assert "refusing to stream FineWeb" in RUN_TEMPLATE
+    assert "streaming" in RUN_TEMPLATE and "FineWeb" in RUN_TEMPLATE
+    assert "dataset_download" in RUN_TEMPLATE
     assert "MODE == \"mount_probe\"" in RUN_TEMPLATE

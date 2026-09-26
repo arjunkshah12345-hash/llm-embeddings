@@ -91,6 +91,7 @@ SOURCE = WORK / "llm-embeddings-source"
 STUDY = WORK / f"{CONFIG['experiment_id']}-seed{SEED}-{CONDITION}"
 DATA = WORK / "scale_data"
 DATA_INPUT = Path("/kaggle/input/__DATASET_SLUG__")
+DATASET_SOURCE = "__DATASET_SOURCE__"
 
 def run(command: list[str], cwd: Path | None = None) -> None:
     print("$", " ".join(command), flush=True)
@@ -110,24 +111,66 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 def prepare_cached_data() -> Path:
-    """Expose the mounted Kaggle dataset through TokenDataset's layout."""
-    if not DATA_INPUT.exists():
-        raise RuntimeError(
-            f"required Kaggle dataset input is not mounted: {DATA_INPUT}; refusing to stream FineWeb"
+    """Expose the pinned cache through TokenDataset's layout.
+
+    Kaggle kernel metadata does not consistently mount private datasets for
+    scripted kernels.  If the mount is absent, download the same immutable
+    dataset through Kaggle's in-kernel client.  Never fall back to streaming
+    FineWeb: the compact token bundle is the frozen Study 3 input.
+    """
+    data_source_root = DATA_INPUT
+    if not data_source_root.exists():
+        download_root = WORK / "scale_dataset_download"
+        download_root.mkdir(parents=True, exist_ok=True)
+        try:
+            import kagglehub
+
+            downloaded = kagglehub.dataset_download(
+                DATASET_SOURCE,
+                output_dir=str(download_root),
+            )
+            candidates = [Path(downloaded), download_root]
+        except Exception as exc:
+            print(f"kagglehub dataset download failed: {exc}; trying Kaggle CLI", flush=True)
+            run([
+                "kaggle",
+                "datasets",
+                "download",
+                DATASET_SOURCE,
+                "--path",
+                str(download_root),
+                "--unzip",
+            ])
+            candidates = [download_root]
+        data_source_root = next(
+            (
+                candidate
+                for candidate in candidates
+                if (candidate / "fineweb_edu").is_dir()
+                or all((candidate / f"{split}.pt").exists() for split in ("train", "val", "test"))
+            ),
+            None,
         )
-    if (DATA_INPUT / "fineweb_edu").is_dir():
-        return DATA_INPUT
-    if all((DATA_INPUT / f"{split}.pt").exists() for split in ("train", "val", "test")):
+        if data_source_root is None:
+            raise RuntimeError(
+                f"downloaded Kaggle dataset {DATASET_SOURCE} has no expected token files; "
+                f"searched {[str(candidate) for candidate in candidates]}"
+            )
+    if (data_source_root / "fineweb_edu").is_dir():
+        return data_source_root
+    if all((data_source_root / f"{split}.pt").exists() for split in ("train", "val", "test")):
         cached_root = DATA / "fineweb_edu"
         cached_root.mkdir(parents=True, exist_ok=True)
         for name in ("metadata.json", "source_manifest.json", "train.pt", "val.pt", "test.pt"):
-            source = DATA_INPUT / name
+            source = data_source_root / name
             if source.exists():
                 link = cached_root / name
                 if not link.exists():
                     link.symlink_to(source)
         return DATA
-    raise RuntimeError(f"mounted Kaggle dataset has unexpected files: {sorted(p.name for p in DATA_INPUT.iterdir())}")
+    raise RuntimeError(
+        f"Kaggle dataset has unexpected files: {sorted(p.name for p in data_source_root.iterdir())}"
+    )
 
 def main() -> None:
     started = time.time()
@@ -145,7 +188,7 @@ def main() -> None:
         dataset = TokenDataset(str(data_dir), "fineweb_edu", seed=1337)
         output_root = WORK / "scale_mount_probe"
         output_root.mkdir(parents=True, exist_ok=True)
-        payload = {"kind": "scale_mount_probe", "git_commit": actual_commit, "dataset_input": str(DATA_INPUT), "dataset": dataset.metadata(), "files": sorted(p.name for p in DATA_INPUT.iterdir())}
+        payload = {"kind": "scale_mount_probe", "git_commit": actual_commit, "dataset_input": str(data_dir), "dataset": dataset.metadata(), "files": sorted(p.name for p in data_dir.iterdir())}
         (output_root / "mount_probe.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
         if DATA.exists():
             shutil.rmtree(DATA)
@@ -298,6 +341,7 @@ def main() -> None:
     rendered = rendered.replace("__OWNER__", args.owner)
     rendered = rendered.replace("__KERNEL_SLUG__", kernel_slug)
     rendered = rendered.replace("__DATASET_SLUG__", DATASET_SLUG)
+    rendered = rendered.replace("__DATASET_SOURCE__", DATASET_SOURCE)
     rendered = rendered.replace("__CONFIG_JSON__", json.dumps(config, sort_keys=True))
     (generated / "run.py").write_text(rendered)
     kernel_id = f"{args.owner}/{kernel_slug}"
