@@ -109,6 +109,26 @@ def sha256(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
+def prepare_cached_data() -> Path:
+    """Expose the mounted Kaggle dataset through TokenDataset's layout."""
+    if not DATA_INPUT.exists():
+        raise RuntimeError(
+            f"required Kaggle dataset input is not mounted: {DATA_INPUT}; refusing to stream FineWeb"
+        )
+    if (DATA_INPUT / "fineweb_edu").is_dir():
+        return DATA_INPUT
+    if all((DATA_INPUT / f"{split}.pt").exists() for split in ("train", "val", "test")):
+        cached_root = DATA / "fineweb_edu"
+        cached_root.mkdir(parents=True, exist_ok=True)
+        for name in ("metadata.json", "source_manifest.json", "train.pt", "val.pt", "test.pt"):
+            source = DATA_INPUT / name
+            if source.exists():
+                link = cached_root / name
+                if not link.exists():
+                    link.symlink_to(source)
+        return DATA
+    raise RuntimeError(f"mounted Kaggle dataset has unexpected files: {sorted(p.name for p in DATA_INPUT.iterdir())}")
+
 def main() -> None:
     started = time.time()
     if SOURCE.exists():
@@ -119,6 +139,20 @@ def main() -> None:
     if actual_commit != COMMIT:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
     run([sys.executable, "-m", "pip", "install", "-r", "requirements-scale-lock.txt", "--quiet"], cwd=SOURCE)
+    if MODE == "mount_probe":
+        data_dir = prepare_cached_data()
+        from data import TokenDataset
+        dataset = TokenDataset(str(data_dir), "fineweb_edu", seed=1337)
+        output_root = WORK / "scale_mount_probe"
+        output_root.mkdir(parents=True, exist_ok=True)
+        payload = {"kind": "scale_mount_probe", "git_commit": actual_commit, "dataset_input": str(DATA_INPUT), "dataset": dataset.metadata(), "files": sorted(p.name for p in DATA_INPUT.iterdir())}
+        (output_root / "mount_probe.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        if DATA.exists():
+            shutil.rmtree(DATA)
+        if SOURCE.exists():
+            shutil.rmtree(SOURCE)
+        return
+
     if MODE in {"probe", "data_bundle"}:
         run([sys.executable, "scale_probe.py"], cwd=SOURCE)
         output_root = WORK / ("scale_probe" if MODE == "probe" else "scale_data_bundle")
@@ -134,23 +168,7 @@ def main() -> None:
         return
 
     output_dir = STUDY / "training"
-    if DATA_INPUT.exists() and (DATA_INPUT / "fineweb_edu").is_dir():
-        data_dir = DATA_INPUT
-    elif DATA_INPUT.exists() and all((DATA_INPUT / f"{split}.pt").exists() for split in ("train", "val", "test")):
-        # Kaggle may flatten a directory uploaded as a dataset zip.  Present
-        # that read-only mount through the layout expected by TokenDataset;
-        # symlinks avoid copying the 160 MB token window for every job.
-        cached_root = DATA / "fineweb_edu"
-        cached_root.mkdir(parents=True, exist_ok=True)
-        for name in ("metadata.json", "source_manifest.json", "train.pt", "val.pt", "test.pt"):
-            source = DATA_INPUT / name
-            if source.exists():
-                link = cached_root / name
-                if not link.exists():
-                    link.symlink_to(source)
-        data_dir = DATA
-    else:
-        data_dir = DATA
+    data_dir = prepare_cached_data()
     run([
         sys.executable, "train.py",
         "--embedding_type", CONDITION,
@@ -245,7 +263,7 @@ def metadata(kernel_id: str, title: str, dataset_sources: list[str] | None = Non
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--commit", required=True)
-    parser.add_argument("--mode", choices=["probe", "data_bundle", "train"], required=True)
+    parser.add_argument("--mode", choices=["probe", "data_bundle", "mount_probe", "train"], required=True)
     parser.add_argument("--condition", choices=CONDITIONS, default="tied")
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--owner", default=OWNER)
@@ -262,6 +280,8 @@ def main() -> None:
         kernel_slug = f"llm-embeddings-scale3-probe{args.slug_suffix}"
     elif args.mode == "data_bundle":
         kernel_slug = f"llm-embeddings-scale3-data-bundle{args.slug_suffix}"
+    elif args.mode == "mount_probe":
+        kernel_slug = f"llm-embeddings-scale3-mount-probe{args.slug_suffix}"
     else:
         if args.seed not in SEEDS:
             raise SystemExit(f"seed must be one of {SEEDS}")
@@ -281,7 +301,7 @@ def main() -> None:
     rendered = rendered.replace("__CONFIG_JSON__", json.dumps(config, sort_keys=True))
     (generated / "run.py").write_text(rendered)
     kernel_id = f"{args.owner}/{kernel_slug}"
-    dataset_sources = [DATASET_SOURCE] if args.mode == "train" else []
+    dataset_sources = [DATASET_SOURCE] if args.mode in {"train", "mount_probe"} else []
     (generated / "kernel-metadata.json").write_text(json.dumps(metadata(kernel_id, kernel_slug, dataset_sources), indent=2) + "\n")
     print(kernel_id)
     if args.dry_run:
