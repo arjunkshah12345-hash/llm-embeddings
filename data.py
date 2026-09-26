@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import urllib.request
+from array import array
 from pathlib import Path
 
 import tiktoken
@@ -45,10 +46,40 @@ FIXTURE_SPLIT_TEXT = {
     "test": ("rho sigma tau upsilon phi chi psi omega\n" * 64),
 }
 
+# Study 3 uses a pinned, broad corpus snapshot.  The sample contains 10B
+# declared tokens; the study consumes only the first 20.48M training tokens,
+# so it never cycles through the source stream.  The file manifest below is
+# metadata for the immutable v1.0.0 snapshot, not a request to download the
+# complete 28GB sample.
+FINEWEB_EDU_VARIANT = "fineweb-edu-sample-10BT-v1.0.0"
+FINEWEB_EDU_DATASET = "HuggingFaceFW/fineweb-edu"
+FINEWEB_EDU_CONFIG = "sample-10BT"
+FINEWEB_EDU_REVISION = "fc9850dff5e2d0f8f776efe41b24a1c49556cfc5"
+FINEWEB_EDU_TRAIN_TOKENS = 20_480_000
+FINEWEB_EDU_VAL_TOKENS = 262_144
+FINEWEB_EDU_TEST_TOKENS = 262_144
+FINEWEB_EDU_SOURCE_FILES = [
+    {"path": "sample/10BT/000_00000.parquet", "oid": "2df63e03a865d1045dcb477fcdd68635faf226ef", "size": 2152819114},
+    {"path": "sample/10BT/001_00000.parquet", "oid": "c2021c8c564a8a3fca7ba114afc9069bd0bcd2d2", "size": 2152222432},
+    {"path": "sample/10BT/002_00000.parquet", "oid": "e42928ee6a755554d7f348456ca62a66a9abc08c", "size": 2151796315},
+    {"path": "sample/10BT/003_00000.parquet", "oid": "2c9b4a5357740163228979d4887b6639977b650f", "size": 2152437524},
+    {"path": "sample/10BT/004_00000.parquet", "oid": "29f28906fd7457a4bad8e8181c9432ac90aac030", "size": 2152338550},
+    {"path": "sample/10BT/005_00000.parquet", "oid": "92cc8d92e5e4cc710a53a14c4999373152b83e41", "size": 2152189947},
+    {"path": "sample/10BT/006_00000.parquet", "oid": "fb75f6c578c1f731b79ec5982e462e75931a6954", "size": 2152689867},
+    {"path": "sample/10BT/007_00000.parquet", "oid": "a9d5d796ea550171f13e71995dfd30a77c766437", "size": 2150686637},
+    {"path": "sample/10BT/008_00000.parquet", "oid": "2535d7e76c7972978eb48a8a8ca4d8b6a718fea1", "size": 2151274846},
+    {"path": "sample/10BT/009_00000.parquet", "oid": "a9fcab0229d213864efab5812255f3ff272fc6d4", "size": 2151913277},
+    {"path": "sample/10BT/010_00000.parquet", "oid": "2c1203939e5139226910db563e21fdf754974e65", "size": 2152798864},
+    {"path": "sample/10BT/011_00000.parquet", "oid": "7f557356b7446c6209ed4e51eb97d65324d75b77", "size": 2152323681},
+    {"path": "sample/10BT/012_00000.parquet", "oid": "08bc10f931c49d4f5e2e832af85c88d19f9a30e9", "size": 2152069689},
+    {"path": "sample/10BT/013_00000.parquet", "oid": "3f659cc279c926e8baeda616b688b4e704b7fa09", "size": 540632672},
+]
+
 DATASETS = {
     "wikitext2": WIKITEXT2,
     "tiny_shakespeare": {"source": TINY_SHAKESPEARE_URL},
     "fixture": FIXTURE_SPLIT_TEXT,
+    "fineweb_edu": {"source": FINEWEB_EDU_VARIANT},
 }
 
 
@@ -79,7 +110,94 @@ class TokenDataset:
         if self.dataset_name == "tiny_shakespeare":
             self._prepare_tiny_shakespeare()
             return
+        if self.dataset_name == "fineweb_edu":
+            self._prepare_fineweb_edu()
+            return
         self._prepare_wikitext2()
+
+    def _prepare_fineweb_edu(self) -> None:
+        """Materialize a deterministic token window from pinned FineWeb-Edu.
+
+        This is deliberately separate from the old small-corpus paths.  The
+        Kaggle scale runner installs ``datasets`` and streams the immutable
+        Hub revision once per job, then all conditions sample the same local
+        token arrays.  Keeping the compact arrays local makes the paired
+        token stream auditable without committing a large corpus.
+        """
+        expected = {
+            "variant": FINEWEB_EDU_VARIANT,
+            "dataset": FINEWEB_EDU_DATASET,
+            "config": FINEWEB_EDU_CONFIG,
+            "revision": FINEWEB_EDU_REVISION,
+            "train_tokens": FINEWEB_EDU_TRAIN_TOKENS,
+            "val_tokens": FINEWEB_EDU_VAL_TOKENS,
+            "test_tokens": FINEWEB_EDU_TEST_TOKENS,
+        }
+        manifest_path = self.root / "source_manifest.json"
+        if all((self.root / f"{split}.pt").exists() for split in ("train", "val", "test")) and manifest_path.exists():
+            try:
+                if json.loads(manifest_path.read_text()) == expected:
+                    return
+            except (OSError, ValueError):
+                pass
+
+        try:
+            from datasets import load_dataset
+        except ImportError as exc:
+            raise RuntimeError(
+                "fineweb_edu requires the scale environment; install requirements-scale-lock.txt"
+            ) from exc
+
+        print(
+            f"Streaming {FINEWEB_EDU_DATASET}/{FINEWEB_EDU_CONFIG} at revision "
+            f"{FINEWEB_EDU_REVISION}...",
+            flush=True,
+        )
+        stream = load_dataset(
+            FINEWEB_EDU_DATASET,
+            name=FINEWEB_EDU_CONFIG,
+            split="train",
+            streaming=True,
+            revision=FINEWEB_EDU_REVISION,
+        )
+        targets = {
+            "train": FINEWEB_EDU_TRAIN_TOKENS,
+            "val": FINEWEB_EDU_VAL_TOKENS,
+            "test": FINEWEB_EDU_TEST_TOKENS,
+        }
+        buffers = {split: array("I") for split in targets}
+        split = "train"
+        documents = 0
+        for example in stream:
+            text = example.get("text")
+            if not isinstance(text, str) or not text:
+                continue
+            buffers[split].extend(self.encoder.encode(text, allowed_special=set()))
+            documents += 1
+            while len(buffers[split]) >= targets[split]:
+                if split == "train":
+                    split = "val"
+                elif split == "val":
+                    split = "test"
+                else:
+                    break
+            if split == "test" and len(buffers["test"]) >= targets["test"]:
+                break
+        if any(len(buffers[name]) < count for name, count in targets.items()):
+            raise RuntimeError(f"FineWeb-Edu stream ended before requested token budget: { {k: len(v) for k, v in buffers.items()} }")
+
+        for name, count in targets.items():
+            tensor = torch.tensor(buffers[name][:count], dtype=torch.long)
+            torch.save(tensor, self.root / f"{name}.pt")
+        expected = {
+            **expected,
+            "documents_consumed": documents,
+            "source_files": FINEWEB_EDU_SOURCE_FILES,
+            "source_files_sha256": hashlib.sha256(
+                json.dumps(FINEWEB_EDU_SOURCE_FILES, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest(),
+        }
+        manifest_path.write_text(json.dumps(expected, indent=2, sort_keys=True) + "\n")
 
     def _prepare_wikitext2(self) -> None:
         source_manifest = self.root / "source_manifest.json"
@@ -185,6 +303,15 @@ class TokenDataset:
         stamp_path.write_text(json.dumps(expected_stamp, indent=2, sort_keys=True) + "\n")
 
     def _load_tokens(self, split: str) -> torch.Tensor:
+        if self.dataset_name == "fineweb_edu":
+            path = self.root / f"{split}.pt"
+            tokens = torch.load(path, map_location="cpu")
+            if not isinstance(tokens, torch.Tensor):
+                raise TypeError(f"expected tensor in {path}")
+            tokens = tokens.to(dtype=torch.long)
+            if tokens.numel() < 2:
+                raise ValueError(f"Dataset split {path} contains fewer than two tokens")
+            return tokens
         path = self.root / f"{split}.txt"
         text = path.read_text(encoding="utf-8")
         encoded = self.encoder.encode(text, allowed_special=set())
@@ -207,6 +334,8 @@ class TokenDataset:
                 "sha256": TINY_SHAKESPEARE_SHA256,
                 "split_version": TINY_SHAKESPEARE_SPLIT_VERSION,
             }
+        elif self.dataset_name == "fineweb_edu":
+            source = json.loads((self.root / "source_manifest.json").read_text())
         else:
             source = {"variant": FIXTURE_VARIANT}
         return {
@@ -216,7 +345,9 @@ class TokenDataset:
             "source": source,
             "token_counts": {split: int(tokens.numel()) for split, tokens in self.tokens.items()},
             "sha256": {
-                split: hashlib.sha256((self.root / f"{split}.txt").read_bytes()).hexdigest()
+                split: hashlib.sha256(
+                    (self.root / (f"{split}.pt" if self.dataset_name == "fineweb_edu" else f"{split}.txt")).read_bytes()
+                ).hexdigest()
                 for split in ("train", "val", "test")
             },
         }

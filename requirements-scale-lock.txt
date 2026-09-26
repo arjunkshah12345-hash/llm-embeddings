@@ -1,0 +1,5 @@
+# Study 3 environment.  The harness and data loader are pinned so a Kaggle
+# job can be reconstructed after the latest package releases move on.
+-r requirements-lock.txt
+datasets==3.6.0
+lm-eval @ git+https://github.com/EleutherAI/lm-evaluation-harness.git@ddd67220430a2470529f25fd5c05a576ca1057a0
