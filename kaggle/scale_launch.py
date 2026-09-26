@@ -181,7 +181,10 @@ def main() -> None:
     actual_commit = capture(["git", "rev-parse", "HEAD"], cwd=SOURCE).strip()
     if actual_commit != COMMIT:
         raise RuntimeError(f"source commit mismatch: expected {COMMIT}, got {actual_commit}")
-    run([sys.executable, "-m", "pip", "install", "-r", "requirements-scale-lock.txt", "--quiet"], cwd=SOURCE)
+    if MODE == "mount_probe":
+        print("mount probe: using Kaggle's preinstalled runtime; skipping research dependency install", flush=True)
+    else:
+        run([sys.executable, "-m", "pip", "install", "-r", "requirements-scale-lock.txt", "--quiet"], cwd=SOURCE)
     if MODE == "mount_probe":
         data_dir = prepare_cached_data()
         sys.path.insert(0, str(SOURCE))
