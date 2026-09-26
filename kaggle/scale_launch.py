@@ -228,6 +228,12 @@ def main() -> None:
     parser.add_argument("--slug-suffix", default="")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    try:
+        args.commit = subprocess.check_output(
+            ["git", "rev-parse", f"{args.commit}^{{commit}}"], cwd=ROOT, text=True
+        ).strip()
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"cannot resolve --commit {args.commit!r} in the local checkout") from exc
     if args.mode == "probe":
         kernel_slug = f"llm-embeddings-scale3-probe{args.slug_suffix}"
     else:

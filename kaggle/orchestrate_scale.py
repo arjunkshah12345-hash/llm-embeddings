@@ -45,6 +45,12 @@ def main() -> None:
     parser.add_argument("--slug-suffix", default="")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+    try:
+        args.commit = subprocess.check_output(
+            ["git", "rev-parse", f"{args.commit}^{{commit}}"], cwd=ROOT, text=True
+        ).strip()
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"cannot resolve --commit {args.commit!r} in the local checkout") from exc
     kaggle = kaggle_executable()
     jobs = []
     if args.stage == "probe":
