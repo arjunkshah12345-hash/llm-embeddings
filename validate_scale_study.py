@@ -13,6 +13,21 @@ EXPECTED_SEEDS = (1337, 2027, 31415)
 EXPECTED_STEPS = 20_000
 EXPECTED_FINAL_STEP = EXPECTED_STEPS - 1
 EXPECTED_TOKENS = 20_480_000
+EXPECTED_BENCHMARK_TASKS = {
+    "core": (
+        "lambada_open",
+        "hellaswag",
+        "piqa",
+        "winogrande",
+        "arc_easy",
+        "arc_challenge",
+        "sciq",
+        "openbookqa",
+        "boolq",
+        "commonsense_qa",
+    ),
+    "extended": ("mmlu", "truthfulqa_mc1", "triviaqa", "gsm8k"),
+}
 
 
 def read_json(path: Path):
@@ -101,6 +116,14 @@ def validate(root: Path, conditions=EXPECTED_CONDITIONS, seeds=EXPECTED_SEEDS) -
                 payload = read_json(benchmark)
                 if payload.get("harness", {}).get("commit") != "ddd67220430a2470529f25fd5c05a576ca1057a0":
                     errors.append(f"{cell['root']}: benchmark harness commit mismatch")
+                expected_tasks = list(EXPECTED_BENCHMARK_TASKS[suite])
+                if payload.get("tasks") != expected_tasks:
+                    errors.append(f"{cell['root']}: {suite} task list differs from frozen protocol")
+                results = payload.get("results", {})
+                for task in expected_tasks:
+                    entry = results.get(task)
+                    if not isinstance(entry, dict) or entry.get("status") != "complete" or not entry.get("result"):
+                        errors.append(f"{cell['root']}: {suite}/{task} did not complete")
 
     payload = {
         "study": "scale3_fineweb_20m",
