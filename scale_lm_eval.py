@@ -55,7 +55,7 @@ def build_study_lm(model: GPTModel, device: torch.device, batch_size: int = 1):
             def __init__(self):
                 super().__init__()
                 self.model = model
-                self.device = device
+                self._device = device
                 self.encoder = tiktoken.get_encoding("gpt2")
                 self._batch_size = batch_size
                 self.max_length = model.config.block_size
