@@ -19,6 +19,7 @@ from model import GPTModel
 
 
 HARNESS_COMMIT = "ddd67220430a2470529f25fd5c05a576ca1057a0"
+PAIR_ENCODING_VERSION = "lm-eval-gpt2-trailing-whitespace-v1"
 PREFIX_TOKEN_ID = 50256
 CORE_TASKS = (
     "lambada_openai",
@@ -34,6 +35,32 @@ CORE_TASKS = (
 )
 EXTENDED_TASKS = ("mmlu", "truthfulqa_mc1", "triviaqa", "gsm8k")
 HARD_TASKS = ("mmlu_pro", "bbh", "gpqa", "musr", "math")
+
+
+def encode_pair(encoder, context: str, continuation: str, prefix_token_id: int) -> tuple[list[int], list[int]]:
+    """Encode a context/continuation pair using lm-eval's GPT-style boundary rule.
+
+    GPT-2 BPE can merge whitespace at the end of ``context`` with the first
+    continuation token.  lm-eval moves trailing whitespace into the
+    continuation before tokenizing so that the scored token sequence matches
+    the actual concatenated text.  Keeping this helper outside the model
+    wrapper makes the boundary behavior directly testable without a model or
+    GPU.
+    """
+    if context == "":
+        continuation_tokens = encoder.encode(continuation, allowed_special=set())
+        if continuation_tokens and continuation_tokens[0] == prefix_token_id:
+            return continuation_tokens[:1], continuation_tokens[1:]
+        return [prefix_token_id], continuation_tokens
+
+    trailing_count = len(context) - len(context.rstrip())
+    if trailing_count:
+        continuation = context[-trailing_count:] + continuation
+        context = context[:-trailing_count]
+
+    context_tokens = encoder.encode(context, allowed_special=set())
+    whole_tokens = encoder.encode(context + continuation, allowed_special=set())
+    return context_tokens, whole_tokens[len(context_tokens) :]
 
 
 def load_checkpoint(path: Path, device: torch.device) -> tuple[GPTModel, dict]:
@@ -102,14 +129,11 @@ def build_study_lm(model: GPTModel, device: torch.device, batch_size: int = 1):
                 return total, greedy
 
             def _pair_tokens(self, context: str, continuation: str) -> tuple[list[int], int, int]:
-                if context:
-                    context_tokens = self.encoder.encode(context, allowed_special=set())
-                    whole_tokens = self.encoder.encode(context + continuation, allowed_special=set())
-                    target_start = len(context_tokens)
-                    return whole_tokens, target_start, len(whole_tokens)
-                continuation_tokens = self.encoder.encode(continuation, allowed_special=set())
-                whole_tokens = [self.prefix_token_id] + continuation_tokens
-                return whole_tokens, 1, len(whole_tokens)
+                context_tokens, continuation_tokens = encode_pair(
+                    self.encoder, context, continuation, self.prefix_token_id
+                )
+                whole_tokens = context_tokens + continuation_tokens
+                return whole_tokens, len(context_tokens), len(whole_tokens)
 
             def loglikelihood(self, requests):
                 outputs = []
@@ -195,6 +219,7 @@ def run_suite(checkpoint: Path, output: Path, suite: str, device_name: str, batc
             results[task] = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
     payload = {
         "harness": {"name": "lm-evaluation-harness", "commit": HARNESS_COMMIT},
+        "adapter": {"pair_encoding": PAIR_ENCODING_VERSION},
         "suite": suite,
         "tasks": list(task_names),
         "num_fewshot": 0,

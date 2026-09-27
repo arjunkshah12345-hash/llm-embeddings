@@ -133,6 +133,12 @@ dropped. All evaluated checkpoints use zero-shot settings (`num_fewshot=0`),
 the same precision and batch size, and the final checkpoint. LAMBADA is
 reported separately with its exact harness metric name and per-seed values.
 
+The repository adapter records `PAIR_ENCODING_VERSION =
+lm-eval-gpt2-trailing-whitespace-v1`. It follows the pinned harness behavior
+of moving trailing context whitespace into the continuation before GPT-2 BPE
+encoding. Benchmark outputs generated before this adapter version are
+historical exploratory artifacts and must not be promoted into final tables.
+
 ## Measurements and reporting
 
 Each run records final and best validation loss/perplexity, training loss,

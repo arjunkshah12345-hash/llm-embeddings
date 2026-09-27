@@ -22,6 +22,11 @@ launcher deleted `.pt` files before Kaggle packaged its output. The launcher
 now retains the final model and `optimizer_last.pt` for exact continuation in
 future jobs; this fix cannot recover the already-deleted seed-1337 weights.
 
+The compact seed-1337 benchmark JSON was also produced before the current
+GPT-2 trailing-whitespace boundary correction in `scale_lm_eval.py`. Those
+scores remain historical exploratory artifacts and must be regenerated from
+retained checkpoints before any downstream benchmark claim.
+
 ## Resume command
 
 From a clean checkout with Kaggle credentials, launch the frozen matrix with:

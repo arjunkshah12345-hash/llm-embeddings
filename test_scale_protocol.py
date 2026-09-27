@@ -11,7 +11,9 @@ from data import (
     FINEWEB_EDU_VAL_TOKENS,
 )
 from model import GPTModel
-from scale_lm_eval import CORE_TASKS, EXTENDED_TASKS, HARNESS_COMMIT
+import tiktoken
+
+from scale_lm_eval import CORE_TASKS, EXTENDED_TASKS, HARNESS_COMMIT, PAIR_ENCODING_VERSION, encode_pair
 from validate_scale_study import training_source_fingerprint
 from kaggle.scale_launch import RUN_TEMPLATE, slug
 
@@ -58,6 +60,7 @@ def test_benchmark_suite_is_frozen_and_does_not_include_chat_tasks():
     assert len(EXTENDED_TASKS) == 4
     assert CORE_TASKS[0] == "lambada_openai"
     assert not any("mtbench" in task or "alpaca" in task or "ifeval" in task for task in CORE_TASKS + EXTENDED_TASKS)
+    assert PAIR_ENCODING_VERSION == "lm-eval-gpt2-trailing-whitespace-v1"
 
 
 def test_current_training_source_fingerprint_is_stable_without_history():
@@ -80,3 +83,32 @@ def test_scale_launcher_preserves_exact_resume_checkpoint():
     assert 'resume_checkpoint = run_dir / "optimizer_last.pt"' in RUN_TEMPLATE
     assert '"resume_checkpoint"' in RUN_TEMPLATE
     assert 'for path in STUDY.rglob("*.pt")' not in RUN_TEMPLATE
+
+
+def test_gpt2_pair_encoding_matches_lm_eval_trailing_whitespace_rule():
+    encoder = tiktoken.get_encoding("gpt2")
+
+    context_tokens, continuation_tokens = encode_pair(encoder, "hello ", "world", 50256)
+
+    # This is the boundary rule used by the pinned lm-evaluation-harness:
+    # move trailing context whitespace into the continuation before encoding.
+    reference_context = "hello"
+    reference_continuation = " world"
+    expected_context = encoder.encode(reference_context, allowed_special=set())
+    expected_whole = encoder.encode(reference_context + reference_continuation, allowed_special=set())
+
+    assert context_tokens == expected_context
+    assert continuation_tokens == expected_whole[len(expected_context) :]
+    assert continuation_tokens == [995]  # one merged `` world`` token
+
+
+def test_gpt2_pair_encoding_preserves_non_boundary_and_empty_context_cases():
+    encoder = tiktoken.get_encoding("gpt2")
+
+    context_tokens, continuation_tokens = encode_pair(encoder, "hello", " world", 50256)
+    assert context_tokens == encoder.encode("hello", allowed_special=set())
+    assert continuation_tokens == [995]
+
+    context_tokens, continuation_tokens = encode_pair(encoder, "", "world", 50256)
+    assert context_tokens == [50256]
+    assert continuation_tokens == encoder.encode("world", allowed_special=set())
