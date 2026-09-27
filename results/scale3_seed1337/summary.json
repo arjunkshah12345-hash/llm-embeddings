@@ -1521,6 +1521,6 @@
   "status": "exploratory_only_incomplete_replication",
   "study": "Study 3 scaled pretraining exploratory first seed",
   "training_jobs_completed": 4,
-  "training_jobs_rejected_by_kaggle_quota": 3,
-  "training_jobs_requested_after_first_seed": 3
+  "training_jobs_rejected_by_kaggle_quota": 4,
+  "training_jobs_requested_after_first_seed": 4
 }
