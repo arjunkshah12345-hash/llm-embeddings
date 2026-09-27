@@ -72,3 +72,11 @@ def test_scale_launcher_uses_mount_probe_and_canonical_kernel_slug():
     assert "dataset_download" in RUN_TEMPLATE
     assert "shutil.copy2(source, target)" in RUN_TEMPLATE
     assert "MODE == \"mount_probe\"" in RUN_TEMPLATE
+
+
+def test_scale_launcher_preserves_exact_resume_checkpoint():
+    assert '"--save_optimizer"' in RUN_TEMPLATE
+    assert '"--no-save_optimizer"' not in RUN_TEMPLATE
+    assert 'resume_checkpoint = run_dir / "optimizer_last.pt"' in RUN_TEMPLATE
+    assert '"resume_checkpoint"' in RUN_TEMPLATE
+    assert 'for path in STUDY.rglob("*.pt")' not in RUN_TEMPLATE

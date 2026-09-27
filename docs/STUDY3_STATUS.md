@@ -17,6 +17,11 @@ Within this single seed, partial minus tied final loss was -0.016082; untied min
 
 The compact machine-readable artifacts are in [`results/scale3_seed1337/`](../results/scale3_seed1337/). The existing small-model paper and its conclusions remain unchanged. The scaled study should be resumed only after Kaggle quota is available, then run through the strict three-seed validator before updating the paper.
 
+The completed seed-1337 jobs do not contain resumable weights: the original
+launcher deleted `.pt` files before Kaggle packaged its output. The launcher
+now retains the final model and `optimizer_last.pt` for exact continuation in
+future jobs; this fix cannot recover the already-deleted seed-1337 weights.
+
 ## Resume command
 
 From a clean checkout with Kaggle credentials, launch the frozen matrix with:

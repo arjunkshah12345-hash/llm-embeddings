@@ -249,12 +249,18 @@ def main() -> None:
         "--eval_batches", str(CONFIG["train"]["eval_batches"]),
         "--log_interval", str(CONFIG["train"]["log_interval"]),
         "--save_interval", str(CONFIG["train"]["save_interval"]),
-        "--no-save_optimizer",
+        # Keep the optimizer state so a completed Kaggle job can be resumed
+        # without discarding its training progress.  The final output bundle
+        # retains only the final compact model and optimizer checkpoints.
+        "--save_optimizer",
     ], cwd=SOURCE)
     run_dir = output_dir / CONDITION
     checkpoint = run_dir / "last.pt"
     if not checkpoint.exists():
         raise RuntimeError(f"missing final checkpoint: {checkpoint}")
+    resume_checkpoint = run_dir / "optimizer_last.pt"
+    if not resume_checkpoint.exists():
+        raise RuntimeError(f"missing exact-resume checkpoint: {resume_checkpoint}")
     for suite in CONFIG["train"]["benchmark_suites"]:
         run([
             sys.executable, "scale_lm_eval.py",
@@ -277,14 +283,24 @@ def main() -> None:
         "config": CONFIG,
         "run_manifest": run_manifest,
         "checkpoint": {"name": checkpoint.name, "sha256": sha256(checkpoint), "step": 19999},
+        "resume_checkpoint": {
+            "name": resume_checkpoint.name,
+            "sha256": sha256(resume_checkpoint),
+            "step": 19999,
+        },
         "started_at_unix": started,
         "finished_at_unix": time.time(),
         "hardware": {"python": sys.version, "platform": platform.platform(), "pip_freeze": capture([sys.executable, "-m", "pip", "freeze"]), "nvidia_smi": capture(["nvidia-smi"])},
     }
     STUDY.mkdir(parents=True, exist_ok=True)
     (STUDY / "artifact_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
-    for path in STUDY.rglob("*.pt"):
-        path.unlink()
+    # Do not delete the final checkpoints: Kaggle only preserves files in the
+    # kernel output bundle after the session ends.  The best-only checkpoint
+    # is unnecessary for exact continuation and would duplicate a large model
+    # file, so retain the final model plus optimizer state.
+    best_checkpoint = run_dir / "best.pt"
+    if best_checkpoint.exists():
+        best_checkpoint.unlink()
     if DATA.exists():
         shutil.rmtree(DATA)
     if SOURCE.exists():
