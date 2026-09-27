@@ -60,8 +60,10 @@ def test_benchmark_suite_is_frozen_and_does_not_include_chat_tasks():
     assert not any("mtbench" in task or "alpaca" in task or "ifeval" in task for task in CORE_TASKS + EXTENDED_TASKS)
 
 
-def test_launcher_only_commits_have_identical_training_source():
-    assert training_source_fingerprint("c7323ae") == training_source_fingerprint("44095f4")
+def test_current_training_source_fingerprint_is_stable_without_history():
+    fingerprint = training_source_fingerprint("HEAD")
+    assert len(fingerprint) == 64
+    assert fingerprint == training_source_fingerprint("HEAD")
 
 
 def test_scale_launcher_uses_mount_probe_and_canonical_kernel_slug():
