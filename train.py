@@ -343,6 +343,12 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
     parser.add_argument("--eval_batches", type=int, default=20)
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument(
+        "--checkpoint_interval",
+        type=int,
+        default=0,
+        help="checkpoint cadence independent of validation; 0 preserves the existing cadence",
+    )
     parser.add_argument("--path_ablation", choices=["none", "stop_input", "stop_output"], default="none")
     parser.add_argument("--ablation_start", type=int, default=0, help="first step included in the path ablation")
     parser.add_argument("--ablation_end", type=int, default=0, help="first step excluded; 0 means through the last step")
@@ -362,6 +368,8 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         parser.error("ablation_start and ablation_end must be non-negative")
     if args.ablation_end and args.ablation_end <= args.ablation_start:
         parser.error("ablation_end must be greater than ablation_start when non-zero")
+    if args.checkpoint_interval < 0:
+        parser.error("checkpoint_interval must be non-negative")
     if args.ablation_start >= args.steps and args.path_ablation != "none":
         parser.error("ablation_start must be smaller than steps when path_ablation is enabled")
     model_config = ModelConfig(
@@ -394,6 +402,7 @@ def parse_args() -> tuple[ModelConfig, TrainConfig, argparse.Namespace]:
         eval_batches=args.eval_batches,
         log_interval=args.log_interval,
         save_interval=args.save_interval,
+        checkpoint_interval=args.checkpoint_interval,
         path_ablation=args.path_ablation,
         ablation_start=args.ablation_start,
         ablation_end=args.ablation_end,
@@ -434,6 +443,7 @@ def main() -> None:
             },
             "resume_from": args.resume or None,
             "save_optimizer": bool(args.save_optimizer),
+            "checkpoint_interval": train_config.checkpoint_interval or "validation_and_save_interval",
             "path_ablation": {
                 "mode": train_config.path_ablation,
                 "start": train_config.ablation_start,
@@ -480,6 +490,8 @@ def main() -> None:
     batch_stream_digest, batch_record_count = load_batch_stream_digest(batch_stream_path)
     batch_stream_handle = batch_stream_path.open("ab", buffering=1024 * 1024)
     model.train()
+    eval_checkpoint_interval = train_config.checkpoint_interval or train_config.eval_interval
+    non_eval_checkpoint_interval = train_config.checkpoint_interval or train_config.save_interval
     token_class_ids = dataset_class_ids(dataset).to(device)
     token_frequency_ids = dataset_frequency_bucket_ids(dataset).to(device)
 
@@ -586,31 +598,35 @@ def main() -> None:
             with metrics_path.open("a") as handle:
                 handle.write(json.dumps(val_record) + "\n")
             print(f"step={step:5d} val_loss={val_loss:.4f} val_ppl={val_record['perplexity']:.2f}")
-            checkpoint = compact_checkpoint_payload(
-                model, model_config, train_config, device, step, min(best_val, val_loss)
-            )
-            save_checkpoint(run_dir / "last.pt", checkpoint)
-            if val_loss < best_val:
+            new_best = val_loss < best_val
+            if new_best:
                 best_val = val_loss
-                save_checkpoint(run_dir / "best.pt", checkpoint)
-            if args.save_optimizer:
-                save_checkpoint(
-                    run_dir / "optimizer_last.pt",
-                    optimizer_checkpoint_payload(
-                        model,
-                        optimizer,
-                        model_config,
-                        train_config,
-                        device,
-                        step,
-                        best_val,
-                        tokens_seen,
-                        training_elapsed,
-                        embedding_cumulative_update_norm,
-                        dataset.generators,
-                    ),
+            should_checkpoint = step % eval_checkpoint_interval == 0 or step == train_config.steps - 1
+            if should_checkpoint:
+                checkpoint = compact_checkpoint_payload(
+                    model, model_config, train_config, device, step, best_val
                 )
-        elif step % train_config.save_interval == 0:
+                save_checkpoint(run_dir / "last.pt", checkpoint)
+                if new_best:
+                    save_checkpoint(run_dir / "best.pt", checkpoint)
+                if args.save_optimizer:
+                    save_checkpoint(
+                        run_dir / "optimizer_last.pt",
+                        optimizer_checkpoint_payload(
+                            model,
+                            optimizer,
+                            model_config,
+                            train_config,
+                            device,
+                            step,
+                            best_val,
+                            tokens_seen,
+                            training_elapsed,
+                            embedding_cumulative_update_norm,
+                            dataset.generators,
+                        ),
+                    )
+        elif step % non_eval_checkpoint_interval == 0:
             save_checkpoint(
                 run_dir / "last.pt",
                 compact_checkpoint_payload(model, model_config, train_config, device, step, best_val),

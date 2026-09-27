@@ -122,6 +122,8 @@ def main() -> None:
         "500",
         "--save_interval",
         "2500",
+        "--checkpoint_interval",
+        "2500",
         "--save_optimizer",
     ]
 

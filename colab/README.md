@@ -20,5 +20,7 @@ drive.mount("/content/drive")
 Run seed `31415` in a separate runtime. The runner refuses CPU execution,
 uses the frozen 12-layer/768-width/rank-8 configuration, writes exact
 `last.pt` and `optimizer_last.pt` checkpoints, and can resume an interrupted
-condition with `--resume-existing`. It does not alter the Kaggle artifacts or
-the completed small-model studies.
+condition with `--resume-existing`. Validation is still recorded every 500
+steps, while Drive checkpoints are written every 2,500 steps to avoid copying
+multi-gigabyte optimizer state on every validation pass. It does not alter the
+Kaggle artifacts or the completed small-model studies.

@@ -36,6 +36,7 @@ class TrainConfig:
     eval_batches: int = 20
     log_interval: int = 10
     save_interval: int = 500
+    checkpoint_interval: int = 0
     path_ablation: str = "none"
     ablation_start: int = 0
     ablation_end: int = 0

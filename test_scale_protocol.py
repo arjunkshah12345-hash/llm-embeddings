@@ -112,3 +112,12 @@ def test_gpt2_pair_encoding_preserves_non_boundary_and_empty_context_cases():
     context_tokens, continuation_tokens = encode_pair(encoder, "", "world", 50256)
     assert context_tokens == [50256]
     assert continuation_tokens == encoder.encode("world", allowed_special=set())
+
+
+def test_colab_runner_requires_gpu_and_uses_drive_resume_checkpoints():
+    runner = Path("colab/run_scale3.py").read_text()
+    assert "torch.cuda.is_available()" in runner
+    assert '"--save_optimizer"' in runner
+    assert '"--checkpoint_interval"' in runner
+    assert '"--resume"' in runner
+    assert "benchmark" in runner.lower()
