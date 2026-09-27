@@ -1,6 +1,8 @@
 # Tied, untied, and partially tied language-model embeddings
 
-> **Research status:** Final release for the declared studies. The implementation, fairness gates, cloud runs, mechanism diagnostics, analysis artifacts, and paper bundle are complete. Under the tested small-model protocols, the results do **not** support a performance advantage for low-rank partial tying. The conclusion is specific to these datasets, model sizes, and training budgets; it is not a claim about all language models.
+> **Small-model release status:** Complete for the declared studies. The implementation, fairness gates, cloud runs, mechanism diagnostics, analysis artifacts, and paper bundle are complete. Under the tested small-model protocols, the results do **not** support a performance advantage for low-rank partial tying. The conclusion is specific to these datasets, model sizes, and training budgets; it is not a claim about all language models.
+>
+> **Scaled Study 3 status:** Exploratory and incomplete. Four matched approximately 125M-parameter seed-1337 Kaggle runs completed with full benchmark artifacts, but Kaggle rejected the remaining seed submissions after the weekly GPU quota was reached. These runs are retained for auditability and are not confirmatory evidence. See [`docs/STUDY3_STATUS.md`](docs/STUDY3_STATUS.md) and [`results/scale3_seed1337/`](results/scale3_seed1337/).
 
 This project tests whether a decoder-only language model can keep the parameter savings of weight tying while allowing its input and output token representations to specialize slightly. The comparison is:
 

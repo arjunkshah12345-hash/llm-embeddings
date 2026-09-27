@@ -24,6 +24,8 @@ The main 50k comparison is:
 
 The preserved 10k Study 1 adds input-only and output-only conditions. The confirmatory rank study uses ranks 1, 2, 4, 8, 16, and 32 for three seeds. Robustness uses a smaller WikiText-2 model and Tiny Shakespeare. Mechanism profiles run matched tied/partial path interventions with input or output gradients stopped for steps `[0, 5000)`.
 
+Study 3 is a separately frozen scaled follow-up using a 12-layer, 12-head, width-768 model, block size 512, the pinned FineWeb-Edu token cache, rank 8 / alpha 8 partial corrections, 20,000 optimizer steps, and seeds 1337, 2027, and 31415. Four seed-1337 conditions completed in Kaggle, but the remaining submissions were rejected at the weekly GPU quota; the result is exploratory and incomplete. The status and compact raw artifacts are recorded in [`docs/STUDY3_STATUS.md`](docs/STUDY3_STATUS.md) and [`results/scale3_seed1337/`](results/scale3_seed1337/).
+
 ## Kaggle training commands
 
 Use the source commits recorded in the final artifacts. These commands submit cloud kernels and collect compact outputs; they do not train locally:
@@ -38,6 +40,14 @@ python3 kaggle/orchestrate.py --profiles small_scale second_dataset \
 python3 kaggle/orchestrate.py \
   --profiles mechanism_stop_input mechanism_stop_output \
   --seeds 1337 2027 31415 --commit 77923885b40f9e80c0f0a0f6fb6e94e9bdfc51db
+```
+
+When Kaggle quota is available, resume the frozen scaled follow-up with:
+
+```bash
+python3 kaggle/orchestrate_scale.py --stage train \
+  --commit <study3-commit> --seeds 1337 2027 31415 \
+  --conditions tied partial untied capacity_control
 ```
 
 The 50k study must be launched in a fresh output directory. Do not resume a 10k run with a changed schedule horizon. The launcher rejects unsafe step-horizon changes when resuming.

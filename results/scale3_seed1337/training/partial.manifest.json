@@ -1,0 +1,221 @@
+{
+  "batch_stream": {
+    "algorithm": "sha256-jsonl-start-offsets-v1",
+    "digest": "0bd229b10c5acbd9034fb96d84598666f1e57afc1e2868858ea0bb29bfc8d0e6",
+    "offset_log": "batch_offsets.jsonl",
+    "record_count": 40000,
+    "token_count": 20480000
+  },
+  "command": [
+    "/usr/bin/python3",
+    "train.py",
+    "--embedding_type",
+    "partial",
+    "--dataset",
+    "fineweb_edu",
+    "--data_dir",
+    "/kaggle/working/scale_data",
+    "--output_dir",
+    "/kaggle/working/scale3_fineweb_20m-seed1337-partial/training",
+    "--run_name",
+    "partial",
+    "--device",
+    "cuda",
+    "--seed",
+    "1337",
+    "--steps",
+    "20000",
+    "--batch_size",
+    "1",
+    "--grad_accum_steps",
+    "2",
+    "--block_size",
+    "512",
+    "--n_layer",
+    "12",
+    "--n_head",
+    "12",
+    "--n_embd",
+    "768",
+    "--adapter_rank",
+    "8",
+    "--adapter_alpha",
+    "8",
+    "--capacity_control_width",
+    "532",
+    "--learning_rate",
+    "0.0003",
+    "--min_learning_rate",
+    "3e-05",
+    "--warmup_steps",
+    "500",
+    "--weight_decay",
+    "0.1",
+    "--grad_clip",
+    "1.0",
+    "--eval_interval",
+    "500",
+    "--eval_batches",
+    "32",
+    "--log_interval",
+    "500",
+    "--save_interval",
+    "2500",
+    "--no-save_optimizer"
+  ],
+  "dataset": {
+    "dataset": "fineweb_edu",
+    "sha256": {
+      "test": "a41daf21eee24013d0d3b288fe2e2b506dfa748faec37714f962e7cad5744f9d",
+      "train": "1d2d6e3ed9dea067696eee9233e31ae150754c61698a8ca4bbdf42874cded5df",
+      "val": "682e7aa3fba559da42eb9fd53747cf39d196562c07b0c836b7f42a77d3fc0076"
+    },
+    "source": {
+      "config": "sample-10BT",
+      "dataset": "HuggingFaceFW/fineweb-edu",
+      "documents_consumed": 20225,
+      "revision": "fc9850dff5e2d0f8f776efe41b24a1c49556cfc5",
+      "source_files": [
+        {
+          "oid": "2df63e03a865d1045dcb477fcdd68635faf226ef",
+          "path": "sample/10BT/000_00000.parquet",
+          "size": 2152819114
+        },
+        {
+          "oid": "c2021c8c564a8a3fca7ba114afc9069bd0bcd2d2",
+          "path": "sample/10BT/001_00000.parquet",
+          "size": 2152222432
+        },
+        {
+          "oid": "e42928ee6a755554d7f348456ca62a66a9abc08c",
+          "path": "sample/10BT/002_00000.parquet",
+          "size": 2151796315
+        },
+        {
+          "oid": "2c9b4a5357740163228979d4887b6639977b650f",
+          "path": "sample/10BT/003_00000.parquet",
+          "size": 2152437524
+        },
+        {
+          "oid": "29f28906fd7457a4bad8e8181c9432ac90aac030",
+          "path": "sample/10BT/004_00000.parquet",
+          "size": 2152338550
+        },
+        {
+          "oid": "92cc8d92e5e4cc710a53a14c4999373152b83e41",
+          "path": "sample/10BT/005_00000.parquet",
+          "size": 2152189947
+        },
+        {
+          "oid": "fb75f6c578c1f731b79ec5982e462e75931a6954",
+          "path": "sample/10BT/006_00000.parquet",
+          "size": 2152689867
+        },
+        {
+          "oid": "a9d5d796ea550171f13e71995dfd30a77c766437",
+          "path": "sample/10BT/007_00000.parquet",
+          "size": 2150686637
+        },
+        {
+          "oid": "2535d7e76c7972978eb48a8a8ca4d8b6a718fea1",
+          "path": "sample/10BT/008_00000.parquet",
+          "size": 2151274846
+        },
+        {
+          "oid": "a9fcab0229d213864efab5812255f3ff272fc6d4",
+          "path": "sample/10BT/009_00000.parquet",
+          "size": 2151913277
+        },
+        {
+          "oid": "2c1203939e5139226910db563e21fdf754974e65",
+          "path": "sample/10BT/010_00000.parquet",
+          "size": 2152798864
+        },
+        {
+          "oid": "7f557356b7446c6209ed4e51eb97d65324d75b77",
+          "path": "sample/10BT/011_00000.parquet",
+          "size": 2152323681
+        },
+        {
+          "oid": "08bc10f931c49d4f5e2e832af85c88d19f9a30e9",
+          "path": "sample/10BT/012_00000.parquet",
+          "size": 2152069689
+        },
+        {
+          "oid": "3f659cc279c926e8baeda616b688b4e704b7fa09",
+          "path": "sample/10BT/013_00000.parquet",
+          "size": 540632672
+        }
+      ],
+      "source_files_sha256": "e94224beb36b3d861f5315d42ba4585cbd6805fc6737e2773b28f88609d9f903",
+      "test_tokens": 262144,
+      "train_tokens": 20480000,
+      "val_tokens": 262144,
+      "variant": "fineweb-edu-sample-10BT-v1.0.0"
+    },
+    "token_counts": {
+      "test": 262144,
+      "train": 20480000,
+      "val": 262144
+    },
+    "tokenizer": "gpt2",
+    "vocab_size": 50257
+  },
+  "flops_accounting": {
+    "estimated_flops_embedding": 234070320.0,
+    "estimated_flops_non_embedding": 512197632.0,
+    "estimated_flops_total": 746267952.0,
+    "flops_per_token_embedding": 234070320.0,
+    "flops_per_token_non_embedding": 512197632.0,
+    "flops_per_token_total": 746267952.0,
+    "rule": "6ND dense-matmul approximation; embedding lookups treated as negligible"
+  },
+  "git_commit": "c1614dc015d5b8e8d281c02acd5d7e90dae1e73d",
+  "model": {
+    "embedding_type": "partial",
+    "model": {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 8,
+      "block_size": 512,
+      "capacity_control_width": 532,
+      "dropout": 0.0,
+      "n_embd": 768,
+      "n_head": 12,
+      "n_layer": 12,
+      "vocab_size": 50257
+    }
+  },
+  "parameter_counts": {
+    "capacity_control_parameters": 0,
+    "capacity_control_width": 0,
+    "embedding_compute_parameters": 39011720,
+    "embedding_parameters": 39413776,
+    "embedding_type": "partial",
+    "input_correction_compute_parameters": 6144,
+    "input_correction_parameters": 408200,
+    "input_side_parameters": 39005576,
+    "output_correction_compute_parameters": 408200,
+    "output_correction_parameters": 408200,
+    "output_projection_parameters": 38597376,
+    "output_side_parameters": 39005576,
+    "shared_parameters": 38597376,
+    "total_parameters": 124780048,
+    "trainable_parameters": 124780048,
+    "transformer_parameters": 85366272
+  },
+  "path_ablation": {
+    "end": 20000,
+    "mode": "none",
+    "start": 0
+  },
+  "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+  "python": "3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0]",
+  "resume_from": null,
+  "save_optimizer": false,
+  "tiktoken": "0.13.0",
+  "tokenizer": {
+    "name": "gpt2",
+    "vocab_size": 50257
+  },
+  "torch": "2.12.1+cu130"
+}

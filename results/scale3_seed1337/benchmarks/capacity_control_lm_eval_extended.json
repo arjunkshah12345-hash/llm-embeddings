@@ -1,0 +1,297 @@
+{
+  "batch_size": 1,
+  "checkpoint": "last.pt",
+  "checkpoint_metadata": {
+    "model": {
+      "adapter_alpha": 8.0,
+      "adapter_rank": 8,
+      "block_size": 512,
+      "capacity_control_width": 532,
+      "dropout": 0.0,
+      "n_embd": 768,
+      "n_head": 12,
+      "n_layer": 12,
+      "vocab_size": 50257
+    },
+    "step": 19999,
+    "train": {
+      "ablation_end": 0,
+      "ablation_start": 0,
+      "batch_size": 1,
+      "data_dir": "/kaggle/working/scale_data",
+      "dataset": "fineweb_edu",
+      "device": "cuda",
+      "embedding_type": "capacity_control",
+      "eval_batches": 32,
+      "eval_interval": 500,
+      "grad_accum_steps": 2,
+      "grad_clip": 1.0,
+      "learning_rate": 0.0003,
+      "log_interval": 500,
+      "min_learning_rate": 3e-05,
+      "output_dir": "/kaggle/working/scale3_fineweb_20m-seed1337-capacity_control/training",
+      "path_ablation": "none",
+      "run_name": "capacity_control",
+      "save_interval": 2500,
+      "seed": 1337,
+      "steps": 20000,
+      "warmup_steps": 500,
+      "weight_decay": 0.1
+    }
+  },
+  "harness": {
+    "commit": "ddd67220430a2470529f25fd5c05a576ca1057a0",
+    "name": "lm-evaluation-harness"
+  },
+  "num_fewshot": 0,
+  "precision": "float32",
+  "results": {
+    "gsm8k": {
+      "config": {
+        "dataset_name": "main",
+        "dataset_path": "openai/gsm8k",
+        "description": "",
+        "doc_to_target": "{{answer}}",
+        "doc_to_text": "Question: {{question}}\nAnswer:",
+        "fewshot_config": {
+          "doc_to_choice": null,
+          "doc_to_target": "{{answer}}",
+          "doc_to_text": "Question: {{question}}\nAnswer:",
+          "fewshot_delimiter": "\n\n",
+          "fewshot_indices": null,
+          "gen_prefix": null,
+          "process_docs": null,
+          "sampler": "default",
+          "samples": null,
+          "split": "train",
+          "target_delimiter": " "
+        },
+        "fewshot_delimiter": "\n\n",
+        "fewshot_split": "train",
+        "filter_list": [
+          {
+            "filter": [
+              {
+                "function": "regex",
+                "regex_pattern": "#### (\\-?[0-9\\.\\,]+)"
+              },
+              {
+                "function": "take_first"
+              }
+            ],
+            "name": "strict-match"
+          },
+          {
+            "filter": [
+              {
+                "function": "regex",
+                "group_select": -1,
+                "regex_pattern": "(-?[$0-9.,]{2,})|(-?[0-9]+)"
+              },
+              {
+                "function": "take_first"
+              }
+            ],
+            "name": "flexible-extract"
+          }
+        ],
+        "generation_kwargs": {
+          "do_sample": false,
+          "temperature": 0.0,
+          "until": [
+            "Question:",
+            "</s>",
+            "<|im_end|>"
+          ]
+        },
+        "metadata": {
+          "config_source": "/usr/local/lib/python3.12/dist-packages/lm_eval/tasks/gsm8k/gsm8k.yaml",
+          "version": 3.0
+        },
+        "metric_list": [
+          {
+            "aggregation": "mean",
+            "higher_is_better": true,
+            "ignore_case": true,
+            "ignore_punctuation": false,
+            "metric": "exact_match",
+            "regexes_to_ignore": [
+              ",",
+              "\\$",
+              "(?s).*#### ",
+              "\\.$"
+            ]
+          }
+        ],
+        "num_fewshot": 0,
+        "output_type": "generate_until",
+        "repeats": 1,
+        "should_decontaminate": false,
+        "target_delimiter": " ",
+        "task": "gsm8k",
+        "test_split": "test",
+        "training_split": "train",
+        "unsafe_code": false
+      },
+      "result": {
+        "alias": "gsm8k",
+        "exact_match,flexible-extract": 0.0,
+        "exact_match,strict-match": 0.0,
+        "exact_match_stderr,flexible-extract": 0.0,
+        "exact_match_stderr,strict-match": 0.0,
+        "name": "gsm8k",
+        "sample_len": 1319
+      },
+      "status": "complete"
+    },
+    "mmlu": {
+      "config": null,
+      "result": {
+        "acc,none": 0.22945449366187154,
+        "acc_stderr,none": 0.00354269136928236,
+        "alias": "mmlu",
+        "name": "mmlu",
+        "sample_count": {
+          "acc,none": 14042
+        },
+        "sample_len": 14042
+      },
+      "status": "complete"
+    },
+    "triviaqa": {
+      "config": {
+        "dataset_name": "rc.nocontext",
+        "dataset_path": "mandarjoshi/trivia_qa",
+        "description": "",
+        "doc_to_decontamination_query": "question",
+        "doc_to_target": "{{answer.aliases}}",
+        "doc_to_text": "Question: {{question}}?\nAnswer:",
+        "fewshot_config": {
+          "doc_to_choice": null,
+          "doc_to_target": "{{answer.aliases}}",
+          "doc_to_text": "Question: {{question}}?\nAnswer:",
+          "fewshot_delimiter": "\n\n",
+          "fewshot_indices": null,
+          "gen_prefix": null,
+          "process_docs": null,
+          "sampler": "default",
+          "samples": null,
+          "split": null,
+          "target_delimiter": " "
+        },
+        "fewshot_delimiter": "\n\n",
+        "filter_list": [
+          {
+            "filter": [
+              {
+                "function": "remove_whitespace"
+              },
+              {
+                "function": "take_first"
+              }
+            ],
+            "name": "remove_whitespace"
+          }
+        ],
+        "generation_kwargs": {
+          "do_sample": false,
+          "temperature": 0.0,
+          "until": [
+            "\n",
+            ".",
+            ","
+          ]
+        },
+        "metadata": {
+          "config_source": "/usr/local/lib/python3.12/dist-packages/lm_eval/tasks/triviaqa/default.yaml",
+          "version": 3.0
+        },
+        "metric_list": [
+          {
+            "aggregation": "mean",
+            "higher_is_better": true,
+            "ignore_case": true,
+            "ignore_punctuation": true,
+            "metric": "exact_match"
+          }
+        ],
+        "num_fewshot": 0,
+        "output_type": "generate_until",
+        "repeats": 1,
+        "should_decontaminate": true,
+        "target_delimiter": " ",
+        "task": "triviaqa",
+        "training_split": "train",
+        "unsafe_code": false,
+        "validation_split": "validation"
+      },
+      "result": {
+        "alias": "triviaqa",
+        "exact_match,remove_whitespace": 0.00011145786892554614,
+        "exact_match_stderr,remove_whitespace": 7.881041870933683e-05,
+        "name": "triviaqa",
+        "sample_len": 17944
+      },
+      "status": "complete"
+    },
+    "truthfulqa_mc1": {
+      "config": {
+        "dataset_name": "multiple_choice",
+        "dataset_path": "truthfulqa/truthful_qa",
+        "description": "",
+        "doc_to_choice": "{{mc1_targets.choices}}",
+        "doc_to_decontamination_query": "question",
+        "doc_to_target": 0,
+        "doc_to_text": "{% set prompt_qa = 'Q: What is human life expectancy in the United States?\nA: Human life expectancy in the United States is 78 years.\n\nQ: Who was president of the United States in 1955?\nA: Dwight D. Eisenhower was president of the United States in 1955.\n\nQ: Which party did he belong to?\nA: He belonged to the Republican Party.\n\nQ: What is the square root of banana?\nA: I have no comment.\n\nQ: How does a telescope work?\nA: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n\nQ: Where were the 1992 Olympics held?\nA: The 1992 Olympics were held in Barcelona, Spain.'%}{{prompt_qa + '\n\nQ: ' + question + '\nA:'}}",
+        "fewshot_config": {
+          "doc_to_choice": "{{mc1_targets.choices}}",
+          "doc_to_target": 0,
+          "doc_to_text": "{% set prompt_qa = 'Q: What is human life expectancy in the United States?\nA: Human life expectancy in the United States is 78 years.\n\nQ: Who was president of the United States in 1955?\nA: Dwight D. Eisenhower was president of the United States in 1955.\n\nQ: Which party did he belong to?\nA: He belonged to the Republican Party.\n\nQ: What is the square root of banana?\nA: I have no comment.\n\nQ: How does a telescope work?\nA: Telescopes use lenses or mirrors to focus light and make objects appear closer.\n\nQ: Where were the 1992 Olympics held?\nA: The 1992 Olympics were held in Barcelona, Spain.'%}{{prompt_qa + '\n\nQ: ' + question + '\nA:'}}",
+          "fewshot_delimiter": "\n\n",
+          "fewshot_indices": null,
+          "gen_prefix": null,
+          "process_docs": null,
+          "sampler": "default",
+          "samples": null,
+          "split": null,
+          "target_delimiter": " "
+        },
+        "fewshot_delimiter": "\n\n",
+        "metadata": {
+          "config_source": "/usr/local/lib/python3.12/dist-packages/lm_eval/tasks/truthfulqa/truthfulqa_mc1.yaml",
+          "version": 2.0
+        },
+        "metric_list": [
+          {
+            "aggregation": "mean",
+            "higher_is_better": true,
+            "metric": "acc"
+          }
+        ],
+        "num_fewshot": 0,
+        "output_type": "multiple_choice",
+        "repeats": 1,
+        "should_decontaminate": true,
+        "target_delimiter": " ",
+        "task": "truthfulqa_mc1",
+        "unsafe_code": false,
+        "validation_split": "validation"
+      },
+      "result": {
+        "acc,none": 0.2460220318237454,
+        "acc_stderr,none": 0.01507721920066264,
+        "alias": "truthfulqa_mc1",
+        "name": "truthfulqa_mc1",
+        "sample_len": 817
+      },
+      "status": "complete"
+    }
+  },
+  "suite": "extended",
+  "tasks": [
+    "mmlu",
+    "truthfulqa_mc1",
+    "triviaqa",
+    "gsm8k"
+  ]
+}
