@@ -16,6 +16,7 @@ import tiktoken
 from scale_lm_eval import CORE_TASKS, EXTENDED_TASKS, HARNESS_COMMIT, PAIR_ENCODING_VERSION, encode_pair
 from validate_scale_study import training_source_fingerprint
 from kaggle.scale_launch import RUN_TEMPLATE, slug
+from colab.run_scale3 import STEPS, run_is_complete
 
 
 def test_scale_data_revision_and_shards_are_pinned():
@@ -121,3 +122,20 @@ def test_colab_runner_requires_gpu_and_uses_drive_resume_checkpoints():
     assert '"--checkpoint_interval"' in runner
     assert '"--resume"' in runner
     assert "benchmark" in runner.lower()
+
+
+def test_colab_runner_skips_a_complete_cloud_condition(tmp_path):
+    run_dir = tmp_path / "partial"
+    run_dir.mkdir()
+    for name in ("last.pt", "optimizer_last.pt"):
+        (run_dir / name).write_bytes(b"checkpoint")
+    (run_dir / "metrics.jsonl").write_text(
+        json.dumps({"split": "val", "step": STEPS - 1, "loss": 1.0}) + "\n"
+    )
+
+    assert run_is_complete(run_dir)
+
+    (run_dir / "metrics.jsonl").write_text(
+        json.dumps({"split": "val", "step": STEPS - 2, "loss": 1.0}) + "\n"
+    )
+    assert not run_is_complete(run_dir)

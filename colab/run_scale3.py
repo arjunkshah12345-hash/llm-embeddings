@@ -23,6 +23,29 @@ SEEDS = (1337, 2027, 31415)
 STEPS = 20_000
 
 
+def run_is_complete(run_dir: Path) -> bool:
+    """Return whether a cloud run has a final, resumable endpoint."""
+    required = (
+        run_dir / "last.pt",
+        run_dir / "optimizer_last.pt",
+        run_dir / "metrics.jsonl",
+    )
+    if not all(path.exists() for path in required):
+        return False
+    try:
+        rows = [
+            json.loads(line)
+            for line in (run_dir / "metrics.jsonl").read_text().splitlines()
+            if line.strip()
+        ]
+    except (OSError, json.JSONDecodeError):
+        return False
+    return any(
+        row.get("split") == "val" and int(row.get("step", -1)) == STEPS - 1
+        for row in rows
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, required=True, choices=SEEDS)
@@ -134,6 +157,9 @@ def main() -> None:
             raise SystemExit(
                 f"{run_dir} already exists; use --resume-existing to continue from its optimizer checkpoint"
             )
+        if args.resume_existing and run_is_complete(run_dir):
+            print(f"SKIP complete cloud run: {run_dir}", flush=True)
+            continue
         command = [*common, "--embedding_type", condition, "--run_name", condition]
         if args.resume_existing and resume.exists():
             command.extend(["--resume", str(resume)])
